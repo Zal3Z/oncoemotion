@@ -106,6 +106,22 @@ rimosso la valenza negativa generica. In **Qwen3 (Cina)** la relazione è
 (Curiosità: in Gemma afraid↑ ma anxious↓ con la gravità — separa i due affetti in
 direzioni opposte.)
 
+### RQ4 · È districata dalla valenza negativa? (attenzione a Gemma)
+
+Correlazione (Pearson) **paura ↔ valenza-negativa** al punto E — più vicino a 0 =
+meglio districata:
+
+| | 🇨🇳 Qwen3 | 🇪🇺 Ministral | 🇺🇸 Gemma |
+|---|---|---|---|
+| afraid ↔ neg-valence | **−0.24** (districato) | **−0.21** (districato) | **+0.71 (ancora confuso)** |
+
+**In Qwen3 e Ministral la paura è ben separata dalla valenza negativa** (leggermente
+anti-correlata). **In Gemma resta correlata (+0.71)**: quindi la sua pulita
+"paura↔gravità" (sopra) va letta con cautela — potrebbe essere in parte **valenza
+negativa generica**, non paura specifica. (La residualizzazione ortogonalizza il
+*vettore*, ma i dati clinici al punto E possono restare correlati, e in Gemma sia
+afraid sia neg-valence hanno il best-layer profondo → si misurano insieme.)
+
 ### RQ6 · Il segnale persiste fino alla decisione? **Sì; Gemma amplifica.**
 
 |z| della paura trattenuto dopo aver inserito una frase neutra identica prima della
@@ -120,22 +136,28 @@ decisione:
 Tutti persistono. **Gemma amplifica** (1.5–2.4), Ministral mantiene (~1.0), Qwen3
 attenua un po' (0.8).
 
-### RQ5 · L'intervento causale batte il caso? **No, in nessuno.**
+### RQ5 · L'intervento causale batte il caso? **No — nessun driver emotion-specifico.**
 
-**Patching** della sola componente-paura (severe→mild), Δentropia vs vettore random:
+**Steering** sull'input severo: massima |Δentropia| della **direzione paura** vs
+**vettore random**, e numero di **flip** della decisione:
 
-| modello | Δentropia (paura) | Δentropia (random) | verdetto |
-|---|---|---|---|
-| 🇨🇳 Qwen3 | +0.033 | −0.064 | paura ≤ random |
-| 🇪🇺 Ministral | +0.020 | +0.091 | paura < random |
-| 🇺🇸 Gemma | −0.041 | +0.054 | paura ≤ random |
+| modello | paura | random | flip | lettura |
+|---|---|---|---|---|
+| 🇨🇳 Qwen3 | 0.11 | 0.18 | 2 | paura < random |
+| 🇪🇺 Ministral | 0.11 | 0.02 | 0 | paura > random, ma < confondente (0.16) e **0 flip** |
+| 🇺🇸 Gemma | 0.50 | **2.45** | 14 | molto perturbabile, ma **random ≫ paura** |
 
-Lo **steering** dà effetti minuscoli e **0 flip** della decisione in tutti e tre. In
-**ogni** modello l'intervento sulla direzione-paura **non supera il controllo random**.
+**Patching** (solo componente-paura, severe→mild) conferma: Qwen3 +0.03 vs random −0.06;
+Ministral +0.02 vs +0.09; Gemma −0.04 vs +0.05 — in tutti paura ≤ random.
+
+**Lettura onesta:** **Gemma** flippa la decisione 14 volte, ma un vettore **random** ha
+un effetto **5× maggiore** (2.45 vs 0.50) → è solo molto *steerabile*, da qualsiasi
+direzione. **Ministral** mostra un lieve effetto della paura sopra il random (0.11 vs
+0.02) ma **sotto il confondente** e **senza flip**. **Qwen3** non supera il random.
 Il transfer dell'attivazione *completa* ribalta banalmente (sovrascrive il token).
-→ **Risultato negativo robusto e uguale nelle tre culture di modello: le
-rappresentazioni emotion-like esistono e persistono, ma non guidano *causalmente* la
-codifica PRO-CTCAE.**
+→ **Nessun modello mostra una "paura" che guida *causalmente e specificamente* la
+codifica PRO-CTCAE**: le rappresentazioni esistono e persistono, ma l'effetto causale
+non è distinguibile da una perturbazione generica.
 
 ---
 
@@ -152,12 +174,17 @@ Contiene, in ordine:
    decodabilità universale.
 3. **"La paura segue la gravità?"** — barre per ogni gradiente (mobilità/dolore/respiro/
    nausea/prognosi), tre modelli. **Sopra lo zero = la paura cresce con la gravità.**
-   Qui si vede a colpo d'occhio: Ministral/Gemma tutte sopra zero, Qwen3 che oscilla.
-4. **"Persistenza"** — una barra per modello con la linea tratteggiata a 1.0 (≥1 =
+   Ministral/Gemma tutte sopra zero, Qwen3 che oscilla.
+4. **"È districata dalla valenza negativa?"** — una barra per modello (paura↔valenza,
+   −1…+1). Qwen3/Ministral vicino a 0 (districati), **Gemma +0.71 in rosso** (ancora
+   confuso): la sua "traccia la gravità" va presa con le pinze.
+5. **"Persistenza"** — una barra per modello, linea tratteggiata a 1.0 (≥1 =
    mantenuto/amplificato). Gemma svetta a 1.5.
-5. **"Causalità"** — per modello due barrette: **emo** (direzione-paura) vs **rnd**
-   (random). In tutti "emo" non supera "rnd" → nessun effetto causale specifico.
-6. **Tabella di sintesi** + il riquadro con la conclusione.
+6. **"Causalità"** — per modello due barrette, **paura** vs **random** (max Δentropia
+   sull'input severo), con il n° di **flip** annotato. **Gemma**: random 2.45 ≫ paura
+   0.50, 14 flip → perturbabile da qualsiasi direzione. In nessun modello la paura
+   supera *specificamente* il random.
+7. **Tabella di sintesi** (con confondimento e flip) + il riquadro con la conclusione.
 
 ## 6. Gli altri artifact (la "radiografia" interna)
 
@@ -183,9 +210,14 @@ spiegano *cosa succede dentro*:
 ## 7. Sintesi — reagiscono uguale o diverso?
 
 **Entrambe le cose.** *Uguale*: tutti rappresentano le emozioni chiaramente, le portano
-alla decisione, e in tutti l'effetto causale **non batte il caso**. *Diverso*: il legame
-**paura ↔ gravità** è netto in **Europa/USA** e sfumato in **Cina** (dove domina
-l'ansia), e **Gemma amplifica** i segnali più degli altri.
+alla decisione, e in tutti l'effetto causale **non batte il caso** (nessun driver
+emotion-specifico). *Diverso*: il legame **paura ↔ gravità** è netto in **Europa/USA** e
+sfumato in **Cina** (dove domina l'ansia) — **ma** in **Gemma** quella "paura" resta
+**confusa con la valenza negativa (+0.71)**, quindi il suo tracciamento pulito della
+gravità va preso con cautela; ed è il modello più **perturbabile** (14 flip di
+decisione, però da *qualsiasi* direzione). In sintesi: la **rappresentazione** è
+condivisa, il **come** la gravità clinica si mappa sugli affetti specifici cambia da
+modello a modello, e la **causalità specifica** non emerge in nessuno.
 
 ## 8. Limiti (onestà)
 

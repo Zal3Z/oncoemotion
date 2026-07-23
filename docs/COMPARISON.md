@@ -71,6 +71,22 @@ models encode a "fear that scales with severity"; the Chinese model gets there m
 negative** (−0.23/−0.81/−0.18/−0.93/−0.90) — in Gemma afraid↑ but anxious↓ with
 severity, i.e. it separates the two affects in opposite directions.
 
+## RQ4 · Is it disentangled from negative valence? (careful with Gemma)
+
+Pearson correlation **afraid ↔ general-negative-valence** at point E (closer to 0 =
+better disentangled):
+
+| | 🇨🇳 Qwen3 | 🇪🇺 Ministral | 🇺🇸 Gemma |
+|---|---|---|---|
+| afraid ↔ neg-valence | **−0.24** | **−0.21** | **+0.71 (still confounded)** |
+
+In **Qwen3 and Ministral** afraid is well separated from generic negative valence
+(slightly anti-correlated). In **Gemma it stays correlated (+0.71)** — so Gemma's clean
+"fear ↔ severity" result must be read with caution: it may partly be generic negative
+valence. (Residualization orthogonalizes the *vector*; the clinical data at point E can
+still correlate, and in Gemma both afraid and neg-valence have deep best-layers, so they
+are read together.)
+
 ## RQ6 · Does the signal persist to the decision? (yes; Gemma amplifies)
 
 |z| of the signal retained at point E after inserting an identical neutral sentence:
@@ -86,26 +102,29 @@ severity, i.e. it separates the two affects in opposite directions.
 All persist to the decision. **Gemma amplifies** the signals through the filler
 (1.5–2.4), Ministral holds (~1.0), Qwen3 slightly attenuates fear (0.8).
 
-## RQ5 · Do causal interventions beat the controls? (no, in any model)
+## RQ5 · Do causal interventions beat the controls? (no emotion-specific driver)
 
-**Steering** (ablation Δentropy at point E; mild/severe/neutral): all tiny
-(Qwen3 +0.02/−0.04/−0.07 @L36; Ministral +0.01/−0.00/+0.02 @L36; Gemma
-+0.01/−0.04/−0.03 @L27) with **0 top-1 decision flips** in every model.
+**Steering** on the severe input — max |Δentropy| of the **fear direction** vs a
+**random same-norm vector**, and total top-1 decision **flips**:
 
-**Activation patching** — transferring only the fear-direction component
-(severe→mild), emotion Δentropy vs a random same-norm vector:
+| model | fear | random | flips | reading |
+|---|---|---|---|---|
+| 🇨🇳 Qwen3 | 0.11 | 0.18 | 2 | fear < random |
+| 🇪🇺 Ministral | 0.11 | 0.02 | 0 | fear > random, but < confounder (0.16) and **0 flips** |
+| 🇺🇸 Gemma | 0.50 | **2.45** | 14 | very steerable, but **random ≫ fear** |
 
-| model | emotion ΔH | random ΔH | verdict |
-|---|---|---|---|
-| 🇨🇳 Qwen3 | +0.033 | −0.064 | emotion ≤ random |
-| 🇪🇺 Ministral | +0.020 | +0.091 | emotion < random |
-| 🇺🇸 Gemma | −0.041 | +0.054 | emotion ≤ random |
+**Activation patching** (fear-direction component only, severe→mild) agrees: Qwen3
++0.03 vs random −0.06; Ministral +0.02 vs +0.09; Gemma −0.04 vs +0.05 — fear ≤ random
+in all.
 
-In **every** model the fear-direction intervention **does not exceed the random
-control**, and never flips the decision. Full-activation transfer flips trivially in
-Qwen3/Ministral (it overwrites the token), not in Gemma. **Robust cross-model negative
-result: emotion-like representations exist and persist, but do not *causally drive* the
-PRO-CTCAE coding decision.**
+**Honest reading:** **Gemma** flips the decision 14 times, but a **random** vector has a
+**5× larger** effect (2.45 vs 0.50) → it is simply very steerable, by *any* direction.
+**Ministral** shows a faint fear effect above random (0.11 vs 0.02) but below the
+confounder and with **no flips**. **Qwen3** does not exceed random. Full-activation
+transfer flips trivially (it overwrites the token). **No model shows a fear direction
+that *causally and specifically* drives the PRO-CTCAE decision** — the representations
+exist and persist, but the causal effect is indistinguishable from a generic
+perturbation.
 
 ---
 
@@ -116,8 +135,10 @@ PRO-CTCAE coding decision.**
 beyond a random perturbation.
 
 **Different:** the **fear ↔ severity** coupling is crisp in the **European and American**
-models and blurred in the **Chinese** one (which leans on *anxiety* instead); and
-**Gemma amplifies** affect signals more than the others.
+models and blurred in the **Chinese** one (which leans on *anxiety* instead) — **but** in
+**Gemma** that "fear" stays **confounded with negative valence (+0.71)**, so its clean
+severity-tracking is suspect; and Gemma is the most **steerable** (14 decision flips,
+though by *any* direction).
 
 **Answer to "do they react the same or differently?"** → *Both.* The representational
 and causal picture is shared; the *way* clinical severity maps onto specific affects
