@@ -81,7 +81,23 @@ def main() -> int:
     ex = splits == "extraction"
     all_concepts = EMOTIONS + CONTROLS
 
-    # 1) raw one-vs-rest vectors per concept/method/layer
+    # 1) raw one-vs-rest vectors per concept/method/layer.
+    #    Vector construction runs on the GPU when available (torch backend):
+    #    covariance/solve/SVD at hidden~4096 are ms on GPU vs minutes on CPU.
+    import time as _t
+
+    build_device = None
+    try:
+        import torch as _torch
+
+        if _torch.cuda.is_available():
+            build_device = "cuda"
+    except Exception:
+        pass
+    print(f"Building vectors ({', '.join(args.methods)}) on "
+          f"{build_device or 'cpu'} ...", flush=True)
+    t0 = _t.time()
+
     vec_store: dict[str, np.ndarray] = {}
     norm_store: dict[str, np.ndarray] = {}
     for concept in all_concepts:
@@ -96,11 +112,13 @@ def main() -> int:
             lv = np.zeros((n_layers, acts.shape[2]), np.float32)
             nm = np.zeros(n_layers, np.float32)
             for l in range(n_layers):
-                evv = build_layer_vector(Xall[:, l, :], y, method, concept, l)
+                evv = build_layer_vector(Xall[:, l, :], y, method, concept, l,
+                                         device=build_device)
                 lv[l] = evv.vector.astype(np.float32)
                 nm[l] = evv.original_norm
             vec_store[f"{concept}|{method}"] = lv
             norm_store[f"{concept}|{method}|norm"] = nm
+    print(f"  built vectors on {build_device or 'cpu'} in {_t.time()-t0:.1f}s", flush=True)
 
     # 2) residualize EMOTION vectors against the CONTROL (confounder) directions
     #    (uses control diff_of_means vectors as the confounder basis, per layer)

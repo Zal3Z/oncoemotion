@@ -55,9 +55,9 @@ def main() -> int:
     ap.add_argument("--models", nargs="+", default=DEFAULT_TRIO)
     ap.add_argument("--dtype", default="bfloat16")
     ap.add_argument("--device", default="auto")
-    # diff_of_means only by default: it's what probing/steering/patching use, and
-    # it's instant. pca/logistic/lda add a very slow CPU build at large hidden sizes.
-    ap.add_argument("--methods", nargs="+", default=["diff_of_means"])
+    # All 4 methods by default — the vector build now runs on the GPU (torch),
+    # so pca/logistic/lda are fast even at large hidden sizes.
+    ap.add_argument("--methods", nargs="+", default=["diff_of_means", "pca", "logistic", "lda"])
     ap.add_argument("--outroot", type=Path, default=_ROOT / "outputs/models")
     ap.add_argument("--skip-existing", action="store_true",
                     help="skip a model if its clinical_probing.json already exists")
