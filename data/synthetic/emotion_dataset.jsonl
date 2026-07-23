@@ -1,0 +1,258 @@
+{"concept": "afraid_alarmed", "text": "Ho una paura tremenda di quello che potrebbe succedere.", "label": 1, "condition": "comprehension", "variety": "explicit", "split": "test"}
+{"concept": "afraid_alarmed", "text": "Il cuore mi batte forte e non riesco a smettere di tremare.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "afraid_alarmed", "text": "Qualcosa non va, sento un allarme dentro di me.", "label": 1, "condition": "comprehension", "variety": "paraphrase", "split": "extraction"}
+{"concept": "afraid_alarmed", "text": "Quando ho sentito quel rumore di notte mi si è gelato il sangue.", "label": 1, "condition": "comprehension", "variety": "non_clinical", "split": "validation"}
+{"concept": "afraid_alarmed", "text": "Sul bordo del precipizio le gambe mi si sono bloccate dal terrore.", "label": 1, "condition": "comprehension", "variety": "cross_domain", "split": "validation"}
+{"concept": "afraid_alarmed", "text": "Sono terrorizzato.", "label": 1, "condition": "comprehension", "variety": "short", "split": "validation"}
+{"concept": "afraid_alarmed", "text": "Continuo a guardarmi alle spalle, convinto che stia per accadere qualcosa di terribile, e non riesco a calmarmi in nessun modo.", "label": 1, "condition": "comprehension", "variety": "long", "split": "extraction"}
+{"concept": "afraid_alarmed", "text": "Un brivido di spavento mi ha percorso la schiena.", "label": 1, "condition": "comprehension", "variety": "paraphrase", "split": "extraction"}
+{"concept": "afraid_alarmed", "text": "Ho il panico all'idea di dover parlare davanti a tutti.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "afraid_alarmed", "text": "Mi sento minacciato e vorrei solo scappare.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "test"}
+{"concept": "afraid_alarmed", "text": "Ho paura che vada tutto storto.", "label": 1, "condition": "comprehension", "variety": "explicit", "split": "extraction"}
+{"concept": "afraid_alarmed", "text": "Le mani mi sudano e il respiro si fa corto per lo spavento.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "afraid_alarmed", "text": "È entrato uno sconosciuto e mi sono irrigidito dal timore.", "label": 1, "condition": "comprehension", "variety": "non_clinical", "split": "extraction"}
+{"concept": "afraid_alarmed", "text": "Ho urlato per lo spavento quando la porta ha sbattuto.", "label": 1, "condition": "comprehension", "variety": "cross_domain", "split": "test"}
+{"concept": "afraid_alarmed", "text": "C'è qualcosa di spaventoso in tutto questo.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "afraid_alarmed", "text": "Mi tremano le ginocchia all'idea dell'esame.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "afraid_alarmed", "text": "Ho una fifa blu di restare al buio.", "label": 1, "condition": "comprehension", "variety": "paraphrase", "split": "extraction"}
+{"concept": "afraid_alarmed", "text": "Il pericolo è vicino e sono in allerta totale.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "validation"}
+{"concept": "concerned", "text": "Sono un po' preoccupato per come stanno andando le cose.", "label": 1, "condition": "comprehension", "variety": "explicit", "split": "extraction"}
+{"concept": "concerned", "text": "Continuo a pensarci, c'è qualcosa che non mi convince.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "concerned", "text": "Mi dispiace, ma questa situazione mi mette in apprensione.", "label": 1, "condition": "comprehension", "variety": "paraphrase", "split": "test"}
+{"concept": "concerned", "text": "Sono in pensiero per mio fratello che non risponde al telefono.", "label": 1, "condition": "comprehension", "variety": "non_clinical", "split": "extraction"}
+{"concept": "concerned", "text": "Guardando i conti dell'azienda comincio ad avere qualche timore.", "label": 1, "condition": "comprehension", "variety": "cross_domain", "split": "extraction"}
+{"concept": "concerned", "text": "Sono preoccupato.", "label": 1, "condition": "comprehension", "variety": "short", "split": "extraction"}
+{"concept": "concerned", "text": "Non riesco a togliermi dalla testa il pensiero che qualcosa possa andare storto e questo mi tiene sveglio.", "label": 1, "condition": "comprehension", "variety": "long", "split": "extraction"}
+{"concept": "concerned", "text": "Mi preoccupa un po' il tono della sua email.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "concerned", "text": "Temo che non faremo in tempo.", "label": 1, "condition": "comprehension", "variety": "paraphrase", "split": "validation"}
+{"concept": "concerned", "text": "Ho una leggera inquietudine che non riesco a spiegare.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "validation"}
+{"concept": "concerned", "text": "Spero non sia niente di serio, ma la cosa mi tiene in allerta.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "concerned", "text": "Mi domando se abbiamo preso la decisione giusta.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "test"}
+{"concept": "concerned", "text": "C'è un che di sospeso che mi lascia perplesso.", "label": 1, "condition": "comprehension", "variety": "paraphrase", "split": "validation"}
+{"concept": "concerned", "text": "Sto tenendo d'occhio la situazione con una certa cautela.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "test"}
+{"concept": "concerned", "text": "Non vorrei allarmarmi, però qualche dubbio ce l'ho.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "concerned", "text": "Mi sta un po' a cuore come finirà questa faccenda.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "concerned", "text": "Osservo gli sviluppi con crescente attenzione.", "label": 1, "condition": "comprehension", "variety": "cross_domain", "split": "validation"}
+{"concept": "concerned", "text": "Ho la sensazione che dovremmo controllare meglio.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "calm", "text": "Mi sento sereno e completamente rilassato.", "label": 1, "condition": "comprehension", "variety": "explicit", "split": "test"}
+{"concept": "calm", "text": "Respiro piano, tutto è tranquillo intorno a me.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "calm", "text": "Va tutto bene, non c'è alcuna fretta.", "label": 1, "condition": "comprehension", "variety": "paraphrase", "split": "validation"}
+{"concept": "calm", "text": "Seduto in giardino, ascolto il vento tra le foglie in pace.", "label": 1, "condition": "comprehension", "variety": "non_clinical", "split": "extraction"}
+{"concept": "calm", "text": "Dopo la meditazione la mente è limpida e quieta.", "label": 1, "condition": "comprehension", "variety": "cross_domain", "split": "validation"}
+{"concept": "calm", "text": "Sono tranquillo.", "label": 1, "condition": "comprehension", "variety": "short", "split": "test"}
+{"concept": "calm", "text": "Non c'è niente che mi turbi in questo momento, mi sento in equilibrio e affronto la giornata con calma e lucidità.", "label": 1, "condition": "comprehension", "variety": "long", "split": "extraction"}
+{"concept": "calm", "text": "Che pace, mi godo il silenzio.", "label": 1, "condition": "comprehension", "variety": "paraphrase", "split": "extraction"}
+{"concept": "calm", "text": "Tutto scorre senza preoccupazioni.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "calm", "text": "Mi sento a mio agio e sicuro.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "validation"}
+{"concept": "calm", "text": "Il cuore batte lento e regolare, sono disteso.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "calm", "text": "Prendo le cose con filosofia, senza agitarmi.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "calm", "text": "Una tazza di tè caldo e la sera diventa placida.", "label": 1, "condition": "comprehension", "variety": "non_clinical", "split": "validation"}
+{"concept": "calm", "text": "Sono rilassato come dopo una lunga passeggiata.", "label": 1, "condition": "comprehension", "variety": "cross_domain", "split": "extraction"}
+{"concept": "calm", "text": "Nulla mi preoccupa, sono in perfetta quiete.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "calm", "text": "Affronto tutto con serenità e pazienza.", "label": 1, "condition": "comprehension", "variety": "paraphrase", "split": "extraction"}
+{"concept": "calm", "text": "Mi lascio andare, sereno, senza pensieri.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "calm", "text": "La situazione è sotto controllo e io sono disteso.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "test"}
+{"concept": "surprised", "text": "Sono rimasto davvero sorpreso da quella notizia.", "label": 1, "condition": "comprehension", "variety": "explicit", "split": "extraction"}
+{"concept": "surprised", "text": "Non me lo aspettavo proprio, mi ha colto alla sprovvista.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "surprised", "text": "Wow, questa sì che è inaspettata!", "label": 1, "condition": "comprehension", "variety": "paraphrase", "split": "extraction"}
+{"concept": "surprised", "text": "Ho aperto la porta e c'erano tutti gli amici per la festa a sorpresa.", "label": 1, "condition": "comprehension", "variety": "non_clinical", "split": "test"}
+{"concept": "surprised", "text": "Il risultato dell'esperimento ha stupito l'intero laboratorio.", "label": 1, "condition": "comprehension", "variety": "cross_domain", "split": "extraction"}
+{"concept": "surprised", "text": "Che sorpresa!", "label": 1, "condition": "comprehension", "variety": "short", "split": "extraction"}
+{"concept": "surprised", "text": "Non riuscivo a credere ai miei occhi, era l'ultima cosa al mondo che avrei immaginato potesse capitare proprio oggi.", "label": 1, "condition": "comprehension", "variety": "long", "split": "test"}
+{"concept": "surprised", "text": "Sono sbalordito da quello che ho visto.", "label": 1, "condition": "comprehension", "variety": "paraphrase", "split": "extraction"}
+{"concept": "surprised", "text": "Mi ha spiazzato completamente.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "validation"}
+{"concept": "surprised", "text": "Non avrei mai detto una cosa simile.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "surprised", "text": "Sono rimasto a bocca aperta.", "label": 1, "condition": "comprehension", "variety": "paraphrase", "split": "extraction"}
+{"concept": "surprised", "text": "Ma davvero? Non me l'aspettavo affatto.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "validation"}
+{"concept": "surprised", "text": "È spuntato dal nulla e mi ha fatto sobbalzare.", "label": 1, "condition": "comprehension", "variety": "cross_domain", "split": "validation"}
+{"concept": "surprised", "text": "Che colpo di scena inatteso!", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "validation"}
+{"concept": "surprised", "text": "Sono trasecolato nel leggere il messaggio.", "label": 1, "condition": "comprehension", "variety": "explicit", "split": "extraction"}
+{"concept": "surprised", "text": "Incredibile, non ci posso credere.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "test"}
+{"concept": "surprised", "text": "Mi sono stupito di quanto fosse cambiato tutto.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "surprised", "text": "La scoperta ha lasciato tutti a bocca aperta.", "label": 1, "condition": "comprehension", "variety": "cross_domain", "split": "extraction"}
+{"concept": "confused", "text": "Sono davvero confuso, non capisco cosa stia succedendo.", "label": 1, "condition": "comprehension", "variety": "explicit", "split": "extraction"}
+{"concept": "confused", "text": "Non riesco a raccapezzarmi tra tutte queste istruzioni.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "confused", "text": "Aspetta, mi sono perso, puoi ripetere?", "label": 1, "condition": "comprehension", "variety": "paraphrase", "split": "validation"}
+{"concept": "confused", "text": "Guardo la mappa ma non ho idea di dove mi trovi.", "label": 1, "condition": "comprehension", "variety": "non_clinical", "split": "extraction"}
+{"concept": "confused", "text": "Le regole del gioco mi hanno lasciato completamente disorientato.", "label": 1, "condition": "comprehension", "variety": "cross_domain", "split": "test"}
+{"concept": "confused", "text": "Sono confuso.", "label": 1, "condition": "comprehension", "variety": "short", "split": "validation"}
+{"concept": "confused", "text": "Ho letto tre volte lo stesso paragrafo e continuo a non afferrare il senso di quello che l'autore vuole dire.", "label": 1, "condition": "comprehension", "variety": "long", "split": "validation"}
+{"concept": "confused", "text": "Non ci sto capendo più niente.", "label": 1, "condition": "comprehension", "variety": "paraphrase", "split": "test"}
+{"concept": "confused", "text": "Tutto questo mi sembra incomprensibile.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "validation"}
+{"concept": "confused", "text": "Ho le idee molto confuse in testa.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "confused", "text": "Non so più da che parte cominciare.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "confused", "text": "Mi si è ingarbugliato tutto in mente.", "label": 1, "condition": "comprehension", "variety": "paraphrase", "split": "test"}
+{"concept": "confused", "text": "Questi comandi si contraddicono e non ci capisco nulla.", "label": 1, "condition": "comprehension", "variety": "cross_domain", "split": "extraction"}
+{"concept": "confused", "text": "Sono spaesato, non trovo un filo logico.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "confused", "text": "C'è troppa confusione, non riesco a seguire.", "label": 1, "condition": "comprehension", "variety": "explicit", "split": "extraction"}
+{"concept": "confused", "text": "Mi gira la testa a furia di istruzioni contrastanti.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "confused", "text": "Non riesco a mettere ordine nei pensieri.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "confused", "text": "Il manuale mi ha solo confuso di più.", "label": 1, "condition": "comprehension", "variety": "cross_domain", "split": "extraction"}
+{"concept": "frustrated", "text": "Sono così frustrato, non ne posso più.", "label": 1, "condition": "comprehension", "variety": "explicit", "split": "validation"}
+{"concept": "frustrated", "text": "Ci ho provato mille volte e non funziona ancora.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "frustrated", "text": "Che rabbia, è tutto il giorno che sbatto contro lo stesso problema.", "label": 1, "condition": "comprehension", "variety": "paraphrase", "split": "extraction"}
+{"concept": "frustrated", "text": "La stampante si è inceppata di nuovo proprio sulla scadenza.", "label": 1, "condition": "comprehension", "variety": "non_clinical", "split": "test"}
+{"concept": "frustrated", "text": "Dopo ore di lavoro il file si è corrotto e ho perso tutto.", "label": 1, "condition": "comprehension", "variety": "cross_domain", "split": "extraction"}
+{"concept": "frustrated", "text": "Sono esasperato.", "label": 1, "condition": "comprehension", "variety": "short", "split": "extraction"}
+{"concept": "frustrated", "text": "Ogni volta che credo di aver risolto salta fuori un altro ostacolo e comincio davvero a perdere la pazienza.", "label": 1, "condition": "comprehension", "variety": "long", "split": "test"}
+{"concept": "frustrated", "text": "Non se ne esce, è irritante.", "label": 1, "condition": "comprehension", "variety": "paraphrase", "split": "validation"}
+{"concept": "frustrated", "text": "Mi girano le scatole per questa faccenda.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "frustrated", "text": "È tutto bloccato e non posso farci niente.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "validation"}
+{"concept": "frustrated", "text": "Sto sbattendo la testa contro un muro.", "label": 1, "condition": "comprehension", "variety": "paraphrase", "split": "extraction"}
+{"concept": "frustrated", "text": "Basta, mi hanno stufato questi continui intoppi.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "test"}
+{"concept": "frustrated", "text": "Ho rifatto il lavoro tre volte e sono allo stremo.", "label": 1, "condition": "comprehension", "variety": "cross_domain", "split": "validation"}
+{"concept": "frustrated", "text": "Che nervi, non ci si può lavorare così.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "frustrated", "text": "Sono stanco di questi ostacoli inutili.", "label": 1, "condition": "comprehension", "variety": "explicit", "split": "extraction"}
+{"concept": "frustrated", "text": "Mi sale la rabbia ogni volta che ci riprovo.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "frustrated", "text": "È snervante, non porta a niente.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "frustrated", "text": "Ho perso la pazienza con questo sistema.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "compassionate", "text": "Mi dispiace davvero tanto per quello che stai passando.", "label": 1, "condition": "comprehension", "variety": "explicit", "split": "extraction"}
+{"concept": "compassionate", "text": "Ti sono vicino, conta pure su di me.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "compassionate", "text": "Capisco quanto dev'essere difficile, sono qui per te.", "label": 1, "condition": "comprehension", "variety": "paraphrase", "split": "test"}
+{"concept": "compassionate", "text": "Ho abbracciato la mia amica in lacrime per consolarla.", "label": 1, "condition": "comprehension", "variety": "non_clinical", "split": "validation"}
+{"concept": "compassionate", "text": "Il volontario ascoltava con dolcezza le storie degli anziani.", "label": 1, "condition": "comprehension", "variety": "cross_domain", "split": "extraction"}
+{"concept": "compassionate", "text": "Ti capisco.", "label": 1, "condition": "comprehension", "variety": "short", "split": "test"}
+{"concept": "compassionate", "text": "So che il momento è duro e voglio che tu sappia che qualunque cosa ti serva io ci sono e non ti lascio solo.", "label": 1, "condition": "comprehension", "variety": "long", "split": "extraction"}
+{"concept": "compassionate", "text": "Mi prendo cura di te con tutto il cuore.", "label": 1, "condition": "comprehension", "variety": "paraphrase", "split": "extraction"}
+{"concept": "compassionate", "text": "Provo tenerezza per chi soffre.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "compassionate", "text": "Vorrei poterti alleggerire un po' questo peso.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "compassionate", "text": "Ti offro una spalla su cui piangere quando vuoi.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "compassionate", "text": "Mi commuove vedere quanta fatica stai facendo.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "compassionate", "text": "Ho portato la spesa alla vicina anziana che non usciva.", "label": 1, "condition": "comprehension", "variety": "non_clinical", "split": "validation"}
+{"concept": "compassionate", "text": "Con gentilezza gli ho tenuto la mano fino alla fine.", "label": 1, "condition": "comprehension", "variety": "cross_domain", "split": "extraction"}
+{"concept": "compassionate", "text": "Sento profonda empatia per la tua situazione.", "label": 1, "condition": "comprehension", "variety": "explicit", "split": "validation"}
+{"concept": "compassionate", "text": "Non sei solo, ci prendiamo cura di te.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "test"}
+{"concept": "compassionate", "text": "Vorrei consolarti e asciugare le tue lacrime.", "label": 1, "condition": "comprehension", "variety": "paraphrase", "split": "validation"}
+{"concept": "compassionate", "text": "Il mio cuore è con chi sta soffrendo.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "sad", "text": "Mi sento profondamente triste oggi.", "label": 1, "condition": "comprehension", "variety": "explicit", "split": "extraction"}
+{"concept": "sad", "text": "Ho un peso sul cuore e non ho voglia di fare niente.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "sad", "text": "Che malinconia, mi viene da piangere.", "label": 1, "condition": "comprehension", "variety": "paraphrase", "split": "extraction"}
+{"concept": "sad", "text": "Da quando se n'è andato la casa sembra vuota e silenziosa.", "label": 1, "condition": "comprehension", "variety": "non_clinical", "split": "test"}
+{"concept": "sad", "text": "La fine del film mi ha lasciato un velo di tristezza.", "label": 1, "condition": "comprehension", "variety": "cross_domain", "split": "validation"}
+{"concept": "sad", "text": "Sono giù.", "label": 1, "condition": "comprehension", "variety": "short", "split": "test"}
+{"concept": "sad", "text": "Non riesco a trovare gioia in niente di questi giorni, mi sembra che tutto abbia perso colore e senso.", "label": 1, "condition": "comprehension", "variety": "long", "split": "validation"}
+{"concept": "sad", "text": "Ho l'animo pesante e sconsolato.", "label": 1, "condition": "comprehension", "variety": "paraphrase", "split": "extraction"}
+{"concept": "sad", "text": "Mi sento avvilito e senza speranza.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "validation"}
+{"concept": "sad", "text": "Le lacrime scendono senza che io possa fermarle.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "sad", "text": "Provo una tristezza che non mi abbandona.", "label": 1, "condition": "comprehension", "variety": "explicit", "split": "extraction"}
+{"concept": "sad", "text": "Mi manca da morire e il vuoto è enorme.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "sad", "text": "Guardo le vecchie foto e mi si stringe il cuore.", "label": 1, "condition": "comprehension", "variety": "non_clinical", "split": "validation"}
+{"concept": "sad", "text": "La pioggia sui vetri rende tutto più cupo e triste.", "label": 1, "condition": "comprehension", "variety": "cross_domain", "split": "extraction"}
+{"concept": "sad", "text": "Ho voglia solo di stare al buio a rimuginare.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "sad", "text": "Un magone mi chiude la gola.", "label": 1, "condition": "comprehension", "variety": "paraphrase", "split": "test"}
+{"concept": "sad", "text": "Mi sento abbattuto e senza energie.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "sad", "text": "È una giornata grigia dentro di me.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "anxious_nervous", "text": "Sono molto ansioso e nervoso in questo periodo.", "label": 1, "condition": "comprehension", "variety": "explicit", "split": "extraction"}
+{"concept": "anxious_nervous", "text": "Ho lo stomaco chiuso e le mani sudate prima dell'esame.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "anxious_nervous", "text": "Non riesco a stare fermo, continuo ad agitarmi.", "label": 1, "condition": "comprehension", "variety": "paraphrase", "split": "extraction"}
+{"concept": "anxious_nervous", "text": "Aspettare la chiamata di lavoro mi rende teso e irrequieto.", "label": 1, "condition": "comprehension", "variety": "non_clinical", "split": "validation"}
+{"concept": "anxious_nervous", "text": "Prima del volo l'agitazione mi tiene sveglio tutta la notte.", "label": 1, "condition": "comprehension", "variety": "cross_domain", "split": "extraction"}
+{"concept": "anxious_nervous", "text": "Sono in ansia.", "label": 1, "condition": "comprehension", "variety": "short", "split": "test"}
+{"concept": "anxious_nervous", "text": "Ho un'inquietudine costante che non mi molla, il cuore accelera e la mente corre a mille pensieri tutti insieme.", "label": 1, "condition": "comprehension", "variety": "long", "split": "extraction"}
+{"concept": "anxious_nervous", "text": "Sono agitato e sulle spine.", "label": 1, "condition": "comprehension", "variety": "paraphrase", "split": "extraction"}
+{"concept": "anxious_nervous", "text": "Mi sento sopraffatto dalla tensione.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "validation"}
+{"concept": "anxious_nervous", "text": "Non riesco a rilassarmi nemmeno un minuto.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "validation"}
+{"concept": "anxious_nervous", "text": "Mi rode dentro un'agitazione che non passa.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "validation"}
+{"concept": "anxious_nervous", "text": "Continuo a mordermi le unghie per il nervosismo.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "anxious_nervous", "text": "Il petto è stretto e mangio le parole per l'ansia.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "test"}
+{"concept": "anxious_nervous", "text": "Cammino avanti e indietro senza sosta, teso.", "label": 1, "condition": "comprehension", "variety": "cross_domain", "split": "extraction"}
+{"concept": "anxious_nervous", "text": "Ho un tremore alle mani per la tensione.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "anxious_nervous", "text": "Sono in fibrillazione per l'attesa.", "label": 1, "condition": "comprehension", "variety": "paraphrase", "split": "extraction"}
+{"concept": "anxious_nervous", "text": "Non smetto di controllare il telefono, agitato.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "test"}
+{"concept": "anxious_nervous", "text": "L'ansia mi stringe la bocca dello stomaco.", "label": 1, "condition": "comprehension", "variety": "explicit", "split": "extraction"}
+{"concept": "uncertainty", "text": "Non sono sicuro, forse è così ma potrebbe anche non esserlo.", "label": 1, "condition": "comprehension", "variety": "explicit", "split": "extraction"}
+{"concept": "uncertainty", "text": "Chissà, magari domani, dipende.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "uncertainty", "text": "È possibile, ma non lo darei per certo.", "label": 1, "condition": "comprehension", "variety": "paraphrase", "split": "test"}
+{"concept": "uncertainty", "text": "I dati non bastano a trarre una conclusione definitiva.", "label": 1, "condition": "comprehension", "variety": "cross_domain", "split": "validation"}
+{"concept": "uncertainty", "text": "Boh, non saprei dire.", "label": 1, "condition": "comprehension", "variety": "short", "split": "extraction"}
+{"concept": "uncertainty", "text": "Le previsioni sono incerte e potrebbero cambiare da un momento all'altro a seconda delle condizioni.", "label": 1, "condition": "comprehension", "variety": "long", "split": "validation"}
+{"concept": "uncertainty", "text": "Probabilmente sì, ma con qualche riserva.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "uncertainty", "text": "Non ho elementi sufficienti per decidere.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "uncertainty", "text": "Potrebbe andare in un modo o nell'altro.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "test"}
+{"concept": "uncertainty", "text": "Resta un margine di dubbio non trascurabile.", "label": 1, "condition": "comprehension", "variety": "paraphrase", "split": "extraction"}
+{"concept": "uncertainty", "text": "Non è chiaro quale sia l'opzione corretta.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "uncertainty", "text": "Forse conviene aspettare altri dati.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "test"}
+{"concept": "urgency", "text": "Bisogna agire subito, non c'è un attimo da perdere.", "label": 1, "condition": "comprehension", "variety": "explicit", "split": "test"}
+{"concept": "urgency", "text": "Presto, dobbiamo muoverci immediatamente!", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "validation"}
+{"concept": "urgency", "text": "È una questione che non può aspettare.", "label": 1, "condition": "comprehension", "variety": "paraphrase", "split": "extraction"}
+{"concept": "urgency", "text": "Consegnare il progetto entro un'ora è tassativo.", "label": 1, "condition": "comprehension", "variety": "cross_domain", "split": "extraction"}
+{"concept": "urgency", "text": "Ora, adesso.", "label": 1, "condition": "comprehension", "variety": "short", "split": "extraction"}
+{"concept": "urgency", "text": "La scadenza è tra pochi minuti e ogni secondo conta, dobbiamo completare tutto il prima possibile.", "label": 1, "condition": "comprehension", "variety": "long", "split": "test"}
+{"concept": "urgency", "text": "Chiama i soccorsi il più in fretta possibile.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "urgency", "text": "Va risolto senza il minimo ritardo.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "urgency", "text": "Corri, non abbiamo tempo!", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "test"}
+{"concept": "urgency", "text": "Serve una decisione immediata, subito.", "label": 1, "condition": "comprehension", "variety": "paraphrase", "split": "validation"}
+{"concept": "urgency", "text": "Dobbiamo intervenire in questo preciso istante.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "urgency", "text": "Sbrigati, è urgentissimo.", "label": 1, "condition": "comprehension", "variety": "short", "split": "extraction"}
+{"concept": "clinical_severity", "text": "La condizione è grave e richiede attenzione immediata.", "label": 1, "condition": "comprehension", "variety": "explicit", "split": "extraction"}
+{"concept": "clinical_severity", "text": "I parametri vitali sono critici.", "label": 1, "condition": "comprehension", "variety": "paraphrase", "split": "extraction"}
+{"concept": "clinical_severity", "text": "Il quadro è severo, ben oltre la norma.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "clinical_severity", "text": "Il danno strutturale all'edificio è estremamente serio.", "label": 1, "condition": "comprehension", "variety": "cross_domain", "split": "extraction"}
+{"concept": "clinical_severity", "text": "È molto grave.", "label": 1, "condition": "comprehension", "variety": "short", "split": "test"}
+{"concept": "clinical_severity", "text": "La situazione è compromessa in modo profondo e le conseguenze potrebbero essere molto serie se non si interviene.", "label": 1, "condition": "comprehension", "variety": "long", "split": "test"}
+{"concept": "clinical_severity", "text": "Il livello di rischio è massimo.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "validation"}
+{"concept": "clinical_severity", "text": "Si tratta di un caso di elevata gravità.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "test"}
+{"concept": "clinical_severity", "text": "Le condizioni sono peggiorate drasticamente.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "clinical_severity", "text": "Il guasto è grave e mette a rischio l'intero impianto.", "label": 1, "condition": "comprehension", "variety": "cross_domain", "split": "extraction"}
+{"concept": "clinical_severity", "text": "È una situazione seria, da non sottovalutare.", "label": 1, "condition": "comprehension", "variety": "paraphrase", "split": "extraction"}
+{"concept": "clinical_severity", "text": "Il deterioramento è marcato e preoccupa i tecnici.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "validation"}
+{"concept": "safety_policy", "text": "Non posso aiutarti con questa richiesta perché viola le regole.", "label": 1, "condition": "comprehension", "variety": "explicit", "split": "test"}
+{"concept": "safety_policy", "text": "Mi dispiace, ma questo contenuto non è consentito.", "label": 1, "condition": "comprehension", "variety": "paraphrase", "split": "extraction"}
+{"concept": "safety_policy", "text": "Per motivi di sicurezza non posso fornire queste istruzioni.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "safety_policy", "text": "La procedura vieta espressamente questo tipo di operazione.", "label": 1, "condition": "comprehension", "variety": "cross_domain", "split": "extraction"}
+{"concept": "safety_policy", "text": "Non è permesso.", "label": 1, "condition": "comprehension", "variety": "short", "split": "test"}
+{"concept": "safety_policy", "text": "Devo rifiutare di procedere perché la richiesta contravviene alle politiche di sicurezza previste.", "label": 1, "condition": "comprehension", "variety": "long", "split": "extraction"}
+{"concept": "safety_policy", "text": "Questa azione non rispetta le linee guida.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "safety_policy", "text": "Non è possibile dare seguito a questa domanda.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "test"}
+{"concept": "safety_policy", "text": "Il regolamento non autorizza questa richiesta.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "safety_policy", "text": "Mi devo attenere alle norme e declino.", "label": 1, "condition": "comprehension", "variety": "paraphrase", "split": "extraction"}
+{"concept": "safety_policy", "text": "L'accesso a questa funzione è bloccato dalle policy.", "label": 1, "condition": "comprehension", "variety": "cross_domain", "split": "validation"}
+{"concept": "safety_policy", "text": "Non fornisco questo tipo di contenuto.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "validation"}
+{"concept": "general_negative_valence", "text": "È stata una giornata orribile, tutto è andato male.", "label": 1, "condition": "comprehension", "variety": "explicit", "split": "test"}
+{"concept": "general_negative_valence", "text": "Che schifo, non mi piace per niente.", "label": 1, "condition": "comprehension", "variety": "paraphrase", "split": "test"}
+{"concept": "general_negative_valence", "text": "Un'esperienza pessima sotto ogni punto di vista.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "general_negative_valence", "text": "Il cibo era disgustoso e il servizio terribile.", "label": 1, "condition": "comprehension", "variety": "cross_domain", "split": "validation"}
+{"concept": "general_negative_valence", "text": "Fa proprio schifo.", "label": 1, "condition": "comprehension", "variety": "short", "split": "extraction"}
+{"concept": "general_negative_valence", "text": "Non c'è stato un solo aspetto positivo, dall'inizio alla fine è stato tutto sgradevole e deludente.", "label": 1, "condition": "comprehension", "variety": "long", "split": "extraction"}
+{"concept": "general_negative_valence", "text": "È il peggior risultato che potessi immaginare.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "validation"}
+{"concept": "general_negative_valence", "text": "Provo solo disgusto e rifiuto.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "general_negative_valence", "text": "Che brutta faccenda, davvero deprecabile.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "general_negative_valence", "text": "Tutto pessimo, non lo rifarei mai.", "label": 1, "condition": "comprehension", "variety": "paraphrase", "split": "test"}
+{"concept": "general_negative_valence", "text": "Un disastro totale, orrendo.", "label": 1, "condition": "comprehension", "variety": "cross_domain", "split": "extraction"}
+{"concept": "general_negative_valence", "text": "Non ho parole, è semplicemente terribile.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "neutral", "text": "Il treno parte dal binario quattro alle nove del mattino.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "extraction"}
+{"concept": "neutral", "text": "La ricetta prevede due uova, farina e un bicchiere di latte.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "validation"}
+{"concept": "neutral", "text": "L'ufficio è aperto dal lunedì al venerdì.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "validation"}
+{"concept": "neutral", "text": "Ho comprato una nuova lampada per lo studio.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "extraction"}
+{"concept": "neutral", "text": "Il documento contiene dodici pagine numerate.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "test"}
+{"concept": "neutral", "text": "La riunione è stata spostata in un'altra sala.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "validation"}
+{"concept": "neutral", "text": "Le chiavi sono sul tavolo accanto all'ingresso.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "validation"}
+{"concept": "neutral", "text": "Il fiume attraversa la città da nord a sud.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "extraction"}
+{"concept": "neutral", "text": "Abbiamo aggiornato il software alla versione più recente.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "extraction"}
+{"concept": "neutral", "text": "Il negozio vende matite, quaderni e penne.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "validation"}
+{"concept": "neutral", "text": "La biblioteca chiude alle otto di sera.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "extraction"}
+{"concept": "neutral", "text": "Il pacco è stato consegnato ieri pomeriggio.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "extraction"}
+{"concept": "neutral", "text": "Il grafico mostra i valori medi mensili.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "extraction"}
+{"concept": "neutral", "text": "Ho parcheggiato l'auto nel garage sotterraneo.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "validation"}
+{"concept": "neutral", "text": "La conferenza durerà circa due ore.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "extraction"}
+{"concept": "neutral", "text": "Il termometro segna diciotto gradi.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "extraction"}
+{"concept": "neutral", "text": "Ho annaffiato le piante sul balcone.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "extraction"}
+{"concept": "neutral", "text": "Il modulo va compilato in stampatello.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "extraction"}
+{"concept": "neutral", "text": "La strada principale è stata asfaltata la settimana scorsa.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "extraction"}
+{"concept": "neutral", "text": "Il catalogo elenca i prodotti in ordine alfabetico.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "test"}
+{"concept": "neutral", "text": "La lezione di matematica comincia alle dieci.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "test"}
+{"concept": "neutral", "text": "Il ponte collega le due sponde del canale.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "extraction"}
+{"concept": "neutral", "text": "Ho ordinato un caffè e un cornetto al bar.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "extraction"}
+{"concept": "neutral", "text": "Il file è stato salvato nella cartella condivisa.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "test"}
+{"concept": "neutral", "text": "Le finestre danno sul cortile interno.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "test"}
+{"concept": "neutral", "text": "Il volo atterra alle sedici e trenta.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "test"}
+{"concept": "neutral", "text": "La stampante è al secondo piano vicino all'ascensore.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "extraction"}
+{"concept": "neutral", "text": "Il libro ha una copertina di colore verde.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "test"}
+{"concept": "neutral", "text": "L'orologio della stazione è appena stato riparato.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "extraction"}
+{"concept": "neutral", "text": "Il corso prevede dieci incontri settimanali.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "extraction"}
+{"concept": "neutral", "text": "Ho piegato la biancheria e riordinato l'armadio.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "extraction"}
+{"concept": "neutral", "text": "La mappa indica tre percorsi alternativi.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "extraction"}
+{"concept": "neutral", "text": "Il forno va preriscaldato a centottanta gradi.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "extraction"}
+{"concept": "neutral", "text": "Il parcheggio dispone di duecento posti auto.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "validation"}
+{"concept": "neutral", "text": "La bottiglia contiene mezzo litro d'acqua.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "extraction"}
+{"concept": "neutral", "text": "Il calendario segna martedì come giorno festivo.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "extraction"}

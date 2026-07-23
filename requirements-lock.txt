@@ -1,0 +1,17 @@
+# Core Phase-1 dependencies (pinned to the versions installed & tested in .venv).
+# Regenerate after any change with:  .venv/Scripts/python.exe -m pip freeze > requirements-lock.txt
+#
+# The heavy ML stack (torch/transformers/... for Phases 2-4) is intentionally NOT
+# locked here — it is platform/CUDA specific. On the local NVIDIA T1000 install a
+# cu121 torch build; on Colab use the provided GPU torch. See README "Phase 2".
+#
+# Phase-1 core (installed in .venv):
+pydantic>=2.7
+pyyaml>=6
+numpy>=1.26
+rapidfuzz>=3
+fastapi>=0.115
+uvicorn>=0.30
+# dev / test:
+pytest>=8
+httpx>=0.27

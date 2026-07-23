@@ -1,0 +1,36 @@
+# Terminology configuration (spec sections 2-3).
+
+pro_ctcae:
+  terms_file: "terminology/pro_ctcae_terms.json"
+  expected_term_count: 80
+  # Official Italian PRO-CTCAE PDF (PROVIDED). Extract labels with
+  # scripts/extract_pro_ctcae_italian.py -> terminology/official/pro_ctcae_italian_labels.json
+  official_italian_pdf: "pro-ctcae_italian.pdf"
+  official_labels_file: "terminology/official/pro_ctcae_italian_labels.json"
+  source_version: "NCI PRO-CTCAE Italian Item Library Version 1.0 (4/21/2022)"
+  source_reference: "pro-ctcae_italian.pdf"
+
+ctcae:
+  version: "6.0"
+  # Official CTCAE v6.0 PDF (PROVIDED). Extract with scripts/extract_ctcae_v6.py
+  # -> terminology/official/ctcae_v6.json (850 terms, English/MedDRA 28.0).
+  official_pdf: "CTCAEv6_Jan2026.pdf"
+  official_file: "terminology/official/ctcae_v6.json"
+  italian_bridge: "terminology/ctcae_italian_bridge.json"
+  synthetic_fallback: "terminology/ctcae_v6_synthetic.json"
+  allow_synthetic: true   # only used when the official file is absent (CI)
+
+provenance_rules:
+  # Keep these buckets strictly separate (spec section 3):
+  keep_separate:
+    - official_italian_labels
+    - reviewed_synonyms
+    - auto_synonyms
+    - synthetic_synonyms        # (stored in `synonyms` + `common_patient_phrases`)
+  trust_order:
+    - official_italian_label
+    - canonical_english
+    - reviewed_synonym
+    - auto_synonym
+    - synthetic_synonym
+    - synthetic_patient_phrase

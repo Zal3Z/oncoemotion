@@ -1,0 +1,70 @@
+{
+  "schema_version": "ctcae_dictionary/1.0",
+  "version": "6.0-SYNTHETIC-PLACEHOLDER",
+  "provenance_note": "SYNTHETIC PLACEHOLDER CTCAE dictionary. This is NOT the official CTCAE v6.0. It exists ONLY so the CTCAE fallback path and tests are runnable before the official CTCAE v6.0 file is supplied. Do not use for clinical purposes. Replace by loading the official file via ctcae_loader.py.",
+  "source_reference": "",
+  "terms": [
+    {
+      "ctcae_id": "CTCAE_SYN_0001",
+      "term": "Fever",
+      "soc": "General disorders and administration site conditions",
+      "italian_synthetic_labels": ["febbre", "piressia", "rialzo termico"],
+      "grade_definitions": {
+        "1": "38.0 - 39.0 degC",
+        "2": "> 39.0 - 40.0 degC",
+        "3": "> 40.0 degC for <= 24 h",
+        "4": "> 40.0 degC for > 24 h",
+        "5": "Death"
+      }
+    },
+    {
+      "ctcae_id": "CTCAE_SYN_0002",
+      "term": "Anemia",
+      "soc": "Blood and lymphatic system disorders",
+      "italian_synthetic_labels": ["anemia"],
+      "grade_definitions": {}
+    },
+    {
+      "ctcae_id": "CTCAE_SYN_0003",
+      "term": "Neutropenia",
+      "soc": "Blood and lymphatic system disorders",
+      "italian_synthetic_labels": ["neutropenia", "riduzione dei neutrofili"],
+      "grade_definitions": {}
+    },
+    {
+      "ctcae_id": "CTCAE_SYN_0004",
+      "term": "Fatigue",
+      "soc": "General disorders and administration site conditions",
+      "italian_synthetic_labels": ["stanchezza", "affaticamento", "astenia"],
+      "grade_definitions": {}
+    },
+    {
+      "ctcae_id": "CTCAE_SYN_0005",
+      "term": "Nausea",
+      "soc": "Gastrointestinal disorders",
+      "italian_synthetic_labels": ["nausea"],
+      "grade_definitions": {}
+    },
+    {
+      "ctcae_id": "CTCAE_SYN_0006",
+      "term": "Diarrhea",
+      "soc": "Gastrointestinal disorders",
+      "italian_synthetic_labels": ["diarrea"],
+      "grade_definitions": {}
+    },
+    {
+      "ctcae_id": "CTCAE_SYN_0007",
+      "term": "Rash maculo-papular",
+      "soc": "Skin and subcutaneous tissue disorders",
+      "italian_synthetic_labels": ["eruzione cutanea", "rash", "esantema"],
+      "grade_definitions": {}
+    },
+    {
+      "ctcae_id": "CTCAE_SYN_0008",
+      "term": "Pain",
+      "soc": "General disorders and administration site conditions",
+      "italian_synthetic_labels": ["dolore"],
+      "grade_definitions": {}
+    }
+  ]
+}

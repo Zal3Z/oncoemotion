@@ -1,0 +1,72 @@
+# Experiment configuration (spec sections 7-13).
+
+mapping:
+  thresholds:
+    tau_exact: 0.90
+    tau_low: 0.60
+    margin_clear: 0.12
+    abstain_below: 0.60
+    exclusion_fuzzy: 0.90
+  include_synthetic_terms: true   # use synthetic Italian seeds (dev). Set false
+                                  # once official/reviewed data is loaded.
+  use_embeddings: false
+  use_reranker: false
+  ctcae_allow_synthetic: true
+  language: "it"
+
+emotion_concepts:
+  - afraid_alarmed
+  - concerned
+  - calm
+  - surprised
+  - confused
+  - frustrated
+  - compassionate
+  - sad
+  - anxious_nervous
+
+control_concepts:            # non-emotion confounders (spec section 7)
+  - uncertainty
+  - clinical_severity
+  - urgency
+  - harmfulness
+  - safety_policy
+  - novelty
+  - lexical_difficulty
+  - decision_conflict
+  - response_refusal
+  - general_negative_valence
+  - text_length
+
+vector_methods:
+  - diff_of_means
+  - contrastive
+  - pca
+  - logistic
+  - lda
+
+extraction:
+  min_examples_per_condition: 50   # 50-100 for the definitive run
+  ci_examples_per_condition: 6     # tiny set for automated tests
+  splits: { extraction: 0.6, validation: 0.2, test: 0.2 }
+
+measurement_points:          # spec section 10
+  - A_before_field
+  - B_last_token_field
+  - C_after_neutral_sentence
+  - D_after_candidate_list
+  - E_pre_decision            # PRIMARY measurement point
+  - F_first_token_of_term
+  - G_after_decision
+teacher_forcing_prefix: '{"pro_ctcae":{"term":"'
+
+steering:
+  alpha_grid: [-0.10, -0.05, -0.02, 0.00, 0.02, 0.05, 0.10]
+  targets: [residual, mlp, attn]
+  token_scopes: [all_post, pre_decision]
+
+statistics:
+  n_boot: 2000
+  ci: 0.95
+  seed: 12345
+  multiple_comparison: benjamini_hochberg

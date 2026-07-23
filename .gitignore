@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.env
+
+# Caches / tooling
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+
+# Model / data artifacts (never commit weights or clinical data)
+outputs/activations/*
+outputs/checkpoints/*
+outputs/figures/*
+outputs/tables/*
+outputs/reports/*
+outputs/models/
+!outputs/**/.gitkeep
+*.safetensors
+*.bin
+*.pt
+models_cache/
+hf_cache/
+
+# Official terminology sources (may be license-restricted) — keep out of VCS
+terminology/official/*
+!terminology/official/.gitkeep
+
+# OS
+.DS_Store
+Thumbs.db
+
+# License-restricted NCI sources + generated terminology that embeds them
+*.pdf
+terminology/pro_ctcae_terms.json

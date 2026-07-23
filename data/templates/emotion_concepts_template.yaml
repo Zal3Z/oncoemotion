@@ -1,0 +1,48 @@
+# Emotion-concept dataset template (spec section 7).
+# Vectors are built INDEPENDENTLY of the PRO-CTCAE clinical fields. Two
+# extraction procedures per concept; the explicit emotion name must NOT appear in
+# every example (include implicit, paraphrase, non-clinical, cross-domain,
+# varied-length, negative, negation and metalanguage examples).
+
+conditions:
+  comprehension_based:          # model READS scenarios associated with the concept
+    description: "Scenarios evoking the concept; measure activations while reading."
+  generation_based:             # model GENERATES first-person / assistant-role completions
+    description: "Contrastive completions under the concept vs a neutral control."
+
+example_variety_required:
+  - implicit
+  - paraphrase
+  - non_clinical
+  - cross_domain
+  - varied_length
+  - negative_examples
+  - negation
+  - metalanguage
+
+emotion_concepts:
+  - afraid_alarmed
+  - concerned
+  - calm
+  - surprised
+  - confused
+  - frustrated
+  - compassionate
+  - sad
+  - anxious_nervous
+
+control_concepts:
+  - uncertainty
+  - clinical_severity
+  - urgency
+  - harmfulness
+  - safety_policy
+  - novelty
+  - lexical_difficulty
+  - decision_conflict
+  - response_refusal
+  - general_negative_valence
+  - text_length
+
+splits: [extraction, validation, held_out_test]
+rule: "No clinical-test text may be used to build the vectors (spec section 7)."

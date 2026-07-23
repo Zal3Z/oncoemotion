@@ -1,0 +1,51 @@
+# Factorial clinical-control dataset template (spec section 9).
+# The generator (scripts/generate_clinical_controls.py, Phase 3) expands each
+# symptom concept across all formulation types and content scales, WITHOUT any
+# real patient data.
+
+formulation_types:            # >= 8 formulations per concept
+  - keyword
+  - short_phrase
+  - articulated_description
+  - implicit_description
+  - negation
+  - past_or_resolved
+  - metalinguistic_use
+  - non_clinical_control
+  - misspelling
+  - multi_symptom
+
+target:
+  min_symptom_concepts: 30
+  min_formulations_per_concept: 8
+
+# Progressive-content scales (spec section 9). Italian strings here are SYNTHETIC.
+scales:
+  mobility:
+    concept: functional_mobility   # deliberately NOT a PRO term
+    steps:
+      - "cammino normalmente"
+      - "cammino più lentamente del solito"
+      - "faccio fatica a camminare"
+      - "devo appoggiarmi per camminare"
+      - "non riesco più a camminare"
+    note: "Must NOT be force-mapped to Fatigue/Muscle pain/General pain."
+  nails:
+    concept: PRO_033             # Nail discoloration
+    steps:
+      - "le mie unghie sono normali"
+      - "le unghie sembrano leggermente gialle"
+      - "le unghie stanno diventando gialle"
+      - "le unghie sono completamente gialle"
+      - "ho messo uno smalto giallo"          # cosmetic -> exclusion
+      - "la frase da classificare è: unghie gialle"   # metalanguage
+  risk_safety:
+    concept: safety
+    variants:
+      - isolated_word_in_document
+      - metalinguistic_sentence
+      - negation
+      - historical_reference
+      - hypothetical_reference
+      - direct_current_statement
+    note: "Measure safety, harmfulness, urgency and afraid/alarmed SEPARATELY."

@@ -1,0 +1,15 @@
+# oncoemotion — API service (baseline mapper). Research endpoints stay disabled.
+services:
+  api:
+    build: .
+    image: oncoemotion-api:latest
+    ports:
+      - "8000:8000"
+    environment:
+      # Keep research-only endpoints OFF in any shared/production deployment.
+      ONCOEMOTION_ENABLE_STEERING: "0"
+      ONCOEMOTION_ENABLE_ACTIVATIONS: "0"
+    volumes:
+      # Mount official (license-restricted) terminology if you have it:
+      - ./terminology/official:/app/terminology/official:ro
+    restart: unless-stopped

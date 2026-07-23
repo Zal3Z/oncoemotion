@@ -1,0 +1,22 @@
+{
+  "schema_version": "ctcae_italian_bridge/1.0",
+  "provenance": "curated_bridge",
+  "note": "Italian surface strings mapped to OFFICIAL CTCAE v6.0 English terms, used ONLY for the Italian CTCAE fallback (invoked when there is no direct PRO-CTCAE match). This is a small curated/reviewed bridge; from Phase 2 the primary Italian->CTCAE matching uses multilingual embeddings. Targets that do not exist in the loaded CTCAE dictionary are skipped (no invented terms).",
+  "map": {
+    "Fever": ["febbre", "piressia", "rialzo termico", "febbrile"],
+    "Anemia": ["anemia"],
+    "Hypertension": ["ipertensione", "pressione alta", "pressione arteriosa alta"],
+    "Hypotension": ["ipotensione", "pressione bassa"],
+    "Febrile neutropenia": ["neutropenia febbrile"],
+    "Thrombocytopenia": ["trombocitopenia", "piastrinopenia"],
+    "Leukopenia": ["leucopenia"],
+    "Sepsis": ["sepsi", "setticemia"],
+    "Mucositis oral": ["mucosite orale", "mucosite"],
+    "Rash maculo-papular": ["rash", "eruzione cutanea", "esantema"],
+    "Pain": ["dolore fisico generalizzato"],
+    "Weight loss": ["perdita di peso", "calo di peso", "dimagrimento"],
+    "Dehydration": ["disidratazione"],
+    "Hyperglycemia": ["iperglicemia"],
+    "Hypoglycemia": ["ipoglicemia"]
+  }
+}

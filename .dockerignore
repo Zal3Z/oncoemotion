@@ -1,0 +1,21 @@
+.venv/
+venv/
+__pycache__/
+*.pyc
+.git/
+.pytest_cache/
+.ruff_cache/
+outputs/activations/*
+outputs/checkpoints/*
+outputs/figures/*
+outputs/reports/*
+notebooks/
+tests/
+# License-restricted official terminology (mount at runtime instead)
+terminology/official/
+*.pdf
+hf_cache/
+models_cache/
+*.safetensors
+*.bin
+*.pt

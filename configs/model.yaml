@@ -1,0 +1,53 @@
+# Open-weight model configuration (spec section 6).
+# Default preset targets the LOCAL NVIDIA T1000 8GB (Turing, compute 7.5).
+# Turing has no efficient bf16 -> use float16 locally. On Colab (Ampere+),
+# switch to the "colab" preset (bfloat16, larger model).
+
+model:
+  # Local 8GB preset (fits FP16, standard model.model.layers structure):
+  model_id: "Qwen/Qwen2.5-3B-Instruct"
+  dtype: "float16"          # T1000/Turing: float16 (NOT bfloat16)
+  device_map: "cuda"        # "cpu" for control/FP32 runs
+  trust_remote_code: false
+  use_cache: false          # off for clean activation capture
+  quantization: null        # disabled in main experiments (spec section 6)
+  seed: 12345
+  max_new_tokens: 8
+  temperature: 0.0          # deterministic measurement
+
+# Alternative presets (copy into `model:` to use):
+presets:
+  local_t1000_8gb:
+    model_id: "Qwen/Qwen2.5-3B-Instruct"
+    dtype: "float16"
+    device_map: "cuda"
+  local_small_ci:
+    model_id: "Qwen/Qwen2.5-1.5B-Instruct"
+    dtype: "float16"
+    device_map: "cuda"
+  control_fp32_cpu:
+    model_id: "Qwen/Qwen2.5-1.5B-Instruct"
+    dtype: "float32"
+    device_map: "cpu"
+
+  # --- Multi-model comparison trio (Colab A100 40GB, bf16). ---
+  # Ministral & Gemma are GATED: accept the license on their HF page and set
+  # HF_TOKEN before running. Qwen3 is open.
+  cn_qwen3_8b:            # China — Alibaba, Apache-2.0, open
+    model_id: "Qwen/Qwen3-8B"
+    dtype: "bfloat16"
+    device_map: "auto"
+  eu_ministral3_8b:      # Europe — Mistral (FR), gated
+    model_id: "mistralai/Ministral-8B-Instruct-2410"
+    dtype: "bfloat16"
+    device_map: "auto"
+  us_gemma4_12b:         # USA — Google, gated (dense; Gemma has no 8B dense)
+    model_id: "google/gemma-4-12B"
+    dtype: "bfloat16"
+    device_map: "auto"
+
+# The multi-model runner reads this list (scripts/run_all_models.py --preset trio):
+model_trio:
+  - "Qwen/Qwen3-8B"
+  - "mistralai/Ministral-8B-Instruct-2410"
+  - "google/gemma-4-12B"
