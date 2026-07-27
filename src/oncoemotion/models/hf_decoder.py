@@ -162,6 +162,47 @@ class HFDecoderAdapter(ModelAdapter):
         enc = self.tokenizer(text, return_tensors="pt", **kwargs)
         return {k: v.to(dev) for k, v in enc.items()}
 
+    def build_prompt_ids(self, user: str, system: str | None = None,
+                         assistant_prefix: str = "") -> Any:
+        """Chat-template ids for ``[system?, user]`` + an assistant-turn prefix.
+
+        Applies the model's chat template so a SYSTEM role actually reaches the
+        model, then appends ``assistant_prefix`` (no special tokens) as the start
+        of the assistant turn. The LAST token is the last token of
+        ``assistant_prefix`` — measurement point E. Falls back to merging the
+        system text into the user turn for templates without a system slot
+        (e.g. some Gemma/Mistral templates).
+        """
+        import torch
+
+        self._require()
+        msgs = ([{"role": "system", "content": system}] if system else []) + \
+               [{"role": "user", "content": user}]
+        tok = self.tokenizer
+        if hasattr(tok, "apply_chat_template") and tok.chat_template:
+            try:
+                base = tok.apply_chat_template(msgs, add_generation_prompt=True,
+                                               return_tensors="pt")
+            except Exception:
+                merged = (system + "\n\n" + user) if system else user
+                base = tok.apply_chat_template(
+                    [{"role": "user", "content": merged}],
+                    add_generation_prompt=True, return_tensors="pt")
+        else:  # no chat template: plain concatenation
+            text = (system + "\n" if system else "") + user + "\n"
+            base = tok(text, return_tensors="pt").input_ids
+        # apply_chat_template may return a tensor or a BatchEncoding depending on
+        # the transformers version — normalize to a plain [1, T] id tensor.
+        if not torch.is_tensor(base):
+            base = base["input_ids"]
+        if base.dim() == 1:
+            base = base.unsqueeze(0)
+        if assistant_prefix:
+            pref = tok(assistant_prefix, add_special_tokens=False,
+                       return_tensors="pt").input_ids
+            base = torch.cat([base, pref.to(base.device)], dim=1)
+        return base.to(self.device)
+
     def forward_capture(self, text_or_ids: Any, **kwargs) -> dict:
         import torch
 

@@ -1,0 +1,272 @@
+"""Model-as-classifier: constrained scoring of the PRO-CTCAE terms at point E.
+
+The deterministic mapper (``mapping/pipeline.py``) never sees the model's internal
+state, so role/emotion cannot affect its label. To ask *"does emotionality change
+what the model would code?"* we let the MODEL choose the term: after the identical
+teacher-forced prefix ``{"pro_ctcae":{"term":"`` we score every candidate PRO term
+by its length-normalised continuation log-probability and take the arg-max.
+
+This is a measurement of the model's committed term, independent of and comparable
+to the safe deterministic mapper. Nothing here changes the clinical mapping.
+"""
+
+from __future__ import annotations
+
+import re
+from dataclasses import dataclass, field
+
+import numpy as np
+
+
+@dataclass
+class Candidate:
+    canonical_id: str
+    term_en: str
+    surfaces: list[str] = field(default_factory=list)          # surface strings
+    surface_ids: list[list[int]] = field(default_factory=list)  # tokenised
+
+
+@dataclass
+class GenPrediction:
+    generated: str            # raw generated continuation
+    term_str: str             # extracted term (up to the closing quote)
+    top1_id: str | None       # mapped PRO id (None if no confident map)
+    top1_term: str | None
+    map_score: float          # fuzzy match score of term_str to the mapped term
+    logprob: float            # mean token log-prob of the generated term (confidence)
+    matched: bool             # map_score >= floor and a term was mapped
+
+
+# Explicit "no PRO term" markers a model emits when it (correctly) abstains.
+ABSTAIN_MARKERS = {
+    "n/a", "na", "n.a.", "none", "no", "nan", "null", "nulla", "niente", "nessuno",
+    "nessun sintomo", "nessun termine", "non applicabile", "no applicabile",
+    "non specificato", "non pertinente", "sconosciuto", "unknown", "-", "0", "",
+}
+
+
+def _fuzzy_best(term: str, surfaces: list[str]) -> float:
+    """Best fuzzy score of ``term`` vs a list of surfaces (0..1).
+
+    Uses rapidfuzz WRatio (handles morphological/partial variants such as
+    "Anxiety" vs "Anxious") when available, else difflib.
+    """
+    try:
+        from rapidfuzz import fuzz
+        return max((fuzz.WRatio(term, s) for s in surfaces), default=0.0) / 100.0
+    except Exception:
+        from difflib import SequenceMatcher
+        return max((SequenceMatcher(None, term, s).ratio() for s in surfaces), default=0.0)
+
+
+# English lay/noun synonyms not in the terminology (whose canonical_english is an
+# adjective, e.g. "Anxious"), for models that answer in English. Focused on the
+# affect terms central to this study; other terms rely on the library surfaces.
+EN_SUPPLEMENT = {
+    "PRO_054": ["anxiety", "nervousness", "worry", "worried", "nervous"],
+    "PRO_055": ["discouragement", "hopelessness", "demoralization", "hopeless"],
+    "PRO_056": ["sadness", "depression", "depressed mood", "low mood", "unhappy"],
+    "PRO_053": ["tiredness", "exhaustion", "tired", "lack of energy", "weakness"],
+}
+
+
+def build_term_matcher(library):
+    """Return ``match(term_str) -> (canonical_id|None, term_en|None, score)``.
+
+    Maps a free-text term the model GENERATED (e.g. "nausea", "ansia", "Anxiety",
+    "Fatigue") to a canonical PRO id by fuzzy-matching against ALL library surface
+    forms (official Italian, canonical English, reviewed/auto/synthetic synonyms,
+    patient phrases) plus a small English affect supplement. Explicit abstention
+    markers ("N/A", "None", ...) return no match.
+    """
+    per_term = []  # (canonical_id, term_en, [surfaces])
+    for t in library:
+        surf = [e.surface.lower() for e in t.match_entries()]
+        if t.official_italian_labels:
+            surf += _italian_surfaces(t.official_italian_labels[0])
+        surf += EN_SUPPLEMENT.get(t.canonical_id, [])
+        surf = [s.strip() for s in dict.fromkeys(surf) if s and s.strip()]
+        per_term.append((t.canonical_id, t.canonical_english, surf))
+
+    def match(term_str: str):
+        term = (term_str or "").lower().strip().strip('.,;:"\'')
+        if term in ABSTAIN_MARKERS or len(term) < 2:
+            return (None, None, 0.0)
+        best = (None, None, 0.0)
+        for cid, en, surf in per_term:
+            r = _fuzzy_best(term, surf)
+            if r > best[2]:
+                best = (cid, en, r)
+        return best
+
+    return match
+
+
+def predict_generative(adapter, prefix_ids, matcher, max_new_tokens: int = 10,
+                       floor: float = 0.72) -> GenPrediction:
+    """Greedy-generate the term after point E, then map it to a PRO id.
+
+    Faithful to what the model *commits to* under the current role/ablation, and
+    naturally abstains when the generated term maps to nothing (score < floor).
+    """
+    import torch
+
+    model = adapter.model
+    tok = adapter.tokenizer
+    with torch.no_grad():
+        out = model.generate(
+            prefix_ids, max_new_tokens=max_new_tokens, do_sample=False,
+            temperature=None, top_p=None, output_scores=True,
+            return_dict_in_generate=True,
+            pad_token_id=(tok.pad_token_id if tok.pad_token_id is not None else tok.eos_token_id),
+        )
+    gen = out.sequences[0][prefix_ids.shape[1]:]
+    text = tok.decode(gen, skip_special_tokens=True)
+    # term = text up to the first closing quote or brace
+    term_str = text.split('"')[0].split('}')[0].strip().strip(',').strip()
+    # confidence: mean log-prob over the term's own tokens
+    n_term_tok = max(1, len(tok(term_str, add_special_tokens=False).input_ids)) if term_str else 1
+    lps = []
+    for i, logits in enumerate(out.scores[:n_term_tok]):
+        lp = torch.log_softmax(logits[0].float(), dim=-1)
+        lps.append(float(lp[gen[i]]))
+    mean_lp = float(np.mean(lps)) if lps else 0.0
+    cid, en, ms = matcher(term_str)
+    matched = bool(cid is not None and ms >= floor)
+    return GenPrediction(
+        generated=text.strip(), term_str=term_str,
+        top1_id=cid if matched else None, top1_term=en if matched else None,
+        map_score=round(ms, 3), logprob=round(mean_lp, 3), matched=matched)
+
+
+@dataclass
+class LabelPrediction:
+    top1_id: str
+    top1_term: str
+    top1_score: float          # length-normalised mean log-prob of the term
+    margin: float              # top1 - top2 (concept-level)
+    softmax_top1: float        # softmax over concept scores (confidence proxy)
+    entropy: float             # entropy of the concept softmax
+    ranking: list[tuple]       # [(id, term, score), ...] top-k
+    concept_scores: dict       # canonical_id -> best (max over surfaces) score
+
+
+def _italian_surfaces(label: str, max_words: int = 5) -> list[str]:
+    """Short, natural lowercase surface forms from an official PRO label.
+
+    The model, prompted in Italian, emits a SHORT lowercase term after the forced
+    ``"term":"`` (empirically e.g. ``nausea``). Official labels are long/UPPERCASE,
+    so we derive: the head before the first comma (parentheticals removed) AND the
+    parenthetical content itself (often the common word, e.g. ``diarrea`` in
+    "FECI MOLLI O ACQUOSE (DIARREA)"). Forms longer than ``max_words`` are dropped.
+    """
+    lab = label.strip().lower()
+    paren = re.findall(r"\(([^)]+)\)", lab)
+    head = re.sub(r"\([^)]*\)", "", lab).split(",")[0].strip()
+    out = [head] + [p.strip() for p in paren]
+    return [f for f in out if f and len(f.split()) <= max_words]
+
+
+def build_candidates(adapter, library, forms=("it", "en", "phrase")) -> list[Candidate]:
+    """Candidate surface strings per PRO term, pre-tokenised (all lowercase).
+
+    The concept score is the MAX over its variants, so the classifier is robust to
+    whether the model emits the Italian term, the English canonical, or a common
+    patient phrase. ``forms`` selects which families to include.
+    """
+    tok = adapter.tokenizer
+    cands: list[Candidate] = []
+    for t in library:
+        surfaces: list[str] = []
+        if "it" in forms and t.official_italian_labels:
+            surfaces += _italian_surfaces(t.official_italian_labels[0])
+        if "en" in forms and t.canonical_english:
+            surfaces.append(t.canonical_english.lower())
+        if "phrase" in forms and t.common_patient_phrases:
+            surfaces.append(t.common_patient_phrases[0].strip().lower())
+        # de-dup while keeping order
+        seen, uniq = set(), []
+        for s in surfaces:
+            if s and s not in seen:
+                seen.add(s); uniq.append(s)
+        ids = [tok(s, add_special_tokens=False).input_ids for s in uniq]
+        cands.append(Candidate(t.canonical_id, t.canonical_english, uniq, ids))
+    return cands
+
+
+def _score_surface_ids(adapter, prefix_ids, flat_ids: list[list[int]], chunk: int) -> list[float]:
+    """Mean per-token continuation log-prob for each id-list after ``prefix_ids``."""
+    import torch
+
+    model = adapter.model
+    dev = adapter.device
+    tok = adapter.tokenizer
+    pad_id = tok.pad_token_id
+    if pad_id is None:
+        pad_id = tok.eos_token_id or 0
+    prefix = prefix_ids[0]                      # [T]
+    T = int(prefix.shape[0])
+    out_scores: list[float] = []
+    for i in range(0, len(flat_ids), chunk):
+        batch = flat_ids[i:i + chunk]
+        clens = [max(1, len(c)) for c in batch]
+        maxc = max(clens)
+        seqs, attns = [], []
+        for c in batch:
+            c = list(c) if c else [pad_id]
+            pad = maxc - len(c)
+            seqs.append(torch.cat([prefix,
+                                   torch.tensor(c + [pad_id] * pad, device=dev, dtype=prefix.dtype)]))
+            attns.append(torch.cat([torch.ones(T + len(c), device=dev),
+                                    torch.zeros(pad, device=dev)]))
+        input_ids = torch.stack(seqs)           # [B, T+maxc]
+        attn = torch.stack(attns)
+        with torch.no_grad():
+            logits = model(input_ids=input_ids, attention_mask=attn,
+                           use_cache=False).logits
+        # positions T-1 .. T-2+maxc predict candidate tokens at T .. T-1+maxc
+        sub = logits[:, T - 1:T - 1 + maxc, :].float()
+        logp = torch.log_softmax(sub, dim=-1)   # [B, maxc, V]
+        targets = input_ids[:, T:T + maxc]       # [B, maxc]
+        tok_lp = logp.gather(-1, targets.unsqueeze(-1)).squeeze(-1)  # [B, maxc]
+        pos = torch.arange(maxc, device=dev).unsqueeze(0)
+        clen_t = torch.tensor(clens, device=dev).unsqueeze(1)
+        mask = (pos < clen_t).float()
+        mean_lp = (tok_lp * mask).sum(1) / clen_t.squeeze(1).float()
+        out_scores.extend(mean_lp.detach().cpu().tolist())
+    return out_scores
+
+
+def predict_label(adapter, prefix_ids, candidates: list[Candidate],
+                  chunk: int = 32, top_k: int = 5) -> LabelPrediction:
+    """Score all candidate terms at point E and return the model's committed term."""
+    # flatten all surfaces, remember which concept each belongs to
+    flat_ids, owner = [], []
+    for ci, cand in enumerate(candidates):
+        for sid in cand.surface_ids:
+            flat_ids.append(sid); owner.append(ci)
+    surf_scores = _score_surface_ids(adapter, prefix_ids, flat_ids, chunk)
+
+    concept_best = [-1e30] * len(candidates)
+    for s, ci in zip(surf_scores, owner):
+        if s > concept_best[ci]:
+            concept_best[ci] = s
+    scores = np.array(concept_best, dtype=float)
+    order = np.argsort(-scores)
+    ranking = [(candidates[i].canonical_id, candidates[i].term_en, float(scores[i]))
+               for i in order[:top_k]]
+    # softmax over concept scores as a confidence proxy
+    z = scores - scores.max()
+    p = np.exp(z); p = p / p.sum()
+    ent = float(-(p * np.log(np.clip(p, 1e-12, None))).sum())
+    i0 = int(order[0]); i1 = int(order[1]) if len(order) > 1 else i0
+    return LabelPrediction(
+        top1_id=candidates[i0].canonical_id,
+        top1_term=candidates[i0].term_en,
+        top1_score=float(scores[i0]),
+        margin=float(scores[i0] - scores[i1]),
+        softmax_top1=float(p[i0]),
+        entropy=ent,
+        ranking=ranking,
+        concept_scores={candidates[i].canonical_id: float(scores[i]) for i in range(len(candidates))},
+    )

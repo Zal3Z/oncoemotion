@@ -56,17 +56,22 @@ class SteeringRuntime:
         u = _unit_torch(vector, torch, dtype, dev)
 
         def hook(module, inputs, output):
+            # NB: modify the residual tensor IN-PLACE. Some transformers versions
+            # ignore a forward-hook's return value, so returning a new tensor has
+            # no effect on the collected hidden states / downstream computation;
+            # an in-place edit of output[0] propagates in every version. (Safe:
+            # all callers run under torch.no_grad().)
             hs, rewrap = self._block_hidden(output)
             if mode == "ablate":
                 coeff = (hs * u).sum(dim=-1, keepdim=True)  # [...,1]
-                hs = hs - coeff * u
+                hs.sub_(coeff * u)
             else:
                 a = float(alpha)
                 if norm_scale:
                     # scale to the mean residual norm at this position
                     rn = hs.norm(dim=-1, keepdim=True).mean()
                     a = a * float(rn)
-                hs = hs + a * u
+                hs.add_(a * u)
             return rewrap(hs)
 
         with safe_hooks() as mgr:
