@@ -46,8 +46,9 @@ from oncoemotion.models.base import load_adapter  # noqa: E402
 from oncoemotion.clinical.prompt import build_decision_messages, TEACHER_PREFIX  # noqa: E402
 from oncoemotion.clinical.measure import point_e_hidden, project_scores, zscore  # noqa: E402
 
-EMOTIONS = ["afraid_alarmed", "anxious_nervous", "sad", "calm", "compassionate"]
-CONTROLS = ["clinical_severity", "general_negative_valence", "safety_policy", "urgency"]
+# Confounders (everything else in the vector set is treated as an emotion).
+CONFOUNDERS = ["uncertainty", "urgency", "clinical_severity", "safety_policy",
+               "general_negative_valence"]
 NEG_AFFECT = ["afraid_alarmed", "anxious_nervous", "sad"]
 
 # persona -> group (order defines the spectrum layout)
@@ -82,11 +83,11 @@ def _unit(v):
     return v / n if n > 0 else v
 
 
-def _measure(adapter, role, texts, vectors, layer_of):
+def _measure(adapter, role, texts, vectors, layer_of, emo_concepts):
     """Mean projection over `texts` under `role`; also the mean point-E hidden at
     each emotion best-layer (for the directional analysis)."""
     proj_acc = {c: [] for c in vectors}
-    hid_acc = {c: [] for c in EMOTIONS if c in vectors}
+    hid_acc = {c: [] for c in emo_concepts if c in vectors}
     for t in texts:
         system, user = build_decision_messages(t, role=role)
         ids = adapter.build_prompt_ids(user, system, assistant_prefix=TEACHER_PREFIX)
@@ -118,7 +119,10 @@ def main() -> int:
     V = np.load(args.vecs, allow_pickle=True)
     val = json.loads(args.val_report.read_text(encoding="utf-8"))
     best_layer = {c: val["concepts"][c]["best_layer"] for c in val["concepts"]}
-    concepts = [c for c in (EMOTIONS + CONTROLS) if _key_for(V, c, args.method, args.variant) in V]
+    all_c = list(val["concepts"].keys())
+    emo_concepts = [c for c in all_c if c not in CONFOUNDERS and _key_for(V, c, args.method, args.variant) in V]
+    ctrl_concepts = [c for c in all_c if c in CONFOUNDERS and _key_for(V, c, args.method, args.variant) in V]
+    concepts = emo_concepts + ctrl_concepts
     vectors = {c: V[_key_for(V, c, args.method, args.variant)] for c in concepts}
     layer_of = {c: best_layer.get(c, vectors[c].shape[0] // 2) for c in concepts}
 
@@ -148,8 +152,8 @@ def main() -> int:
     rows = {}
     hidden_clinical = {}   # role -> {concept: [H]}
     for role, group in SPECTRUM:
-        cli_proj, cli_hid = _measure(adapter, role, stim, vectors, layer_of)
-        base_proj, _ = _measure(adapter, role, NEUTRAL_BASELINE, vectors, layer_of)
+        cli_proj, cli_hid = _measure(adapter, role, stim, vectors, layer_of, emo_concepts)
+        base_proj, _ = _measure(adapter, role, NEUTRAL_BASELINE, vectors, layer_of, emo_concepts)
         zc = zscore(cli_proj, bmean, bstd)
         zb = zscore(base_proj, bmean, bstd)
         rows[role] = {
@@ -169,7 +173,7 @@ def main() -> int:
     # deviation projected on the unit emotion direction at its best layer.
     direction = {}
     group_of = dict(SPECTRUM)
-    for c in [e for e in EMOTIONS if e in vectors]:
+    for c in emo_concepts:
         u = _unit(vectors[c][int(layer_of[c])])
         H = {r: hidden_clinical[r][c] for r in hidden_clinical if c in hidden_clinical[r]}
         grand = np.mean(np.stack(list(H.values())), axis=0)
@@ -201,6 +205,7 @@ def main() -> int:
     out = {
         "model_id": adapter.config.model_id, "method": args.method, "variant": args.variant,
         "n_stimuli": len(stim), "concepts": concepts, "layer_of": layer_of,
+        "emo_concepts": emo_concepts, "controls": ctrl_concepts,
         "spectrum": [r for r, _ in SPECTRUM], "groups": group_of,
         "personas": rows, "direction": direction,
     }

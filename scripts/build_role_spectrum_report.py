@@ -33,6 +33,16 @@ LABEL = {"oncologo": "Oncologo", "infermiere": "Infermiere", "ingegnere": "Ingeg
          "none": "Nessuno"}
 GROUP_LABEL = {"medici": "Medici", "tecnici": "Tecnici / distaccati",
                "profani": "Emotivi / profani", "controlli": "Controlli"}
+EMO_LABEL = {
+    "afraid_alarmed": "paura", "anxious_nervous": "ansia", "sad": "tristezza",
+    "calm": "calma", "surprised": "sorpresa", "confused": "confusione",
+    "frustrated": "frustrazione", "compassionate": "compassione", "concerned": "preoccupazione",
+    "joy_happy": "gioia", "anger": "rabbia", "disgust": "disgusto", "shame": "vergogna",
+    "guilt": "colpa", "pride": "orgoglio", "gratitude": "gratitudine", "hope": "speranza",
+    "relief": "sollievo", "excitement": "entusiasmo", "love_affection": "amore",
+    "loneliness": "solitudine", "disappointment": "delusione", "embarrassment": "imbarazzo",
+    "curiosity": "curiosità", "boredom": "noia",
+}
 
 
 def _model_name(slug):
@@ -62,12 +72,14 @@ def _collect(dirp):
             "emo_baseline": {r: personas[r]["emo_baseline"] for r in personas},
             "emo_std": std,
             "clinical_z": {r: personas[r]["clinical_z"] for r in personas},
+            "emo_concepts": d.get("emo_concepts", []),
             "dir_afraid": {k: af.get(k) for k in ("profani_minus_medici_cos",
                                                   "tecnici_minus_medici_cos",
                                                   "profani_minus_tecnici_cos")},
             "align": af.get("per_persona_alignment", {}),
         })
-    return {"models": models, "order": ORDER, "label": LABEL, "group_label": GROUP_LABEL}
+    return {"models": models, "order": ORDER, "label": LABEL, "group_label": GROUP_LABEL,
+            "emo_label": EMO_LABEL}
 
 
 TEMPLATE = r"""<!doctype html><html lang=it><head><meta charset=utf-8>
@@ -158,6 +170,16 @@ emozioni ma <b>non</b> la gravità, l'effetto è <b>specifico dell'affetto</b>, 
 <canvas id="chSp" height="280"></canvas><div class="legend" id="legSp"></div>
 <div class="cap" id="capSp"></div></div>
 
+<h2>5 · Quali emozioni cambia il ruolo? (tavolozza completa)</h2>
+<p class="q">Non solo paura: qui c'è <b>tutta</b> la tavolozza misurata. Ogni cella è quanto un <b>gruppo</b>
+di ruoli attiva quell'emozione reagendo ai sintomi — <b style="color:var(--gPro)">rosso</b> = più attiva,
+<b style="color:var(--gTec)">blu</b> = meno (rispetto al neutro). Le righe sono ordinate dalle emozioni che
+i profani accendono <b>più</b> dei medici a quelle che accendono <b>meno</b>: così si vede in cosa i ruoli
+differiscono davvero.</p>
+<div class="card"><span class="lbl" id="hmModel">emozione × gruppo · z medio</span>
+<canvas id="chHeat" height="560"></canvas>
+<div class="cap" id="capHeat"></div></div>
+
 <div class="foot" id="foot"></div>
 </div>
 <script>const DATA = /*__DATA__*/;</script>
@@ -235,10 +257,31 @@ emozioni ma <b>non</b> la gravità, l'effetto è <b>specifico dell'affetto</b>, 
      x.fillStyle=css('--muted');x.font='11px '+css('--sans');x.textAlign='center';x.fillText(lab,pL+gi*gw+gw/2,h-14);});
  }
 
- function drawAll(){drawSpec();drawDir();drawBR();drawSp();}
+ // 5) heatmap emotion (rows) × group (cols), sorted by profani-medici
+ const EL=DATA.emo_label||{};
+ const GCOLS=[['medici','Medici'],['tecnici','Tecnici'],['profani','Profani'],['controlli','Controlli']];
+ function heatColor(v,vmax){const t=Math.max(-1,Math.min(1,v/(vmax||1)));const a=Math.abs(t);const c=t>=0?[220,38,38]:[47,111,208];return `rgba(${c[0]},${c[1]},${c[2]},${(0.10+0.8*a).toFixed(2)})`;}
+ function heatEmos(){return (m0.emo_concepts||[]).filter(c=>EL[c]).slice().sort((a,b)=>{const da=(gmeanZ(m0,'profani',a)||0)-(gmeanZ(m0,'medici',a)||0),db=(gmeanZ(m0,'profani',b)||0)-(gmeanZ(m0,'medici',b)||0);return db-da;});}
+ function drawHeat(){
+   const cv=document.getElementById('chHeat');const emo=heatEmos();const rows=emo.length||1;
+   const rh=Math.max(14,Math.min(22,520/rows)),H=Math.round(rows*rh+40);cv.setAttribute('height',H);
+   const {w,h,x}=fit(cv,H);x.clearRect(0,0,w,h);
+   const pL=100,pT=24,cw=(w-pL-8)/GCOLS.length;
+   const vmax=Math.max(0.5,...emo.flatMap(c=>GCOLS.map(([g])=>Math.abs(gmeanZ(m0,g,c)||0))));
+   x.fillStyle=css('--muted');x.font='11px '+css('--sans');x.textAlign='center';
+   GCOLS.forEach(([g,lab],ci)=>x.fillText(lab,pL+ci*cw+cw/2,15));
+   emo.forEach((c,ri)=>{const y=pT+ri*rh;
+     x.fillStyle=css('--ink');x.font='11px '+css('--sans');x.textAlign='right';x.fillText(EL[c]||c,pL-6,y+rh/2+3);
+     GCOLS.forEach(([g],ci)=>{const v=gmeanZ(m0,g,c),bx=pL+ci*cw;
+       x.fillStyle=(v==null)?css('--grid'):heatColor(v,vmax);x.fillRect(bx+1,y+1,cw-2,rh-2);
+       if(v!=null){x.fillStyle=(Math.abs(v)/vmax>0.55)?'#fff':css('--muted');x.font='10px '+css('--mono');x.textAlign='center';x.fillText((v>=0?'+':'')+v.toFixed(1),bx+cw/2,y+rh/2+3);}
+     });});
+ }
+ function drawAll(){drawSpec();drawDir();drawBR();drawSp();drawHeat();}
  drawAll();
  document.getElementById('brModel').textContent=`persona da sola vs reagendo al sintomo — ${m0.name}`;
  document.getElementById('spModel').textContent=`medici vs profani · emozioni e controlli — ${m0.name}`;
+ document.getElementById('hmModel').textContent=`emozione × gruppo · z medio — ${m0.name}`;
 
  // captions
  const hd=t=>`<span class="hd">${t}</span>`;
@@ -260,6 +303,11 @@ emozioni ma <b>non</b> la gravità, l'effetto è <b>specifico dell'affetto</b>, 
  document.getElementById('capSp').innerHTML=
    hd('Come si legge.')+' Media dei ruoli medici (teal) vs profani (rosso) su emozioni e su due controlli non-emotivi (gravità clinica, valenza negativa). '+
    hd('In sintesi.')+' Se medici e profani differiscono sulle <b>emozioni</b> ma non sui <b>controlli</b>, il ruolo agisce in modo <b>specifico sull\'affetto</b>, non abbassando tutto genericamente.';
+ (function(){const emo=heatEmos();const top=emo.slice(0,3).map(c=>EL[c]||c),bot=emo.slice(-3).map(c=>EL[c]||c);
+  document.getElementById('capHeat').innerHTML=
+   hd('Come si legge.')+' Ogni riga è un\'emozione, ogni colonna un gruppo di ruoli; il colore è quanto quel gruppo la attiva reagendo ai sintomi (rosso = sopra il neutro, blu = sotto). '+
+   hd('Cosa dicono i numeri.')+' Le emozioni che i <b>profani</b> accendono più dei <b>medici</b> (in alto) sono: '+top.join(', ')+'; quelle che accendono meno (in basso): '+bot.join(', ')+'. '+
+   hd('In sintesi.')+' È la tavolozza completa: mostra <b>quali</b> emozioni il ruolo sposta, non solo la paura — e se il distacco professionale smorza tutto l\'affetto negativo o solo alcune emozioni.';})();
  document.getElementById('foot').textContent='oncoemotion · spettro dei ruoli · '+M.map(m=>m.name).join(' · ')+' · nessun claim di coscienza.';
  window.addEventListener('resize',drawAll);
  new MutationObserver(drawAll).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});

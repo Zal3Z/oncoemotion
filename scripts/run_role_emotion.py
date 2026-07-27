@@ -46,7 +46,12 @@ from oncoemotion.terminology.pro_ctcae import load_pro_ctcae  # noqa: E402
 from oncoemotion.factory import build_default_mapper  # noqa: E402
 from oncoemotion.schemas import MapRequest  # noqa: E402
 
-EMOTIONS = ["afraid_alarmed", "anxious_nervous", "sad", "calm", "compassionate"]
+# All concepts that are NOT confounders are treated as emotions (derived from the
+# vector set, so adding emotions to seeds.py flows through automatically).
+CONFOUNDERS = ["uncertainty", "urgency", "clinical_severity", "safety_policy",
+               "general_negative_valence"]
+# The causal "remove emotionality" ablation targets the clinically-relevant
+# negative-affect core (kept small so the intervention is interpretable).
 ABLATE_CONCEPTS = ["afraid_alarmed", "anxious_nervous", "sad"]
 
 # Emotionally-neutral, non-clinical routine sentences for the z-score baseline.
@@ -114,7 +119,8 @@ def main() -> int:
     V = np.load(args.vecs, allow_pickle=True)
     val = json.loads(args.val_report.read_text(encoding="utf-8"))
     best_layer = {c: val["concepts"][c]["best_layer"] for c in val["concepts"]}
-    concepts = [c for c in EMOTIONS if _key_for(V, c, args.method, args.variant) in V]
+    concepts = [c for c in val["concepts"]
+                if c not in CONFOUNDERS and _key_for(V, c, args.method, args.variant) in V]
     vectors = {c: V[_key_for(V, c, args.method, args.variant)] for c in concepts}
     layer_of = {c: best_layer.get(c, vectors[c].shape[0] // 2) for c in concepts}
     ablate_vecs = {c: vectors[c] for c in ABLATE_CONCEPTS if c in vectors}
