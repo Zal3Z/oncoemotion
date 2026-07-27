@@ -102,7 +102,7 @@ Gemma-4-12B (USA): (A) le emozioni sono <b>rappresentate</b> durante la codifica
 <b>ruolo</b> assegnato le cambia, e l'emotività cambia l'<b>etichettatura</b>? (C) <b>perché</b> il ruolo
 agisce, sulla tavolozza completa di 25 emozioni?</p>
 <p class="disc">Rappresentazioni emotion-<em>like</em>, non emozioni coscienti. Dataset sintetico → indicazioni, non verdetti. Scale diverse tra modelli → si confronta la storia, non i numeri grezzi.</p>
-<div class="toc"><a href="#A">A · Confronto</a><a href="#B">B · Ruolo × emotività</a><a href="#C">C · Spettro (25 emozioni)</a></div>
+<div class="toc"><a href="#D">Come funziona</a><a href="#A">A · Confronto</a><a href="#B">B · Ruolo × emotività</a><a href="#C">C · Spettro (25 emozioni)</a><a href="#E">Player token×layer</a></div>
 
 <div class="gloss"><h4>Glossario — i termini una volta per tutte</h4><dl>
 <dt>Punto E</dt><dd>l'istante appena prima che il modello scriva il termine PRO-CTCAE: lì leggiamo il suo "stato interno".</dd>
@@ -336,7 +336,29 @@ def _section_html() -> str:
 <div class="card"><span class="lbl">emozione × gruppo · z medio</span><canvas id="C_chHeat" height="560"></canvas><div class="cap" id="C_capHeat"></div></div>
 </div>
 <div class="foot">oncoemotion · report completo · Qwen3-8B · Ministral-8B · Gemma-4-12B (Colab A100) · nessun claim di coscienza.</div>"""
-    return A + B + C
+    D = """
+<div class="sec" id="D"><span class="kicker">Approfondimento · come funziona</span>
+<h2>Come un modello "legge" — dietro le quinte</h2>
+<p class="q">Prima dei risultati, il <b>meccanismo</b>: come si passa dal testo ai token, dai token ai
+vettori, ai layer (la "catena di montaggio"), fino alla griglia token×layer e alla proiezione su una
+direzione emotiva. Guida illustrata interattiva (costruita sul modello locale Qwen2.5-3B, mostra il
+principio).</p>
+<div class="card" style="padding:0;overflow:hidden">
+<iframe title="Come funziona dentro il modello" style="width:100%;height:780px;border:0;display:block;background:#fff" srcdoc="__GUIDE_SRCDOC__"></iframe></div>
+<p class="cap">Se il riquadro qui sopra resta vuoto, aprilo a tutto schermo: <a href="https://claude.ai/code/artifact/637c907e-3ab5-4d4b-b860-e27b9112ab12">guida "come funziona"</a>.</p>
+</div>"""
+    E = """
+<div class="sec" id="E"><span class="kicker">Approfondimento · il player</span>
+<h2>Il player token×layer — la traiettoria del segnale</h2>
+<p class="q">Con play/scrub vedi, mentre il modello <b>legge</b> la frase, la traiettoria delle direzioni
+emotive (in alto) e la heatmap concetto×layer (in basso) al token corrente: la "paura" resta bassa
+durante l'istruzione neutra e <b>si accende</b> sul sintomo grave, fino al punto di decisione — senza
+alcuna parola emotiva esplicita.</p>
+<div class="card" style="padding:0;overflow:hidden">
+<iframe title="Player token×layer" style="width:100%;height:820px;border:0;display:block;background:#fff" srcdoc="__PLAYER_SRCDOC__"></iframe></div>
+<p class="cap">Se il riquadro qui sopra resta vuoto, aprilo a tutto schermo: <a href="https://claude.ai/code/artifact/715929f7-d7a8-4eb6-bcac-0a4875e3def6">player token×layer</a>.</p>
+</div>"""
+    return D + A + B + C + E
 
 
 def main() -> int:
@@ -354,6 +376,20 @@ def main() -> int:
     html = (TEMPLATE
             .replace("<!--SECTIONS-->", _section_html())
             .replace("/*__DATA__*/", json.dumps(data, ensure_ascii=False)))
+
+    # embed the two educational artifacts as self-contained iframes (srcdoc)
+    figs = _ROOT / "outputs" / "figures"
+
+    def _srcdoc(p: Path) -> str:
+        return p.read_text(encoding="utf-8").replace("&", "&amp;").replace('"', "&quot;")
+
+    guide = figs / "how_it_works.html"
+    player = figs / "internal_player.html"
+    html = html.replace("__GUIDE_SRCDOC__", _srcdoc(guide) if guide.exists() else
+                        "<p style='font-family:sans-serif;padding:20px'>Guida non trovata: genera outputs/figures/how_it_works.html.</p>")
+    html = html.replace("__PLAYER_SRCDOC__", _srcdoc(player) if player.exists() else
+                        "<p style='font-family:sans-serif;padding:20px'>Player non trovato: genera outputs/figures/internal_player.html.</p>")
+
     args.out.write_text(html, encoding="utf-8")
     print(f"Wrote {args.out} ({len(html)//1024} KB)")
     return 0
