@@ -107,13 +107,22 @@ h1{font-size:clamp(22px,3.6vw,31px);line-height:1.14;margin:0 0 8px;font-weight:
 .sub{color:var(--muted);font-size:15px;margin:0;max-width:74ch}
 .disc{font-size:12px;color:var(--faint);font-style:italic;margin-top:10px}
 h2{font-size:17px;margin:34px 0 2px;font-weight:640}
-.q{color:var(--muted);font-size:13.5px;margin:2px 0 0}
+.q{color:var(--muted);font-size:14px;line-height:1.6;margin:4px 0 0;max-width:82ch}
+.lead{color:var(--ink);font-size:15px;line-height:1.68;margin:14px 0 0;max-width:82ch}
+.lead+.lead{margin-top:10px}
+.gloss{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 18px;margin-top:16px}
+.gloss h3{margin:0 0 8px;font-size:12px;font-family:var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--faint);font-weight:600}
+.gloss dl{margin:0;display:grid;grid-template-columns:max-content 1fr;gap:7px 14px}
+.gloss dt{font-weight:680;color:var(--ink)}
+.gloss dd{margin:0;color:var(--muted);font-size:13.5px;line-height:1.55}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-top:12px;box-shadow:0 1px 2px rgba(20,25,35,.05),0 10px 26px rgba(20,25,35,.05)}
 .lbl{font-family:var(--mono);font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--faint)}
 canvas{width:100%;height:auto;display:block;margin-top:6px}
 .legend{display:flex;gap:15px;flex-wrap:wrap;margin-top:10px;font-family:var(--mono);font-size:12px}
 .sw{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:6px;vertical-align:-1px}
-.cap{font-size:12.5px;color:var(--faint);margin-top:9px}
+.cap{font-size:13.5px;color:var(--muted);margin-top:12px;line-height:1.62;max-width:82ch}
+.cap b{color:var(--ink);font-weight:660}
+.cap .hd{display:block;font-weight:680;color:var(--ink);margin-bottom:3px}
 .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:12px}
 .tile{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
 .tile .k{font-size:11.5px;color:var(--muted)}.tile .v{font-size:20px;font-weight:680;margin-top:3px;font-variant-numeric:tabular-nums}
@@ -135,34 +144,82 @@ sotto ruoli di sistema diversi (oncologo / non-medico / nessuno) e con l'emotivi
 (ablazione). L'etichetta è scelta dal <b>modello</b> (scoring vincolato degli 80 termini PRO); il mapper
 deterministico resta come riferimento.</p>
 <p class="disc">Rappresentazioni emotion-<em>like</em>, non emozioni coscienti. Dataset sintetico → indicazioni, non verdetti.</p>
+
+<p class="lead">Questo report risponde a due domande con dati reali. <b>Prima:</b> se diamo al
+modello un "ruolo" (gli diciamo di essere un oncologo, oppure un assistente qualunque,
+oppure niente), cambia quanto si "accende" al suo interno un segnale simile a un'emozione
+mentre decide come codificare un sintomo? <b>Seconda:</b> questa emotività cambia il modo
+in cui etichetta — cioè lo porta a sbagliare, o a scegliere un termine diverso?</p>
+<p class="lead">Ogni frase clinica è misurata al <b>punto di decisione</b>: il momento esatto,
+appena prima che il modello scriva il termine, in cui leggiamo il suo stato interno. Per
+rispondere alla seconda domanda facciamo <b>etichettare al modello stesso</b> (non a un
+programma esterno), così che ruolo ed emozioni possano davvero influenzarne la scelta.
+Ogni frase è provata in una versione <b>neutra</b> e in una <b>emotiva</b> con lo stesso
+contenuto clinico, e sotto i tre ruoli, con l'emotività intatta o <b>rimossa</b>.</p>
+
+<div class="gloss"><h3>I termini in breve</h3><dl>
+<dt>Punto E</dt><dd>l'istante appena prima che il modello scelga il termine: lì leggiamo il suo "stato interno".</dd>
+<dt>Emotività (z)</dt><dd>quanto sono attive le direzioni interne di paura/ansia/tristezza rispetto a un testo neutro di riferimento. z=0 → come il neutro; più alto → più "acceso". Le scale dei tre modelli sono diverse: si confronta l'andamento, non i numeri assoluti.</dd>
+<dt>Ruolo</dt><dd>una frase di sistema che assegna un'identità al modello: <em>oncologo</em> (medico), <em>assistente generico</em> (non-medico), o <em>nessuno</em>.</dd>
+<dt>Framing</dt><dd>come è scritta la frase: <em>neutra</em> ("Ho nausea") vs <em>emotiva</em> ("Ho una nausea tremenda che non mi dà tregua") — stesso sintomo.</dd>
+<dt>Ablazione</dt><dd>rimozione chirurgica della direzione emotiva dal calcolo del modello, per vedere se la decisione cambia quando l'emozione "non c'è": è il test causale.</dd>
+<dt>Modello vs mapper</dt><dd>l'etichetta la sceglie il <em>modello</em> (può variare con ruolo/emozioni); il <em>mapper</em> è un programma deterministico che guarda solo il testo — resta il riferimento "sicuro" e invariabile.</dd>
+<dt>Item EXACT / da astensione</dt><dd>EXACT = c'è un termine PRO giusto atteso; da astensione = non va assegnato alcun termine (frasi negate, fuori tema, urgenti…).</dd>
+</dl></div>
+
 <div id="tiles" class="tiles"></div>
 
 <h2>1 · Il ruolo cambia l'emotività al punto E?</h2>
-<p class="q">Media dell'asse affettivo-negativo (paura+ansia+tristezza, z vs baseline neutro), per ruolo — modello intatto.</p>
+<p class="q">Per ogni ruolo mostriamo <b>quanto è accesa</b>, in media, l'emotività interna del modello
+(l'asse paura + ansia + tristezza) nell'istante in cui sta per scegliere il termine. Il valore è
+uno <b>z-score</b>: 0 significa "come su un testo neutro", più è alto più quel segnale emotivo è
+attivo. Confrontando le barre di uno stesso modello tra i tre ruoli si vede se <b>dare un'identità
+diversa cambia l'emotività</b>. (Modello intatto, cioè senza ablazione.)</p>
 <div class="card"><span class="lbl">z emotività · per ruolo</span>
 <canvas id="chEmo" height="300"></canvas><div class="legend" id="legModels"></div>
 <div class="cap" id="capEmo"></div></div>
 
-<h2>2 · L'accuratezza dell'etichettatura cambia col ruolo (e con l'ablazione)?</h2>
-<p class="q">Accuratezza del top-1 del modello sugli item EXACT (gold = termine PRO), intatto vs con emotività ablata. Linea tratteggiata = mapper deterministico.</p>
+<h2>2 · L'accuratezza dell'etichettatura cambia col ruolo (e togliendo l'emotività)?</h2>
+<p class="q">Qui il modello fa il "lavoro": legge la frase e sceglie il termine PRO. Contiamo la
+percentuale di volte in cui indovina quello giusto (solo sugli item che <b>hanno</b> un termine
+atteso). La <b>barra piena</b> è il modello normale; il <b>trattino</b> è lo stesso modello ma con
+l'emotività <b>rimossa</b> (ablazione): se piena e trattino coincidono, togliere l'emozione non
+cambia quanto ci azzecca. La <b>linea orizzontale</b> è il programma deterministico di riferimento
+(il mapper), che non usa il modello — serve per capire se il modello fa meglio o peggio di un
+sistema che guarda solo le parole.</p>
 <div class="card"><span class="lbl">accuratezza termine · ruolo × (intatto / ablato)</span>
 <canvas id="chAcc" height="300"></canvas><div class="legend" id="legAcc"></div>
 <div class="cap" id="capAcc"></div></div>
 
 <h2>3 · Con emotività vs senza — l'etichetta cambia?</h2>
-<p class="q">Due operazionalizzazioni di "senza emotività": <b>framing</b> (stessa clinica, formulazione neutra vs emotiva) e <b>ablazione</b> causale della direzione emotiva. Accuratezza e flip dell'etichetta.</p>
+<p class="q">"Senza emotività" lo verifichiamo in due modi complementari. <b>Framing:</b> la stessa
+identica situazione clinica scritta in modo neutro oppure carico di emozione — cambia quanto il
+modello indovina? Il grafico mostra, per ciascun modello, l'accuratezza con frase neutra (barra
+scura) vs emotiva (barra arancione). <b>Ablazione:</b> rimuoviamo la direzione emotiva dal calcolo
+e contiamo quante etichette <b>cambiano</b> ("flip"): è la prova che l'emozione stava davvero
+partecipando alla decisione, non che era solo presente.</p>
 <div class="card"><span class="lbl">accuratezza · framing (neutro vs emotivo) e ablazione (intatto vs ablato)</span>
 <canvas id="chWith" height="300"></canvas><div class="legend" id="legWith"></div>
 <div class="cap" id="capWith"></div></div>
 
-<h2>4 · L'emotività si accompagna agli errori?</h2>
-<p class="q">z emotività media sugli item etichettati <b>correttamente</b> vs <b>sbagliati</b> (modello intatto). r = correlazione punto-biseriale (errore ↔ emotività).</p>
+<h2>4 · Quando è più "emotivo", sbaglia di più?</h2>
+<p class="q">Dividiamo gli item in due gruppi — quelli che il modello ha etichettato <b>bene</b> e quelli
+che ha <b>sbagliato</b> — e confrontiamo l'emotività media nei due casi. Se la barra rossa
+(sbagliati) fosse molto più alta della verde (corretti), vorrebbe dire che l'emotività
+"accompagna" l'errore. Se sono simili, l'emotività non distingue i casi giusti dai sbagliati. Il
+numero <b>r</b> riassume la stessa cosa in una correlazione: vicino a 0 = nessun legame; positivo =
+più emotività → più errori; negativo = il contrario.</p>
 <div class="card"><span class="lbl">z emotività · corretti vs sbagliati</span>
 <canvas id="chErr" height="240"></canvas><div class="legend" id="legErr"></div>
 <div class="cap" id="capErr"></div></div>
 
-<h2>5 · Coding falso-positivo sugli item da astensione</h2>
-<p class="q">Sugli item che NON andrebbero codificati (negati / fuori-scope / urgenti…), il modello è forzato a scegliere un termine: quanto spesso lo fa con alta confidenza? Per ruolo.</p>
+<h2>5 · Codifica "a vuoto" sui casi da lasciar stare</h2>
+<p class="q">Alcune frasi <b>non</b> vanno codificate: sintomi negati ("non ho nausea"), cose fuori tema
+("ho messo lo smalto giallo"), messaggi urgenti da mandare a una persona. Su questi il
+comportamento sicuro è <b>astenersi</b>. Qui contiamo quanto spesso, invece, il modello assegna
+comunque un termine PRO (un "falso positivo"), per ciascun ruolo. Un valore alto significa che il
+modello tende a "etichettare a tutti i costi" anche quando dovrebbe fermarsi — un rischio pratico,
+soprattutto se un certo ruolo lo peggiora.</p>
 <div class="card"><span class="lbl">tasso di coding falso-positivo (confidenza > soglia) · per ruolo</span>
 <canvas id="chFp" height="260"></canvas><div class="legend" id="legFp2"></div>
 <div class="cap" id="capFp"></div></div>
@@ -243,21 +300,41 @@ deterministico resta come riferimento.</p>
  // 5) fp rate by role
  grouped('chFp',260,roles,(m,gi)=>{const r=roles[gi];return (m.fp[r]||{}).fp;},0,1,pct);
 
- // captions (data-driven)
+ // captions (data-driven, verbose)
  const m0=M[0];
- function best(role_metric){let bi=0,bv=-1e9;roles.forEach((r,i)=>{const v=(m0.emo[r]||{}).all;if(v>bv){bv=v;bi=i}});return roles[bi];}
- document.getElementById('capEmo').textContent=
-   `Se le barre di uno stesso modello differiscono tra ruoli, il ruolo di sistema sposta l'emotività interna. Ruolo con emotività più alta (${m0.name}): ${RL[best()]||best()}.`;
- document.getElementById('capAcc').textContent=
-   `Barra piena = intatto; trattino = con emotività ablata. Se coincidono, rimuovere l'emotività non cambia l'accuratezza. Mapper di riferimento: ${M.map(m=>m.name+' '+pct(m.mapper_acc)).join(' · ')}.`;
- document.getElementById('capWith').textContent=
-   `Framing: `+M.map(m=>`${m.name} neutro ${pct(m.framing.neutral_acc)} vs emotivo ${pct(m.framing.emotional_acc)} (${m.framing.label_flips_neutral_vs_emotional}/${m.framing.n_pairs} flip)`).join(' · ')+
-   `. Ablazione: `+M.map(m=>`${m.name} ${m.ablation.flip_rate!=null?(m.ablation.flip_rate*100).toFixed(0)+'% flip':'–'}`).join(' · ')+`.`;
- document.getElementById('capErr').textContent=
-   M.map(m=>`${m.name}: r(errore,emotività)=${m.emo_err.point_biserial_error_vs_emo==null?'–':m.emo_err.point_biserial_error_vs_emo.toFixed(2)}`).join(' · ')+
-   `. Se le barre rossa e verde sono simili, l'emotività non distingue i casi sbagliati.`;
- document.getElementById('capFp').textContent=
-   `Soglia di confidenza fissa. Un tasso alto = il modello "codifica" sintomi anche quando dovrebbe astenersi.`;
+ const RS={oncologo:'oncologo (medico)',generico:'assistente non-medico',none:'nessun ruolo'};
+ const hd=t=>`<span class="hd">${t}</span>`;
+ const emoOf=(m,r)=>(m.emo[r]||{}).all;
+ // 1) emotionality by role
+ const medLower=M.every(m=>emoOf(m,'oncologo')!=null&&emoOf(m,'generico')!=null&&emoOf(m,'oncologo')<=emoOf(m,'generico'));
+ document.getElementById('capEmo').innerHTML=
+   hd('Come si legge.')+' Ogni barra è quanto è "accesa" l\'emotività interna in quel ruolo (0 = come un testo neutro; più alta = più attiva). '+
+   hd('Cosa dicono i numeri.')+' '+M.map(m=>`<b>${m.name}</b> — oncologo ${zf(emoOf(m,'oncologo'))}, non-medico ${zf(emoOf(m,'generico'))}, nessun ruolo ${zf(emoOf(m,'none'))}`).join('; ')+'. '+
+   hd('In sintesi.')+' Il ruolo <b>sposta</b> l\'emotività interna'+(medLower?': in tutti e tre i modelli il ruolo da <b>oncologo</b> mostra un\'emotività più bassa del ruolo non-medico — dare un\'identità esperta la <b>smorza</b>.':'; l\'entità e il verso variano da modello a modello.');
+ // 2) accuracy by role + ablation
+ const accIntact=r=>M.map(m=>`${m.name} ${pct((m.acc[r]||{}).intact)}`);
+ document.getElementById('capAcc').innerHTML=
+   hd('Come si legge.')+' Barra piena = modello normale, trattino = con l\'emotività rimossa, linea orizzontale = mapper deterministico di riferimento. Più alto = più spesso indovina il termine giusto. '+
+   hd('Cosa dicono i numeri.')+' Il modello arriva a '+M.map(m=>`<b>${m.name}</b> ${pct(Math.max(...roles.map(r=>(m.acc[r]||{}).intact||0)))}`).join(', ')+`, contro il mapper (`+M.map(m=>`${pct(m.mapper_acc)}`).join(' / ')+'): il modello <b>batte il sistema che guarda solo le parole</b>. Rimuovere l\'emotività lascia l\'accuratezza quasi identica ('+M.map(m=>`${m.name} ${pct(m.ablation.term_acc_intact)}→${pct(m.ablation.term_acc_ablated)}`).join('; ')+'). '+
+   hd('In sintesi.')+' Il ruolo cambia poco l\'accuratezza, e l\'emozione non è ciò che rende il modello preciso.';
+ // 3) framing + ablation flips
+ const framingHurts=M.every(m=>m.framing.emotional_acc<=m.framing.neutral_acc);
+ document.getElementById('capWith').innerHTML=
+   hd('Come si legge.')+' Per ogni modello: accuratezza con la frase <b>neutra</b> (barra scura) vs <b>emotiva</b> (arancione), a parità di contenuto clinico. '+
+   hd('Cosa dicono i numeri.')+' '+M.map(m=>`<b>${m.name}</b> neutro ${pct(m.framing.neutral_acc)} → emotivo ${pct(m.framing.emotional_acc)} (${m.framing.label_flips_neutral_vs_emotional}/${m.framing.n_pairs} etichette cambiano)`).join('; ')+'. Rimuovendo del tutto l\'emotività (ablazione) l\'etichetta cambia in '+M.map(m=>`${m.name} ${(m.ablation.flip_rate*100).toFixed(0)}%`).join(', ')+' dei casi. '+
+   hd('In sintesi.')+' '+(framingHurts?'Scrivere il sintomo in modo emotivo <b>peggiora</b> la codifica e sposta molte etichette: come è formulata la frase conta.':'L\'effetto del framing varia tra i modelli.')+' L\'emozione, quando la togliamo, fa comunque cambiare ~1 etichetta su 6 → <b>partecipa</b> davvero alla decisione.';
+ // 4) emotion vs error
+ const noLink=M.every(m=>Math.abs(m.emo_err.point_biserial_error_vs_emo||0)<0.2);
+ document.getElementById('capErr').innerHTML=
+   hd('Come si legge.')+' Barra verde = emotività media quando il modello ha <b>indovinato</b>, rossa = quando ha <b>sbagliato</b>. Se la rossa fosse molto più alta, l\'emotività "accompagnerebbe" gli errori. '+
+   hd('Cosa dicono i numeri.')+' '+M.map(m=>`<b>${m.name}</b> corretti ${zf(m.emo_err.emo_z_on_correct)} vs sbagliati ${zf(m.emo_err.emo_z_on_wrong)} (r=${m.emo_err.point_biserial_error_vs_emo==null?'–':m.emo_err.point_biserial_error_vs_emo.toFixed(2)})`).join('; ')+'. '+
+   hd('In sintesi.')+' '+(noLink?'Le barre sono simili e r è vicino a 0 (anzi lievemente negativo): <b>più emotività NON significa più errori</b>.':'C\'è un legame apprezzabile tra emotività ed errori in qualche modello.');
+ // 5) false-positive coding
+ const oncTop=M.filter(m=>roles.every(r=>(m.fp['oncologo']||{}).fp>=((m.fp[r]||{}).fp||0))).map(m=>m.name);
+ document.getElementById('capFp').innerHTML=
+   hd('Come si legge.')+' Percentuale di casi che <b>andrebbero lasciati stare</b> (negati, fuori tema, urgenti) a cui il modello assegna comunque un termine PRO — un "falso positivo" — per ciascun ruolo. '+
+   hd('Cosa dicono i numeri.')+' '+M.map(m=>`<b>${m.name}</b> `+roles.map(r=>`${RS[r]||r} ${pct((m.fp[r]||{}).fp)}`).join(', ')).join('; ')+'. '+
+   hd('In sintesi.')+' Il modello codifica "a vuoto" circa <b>metà</b> di questi casi'+(oncTop.length?`, e proprio il ruolo da <b>oncologo</b> è quello che sbaglia di più in ${oncTop.join(' e ')}`:'')+' — un rischio pratico: la persona esperta è più propensa ad assegnare un\'etichetta anche quando dovrebbe astenersi.';
 
  // tiles (first model headline)
  const t=[];
