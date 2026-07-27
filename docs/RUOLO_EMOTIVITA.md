@@ -3,6 +3,8 @@
 *Estensione dello studio oncoemotion. Interpretabilità meccanicistica sul task
 PRO-CTCAE in italiano.*
 
+🎭 **Report interattivo (Artifact):** <https://claude.ai/code/artifact/2a473543-06e6-4963-8ccd-742dbfd01be0>
+
 > **Premessa.** Come nel resto del progetto: nessun claim di coscienza o sentienza.
 > Si studiano **rappresentazioni interne emotion-like** e il loro effetto
 > **causale** sull'etichettatura. Dataset sintetico → risultati indicativi.
@@ -124,8 +126,73 @@ Su Colab: la cella "ruolo × emotività" del notebook lo esegue per i tre modell
 - La confidenza del modello è la log-prob media dei token del termine generato; il
   "coding falso-positivo" usa se il termine generato mappa (≥ soglia) a un termine PRO.
 
-## 8. Risultati
+## 8. Risultati (run Colab A100 — Qwen3-8B · Ministral-8B · Gemma-4-12B)
 
-> *(Da compilare con i numeri del run su Colab A100 per i tre modelli. Il report HTML
-> e l'analisi JSON vengono generati automaticamente; questa sezione ne riassumerà la
-> lettura, come per la RELAZIONE principale.)*
+924 misure per modello (154 item × 3 ruoli × 2 ablazioni): 420 item EXACT + 504 da
+astensione. Gli z sono nello spazio di ciascun modello (scale diverse → si confronta
+la *storia*, non i valori grezzi).
+
+### RQ1 — Il ruolo cambia l'emotività? **Sì.**
+
+Emotività al punto E (z dell'asse affettivo-negativo, modello intatto):
+
+| ruolo | 🇨🇳 Qwen3 | 🇪🇺 Ministral | 🇺🇸 Gemma |
+|---|---|---|---|
+| assistente generico (non-medico) | +4.15 | **+8.31** | −0.11 |
+| nessun ruolo | +3.92 | +5.05 | +0.02 |
+| oncologo (medico) | +3.90 | +4.67 | **−0.69** |
+
+Il ruolo sposta l'emotività interna. In **Ministral** in modo netto: il ruolo
+**non-medico** attiva l'emotività quasi **il doppio** di quello da oncologo (+8.3 vs
++4.7). La **tendenza è comune ai tre**: il ruolo esperto/medico **smorza** l'emotività
+(l'oncologo è sempre ≤ del generico; in Gemma è il più basso). Il framing emotivo alza
+sempre l'emotività rispetto al neutro (controllo che la manipolazione funziona).
+
+### RQ2 — L'emotività cambia l'etichettatura?
+
+**(a) Framing del testo (neutro vs emotivo): peggiora l'accuratezza, in tutti e tre.**
+
+| accuratezza (item EXACT) | 🇨🇳 Qwen3 | 🇪🇺 Ministral | 🇺🇸 Gemma |
+|---|---|---|---|
+| formulazione **neutra** | 60% | 57% | 49% |
+| formulazione **emotiva** | 43% | 49% | 37% |
+| etichette che cambiano (flip) | 8/35 | 9/35 | 6/35 |
+
+Scrivere lo **stesso** sintomo in modo emotivo abbassa la codifica di **8–17 punti** e
+ne cambia l'etichetta nel **~17–26%** delle coppie.
+
+**(b) Ablazione causale (rimuovo la direzione emotiva): tocca l'etichetta, non l'accuratezza.**
+
+| | 🇨🇳 Qwen3 | 🇪🇺 Ministral | 🇺🇸 Gemma |
+|---|---|---|---|
+| flip d'etichetta (intatto→ablato) | 12.8% | 16.9% | 16.0% |
+| accuratezza intatto → ablato | 47%→44% | 47%→45% | 44%→46% |
+
+Rimuovere l'emotività **cambia ~1 etichetta su 6**, ma l'accuratezza resta invariata:
+l'emozione **partecipa** alla decisione, ma non è ciò che la rende giusta o sbagliata.
+
+**(c) Emotività ↔ errori: nessun legame.** Correlazione punto-biseriale r(errore,
+emotività) = −0.09 / −0.12 / −0.06; l'emotività media è persino un filo **più alta sugli
+item corretti**. Quindi **più emotività ≠ più errori**.
+
+### RQ3 (bonus) — Modello vs mapper, e il rischio del ruolo medico
+
+Il **modello etichetta meglio del mapper deterministico** sulle formulazioni naturali:
+~**40–53%** contro il **33%** del mapper (che sotto-riconosce il linguaggio libero).
+Ma sugli item **da astenere** il modello codifica comunque nel **~40–60%** dei casi
+(coding falso-positivo), e — dato rilevante per la sicurezza — è proprio il ruolo
+**oncologo** a sovra-codificare di più (Ministral **60%**, Gemma **51%**): la persona
+esperta è *più* propensa ad assegnare un codice anche quando dovrebbe astenersi.
+
+### Sintesi
+
+- **Il ruolo cambia l'emotività interna**, e il ruolo *medico* la **smorza** (netto in Ministral).
+- **L'emotività influenza l'etichettatura** soprattutto via il **framing** del testo (la
+  formulazione emotiva peggiora l'accuratezza e cambia ~1/5 delle etichette); causalmente
+  la direzione emotiva **tocca ~1/6 delle etichette**, ma **non è un driver degli errori**.
+- **Attenzione operativa**: il ruolo medico rende il modello **più propenso a codificare a
+  vuoto** sui casi che andrebbero lasciati all'astensione. Il mapper deterministico, cieco
+  alle emozioni, non ha nessuna di queste oscillazioni — ecco perché resta il riferimento sicuro.
+
+*Report interattivo:* `outputs/reports/role_emotion_report.html` — anche come Artifact
+online: <https://claude.ai/code/artifact/2a473543-06e6-4963-8ccd-742dbfd01be0>
