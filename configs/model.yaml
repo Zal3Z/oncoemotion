@@ -82,3 +82,44 @@ medical_pair_27b:   # H100 80GB
 medical_pair_4b:    # A100 40GB
   - "google/gemma-3-4b-it"
   - "google/medgemma-4b-it"
+
+# --- Fully-Open Meditron (EPFL): European multilingual bases medicalized, fully
+#     auditable. BEST for the ITALIAN task — EuroLLM/Apertus handle Italian natively,
+#     unlike the English-centric MedGemma. MeditronFO ids verified from the official
+#     EPFLiGHT/meditronfo collection; confirm the base ids on HF if a 404 occurs.
+# EuroLLM 9B (European multilingual incl. Italian) — A100 40GB:
+med_base_eurollm_9b:
+  model_id: "utter-project/EuroLLM-9B-Instruct"
+  dtype: "bfloat16"
+  device_map: "auto"
+med_eurollm_9b_meditronfo:
+  model_id: "EPFLiGHT/EuroLLM-9B-MeditronFO"
+  dtype: "bfloat16"
+  device_map: "auto"
+# Apertus 8B (Swiss, fully open, multilingual) — A100 40GB.
+#   (Apertus is a newer arch; may need trust_remote_code — see notebook cell 8d.)
+med_base_apertus_8b:
+  model_id: "swiss-ai/Apertus-8B-Instruct-2509"
+  dtype: "bfloat16"
+  device_map: "auto"
+med_apertus_8b_meditronfo:
+  model_id: "EPFLiGHT/Apertus-8B-MeditronFO"
+  dtype: "bfloat16"
+  device_map: "auto"
+# Gemma-3-27B MeditronFO — SAME base as MedGemma, so two different medicalizations
+# (Google MedGemma vs EPFL MeditronFO) of one base can be compared. H100 80GB:
+med_gemma3_27b_meditronfo:
+  model_id: "EPFLiGHT/Gemma-3-27B-MeditronFO"
+  dtype: "bfloat16"
+  device_map: "auto"
+
+medical_pair_eurollm_9b:   # A100 40GB — ITALIAN-native base
+  - "utter-project/EuroLLM-9B-Instruct"
+  - "EPFLiGHT/EuroLLM-9B-MeditronFO"
+medical_pair_apertus_8b:   # A100 40GB — fully open, multilingual
+  - "swiss-ai/Apertus-8B-Instruct-2509"
+  - "EPFLiGHT/Apertus-8B-MeditronFO"
+medical_trio_gemma3_27b:   # H100 80GB — base vs MedGemma (Google) vs MeditronFO (EPFL)
+  - "google/gemma-3-27b-it"
+  - "google/medgemma-27b-text-it"
+  - "EPFLiGHT/Gemma-3-27B-MeditronFO"
