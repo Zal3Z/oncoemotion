@@ -40,14 +40,7 @@ class HFDecoderAdapter(ModelAdapter):
             "float32": torch.float32,
         }[self.config.dtype]
 
-        self.tokenizer = AutoTokenizer.from_pretrained(
-            self.config.model_id, trust_remote_code=self.config.trust_remote_code
-        )
-
         dev = (self.config.device_map or "cpu")
-        kw = dict(trust_remote_code=self.config.trust_remote_code)
-        if dev == "auto":
-            kw["device_map"] = "auto"
 
         # Try several AutoModel classes so multimodal decoders (Gemma-3 / MedGemma,
         # Mistral-3, ...) load for TEXT-ONLY interpretability: AutoModelForCausalLM
@@ -61,22 +54,34 @@ class HFDecoderAdapter(ModelAdapter):
             if _cls is not None:
                 loaders.append(_cls)
 
-        def _try_load(loader):
-            # dtype arg name changed across transformers versions.
-            try:
-                return loader.from_pretrained(self.config.model_id, dtype=dtype, **kw)
-            except TypeError:
-                return loader.from_pretrained(self.config.model_id, torch_dtype=dtype, **kw)
+        def _acquire(trc: bool):
+            """Load tokenizer + model with a given trust_remote_code setting."""
+            tok = AutoTokenizer.from_pretrained(self.config.model_id, trust_remote_code=trc)
+            kw = dict(trust_remote_code=trc)
+            if dev == "auto":
+                kw["device_map"] = "auto"
+            mdl, last = None, None
+            for loader in loaders:
+                try:
+                    try:  # dtype arg name changed across transformers versions
+                        mdl = loader.from_pretrained(self.config.model_id, dtype=dtype, **kw)
+                    except TypeError:
+                        mdl = loader.from_pretrained(self.config.model_id, torch_dtype=dtype, **kw)
+                    break
+                except Exception as e:  # arch not supported by this class -> next
+                    last = e
+            if mdl is None:
+                raise last
+            return tok, mdl
 
-        model, _last = None, None
-        for loader in loaders:
-            try:
-                model = _try_load(loader)
-                break
-            except Exception as e:  # arch not supported by this class -> try the next
-                _last = e
-        if model is None:
-            raise _last
+        try:
+            self.tokenizer, model = _acquire(self.config.trust_remote_code)
+        except Exception as e:
+            # some models (e.g. Apertus) require custom code -> auto-enable it and retry
+            if not self.config.trust_remote_code and "trust_remote_code" in str(e).lower():
+                self.tokenizer, model = _acquire(True)
+            else:
+                raise
 
         if dev != "auto":
             target = "cuda" if dev.startswith("cuda") and torch.cuda.is_available() else "cpu"
