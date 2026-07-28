@@ -40,3 +40,8 @@ Thumbs.db
 # License-restricted NCI sources + generated terminology that embeds them
 *.pdf
 terminology/pro_ctcae_terms.json
+
+# Colab run archives (unzipped results) and derived outputs
+oncoemotion_result*/
+outputs/role_emotion/
+outputs/role_spectrum/
