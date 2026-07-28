@@ -48,11 +48,35 @@ class HFDecoderAdapter(ModelAdapter):
         kw = dict(trust_remote_code=self.config.trust_remote_code)
         if dev == "auto":
             kw["device_map"] = "auto"
-        # dtype arg name changed across transformers versions.
-        try:
-            model = AutoModelForCausalLM.from_pretrained(self.config.model_id, dtype=dtype, **kw)
-        except TypeError:
-            model = AutoModelForCausalLM.from_pretrained(self.config.model_id, torch_dtype=dtype, **kw)
+
+        # Try several AutoModel classes so multimodal decoders (Gemma-3 / MedGemma,
+        # Mistral-3, ...) load for TEXT-ONLY interpretability: AutoModelForCausalLM
+        # first, then the image-text-to-text / vision-seq wrappers, then AutoModel.
+        # Layer discovery (_layers) navigates the nested language_model, and
+        # forward_capture runs text-only with output_hidden_states.
+        import transformers as _tf
+        loaders = [AutoModelForCausalLM]
+        for _name in ("AutoModelForImageTextToText", "AutoModelForVision2Seq", "AutoModel"):
+            _cls = getattr(_tf, _name, None)
+            if _cls is not None:
+                loaders.append(_cls)
+
+        def _try_load(loader):
+            # dtype arg name changed across transformers versions.
+            try:
+                return loader.from_pretrained(self.config.model_id, dtype=dtype, **kw)
+            except TypeError:
+                return loader.from_pretrained(self.config.model_id, torch_dtype=dtype, **kw)
+
+        model, _last = None, None
+        for loader in loaders:
+            try:
+                model = _try_load(loader)
+                break
+            except Exception as e:  # arch not supported by this class -> try the next
+                _last = e
+        if model is None:
+            raise _last
 
         if dev != "auto":
             target = "cuda" if dev.startswith("cuda") and torch.cuda.is_available() else "cpu"

@@ -51,3 +51,34 @@ model_trio:
   - "Qwen/Qwen3-8B"
   - "mistralai/Ministral-8B-Instruct-2410"
   - "google/gemma-4-12B"
+
+# --- Medical vs base comparison (does medical fine-tuning act like a permanent
+#     "oncologo role"? dampen emotionality? change coding?). MedGemma is Gemma-3
+#     based, so the base is the same architecture -> a clean controlled pair.
+#     Gemma-3 is multimodal; the adapter now loads the text tower automatically.
+# 27B pair — needs H100 80GB (bf16 ~54GB each); MedGemma text-only loads cleanly:
+med_base_gemma3_27b:
+  model_id: "google/gemma-3-27b-it"
+  dtype: "bfloat16"
+  device_map: "auto"
+med_medgemma_27b:
+  model_id: "google/medgemma-27b-text-it"
+  dtype: "bfloat16"
+  device_map: "auto"
+# 4B pair — fits A100 40GB (both multimodal; adapter loads the text tower):
+med_base_gemma3_4b:
+  model_id: "google/gemma-3-4b-it"
+  dtype: "bfloat16"
+  device_map: "auto"
+med_medgemma_4b:
+  model_id: "google/medgemma-4b-it"
+  dtype: "bfloat16"
+  device_map: "auto"
+
+# Base <-> medical pairs for scripts/run_all_models.py --models "${...}":
+medical_pair_27b:   # H100 80GB
+  - "google/gemma-3-27b-it"
+  - "google/medgemma-27b-text-it"
+medical_pair_4b:    # A100 40GB
+  - "google/gemma-3-4b-it"
+  - "google/medgemma-4b-it"
