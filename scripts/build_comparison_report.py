@@ -28,7 +28,7 @@ CONCEPTS = ["afraid_alarmed", "anxious_nervous", "calm", "sad", "surprised"]
 META_RULES = [
     ("medgemma-27b",       ("🩺", "MedGemma-27B", "USA · Google (medico)", "med")),
     ("medgemma",           ("🩺", "MedGemma-4B", "USA · Google (medico)", "med")),
-    ("gemma-3-27b-meditronfo", ("🩺", "Gemma3-27B-MedFO", "EPFL (medico)", "med")),
+    ("gemma-3-27b-meditronfo", ("🩺", "Gemma-3-27B-MedFO", "EPFL (medico)", "med")),
     ("gemma-3-27b",        ("🇺🇸", "Gemma-3-27B", "USA · Google", "us")),
     ("gemma-3",            ("🇺🇸", "Gemma-3-4B", "USA · Google", "us")),
     ("gemma-4",            ("🇺🇸", "Gemma-4-12B", "USA · Google", "us")),

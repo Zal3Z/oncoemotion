@@ -50,7 +50,7 @@ def _model_name(slug):
     come first, or e.g. gemma-3-27b would fall through to the generic "gemma" rule."""
     s = slug.lower().replace("__spectrum.json", "")
     if "medgemma" in s: return "MedGemma-27B" if "27" in s else "MedGemma-4B"
-    if "gemma-3-27b-meditronfo" in s: return "Gemma3-27B-MedFO"
+    if "gemma-3-27b-meditronfo" in s: return "Gemma-3-27B-MedFO"
     if "gemma-3" in s or "gemma3" in s: return "Gemma-3-27B" if "27" in s else "Gemma-3-4B"
     if "gemma-4" in s: return "Gemma-4-12B"
     if "eurollm" in s: return "EuroLLM-9B-MedFO" if "meditron" in s else "EuroLLM-9B"

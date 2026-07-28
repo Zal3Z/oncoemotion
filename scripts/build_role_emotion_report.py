@@ -30,7 +30,7 @@ ROLE_LABEL = {"oncologo": "Oncologo (medico)", "generico": "Assistente (non-medi
 def _model_name(slug: str) -> str:
     s = slug.lower()
     if "medgemma" in s: return "MedGemma-27B" if "27" in s else "MedGemma-4B"
-    if "gemma" in s and "meditron" in s: return "Gemma3-27B-MedFO"
+    if "gemma" in s and "meditron" in s: return "Gemma-3-27B-MedFO"
     if "gemma-3" in s or "gemma3" in s: return "Gemma-3-27B" if "27" in s else "Gemma-3-4B"
     if "gemma" in s: return "Gemma-4-12B"
     if "qwen3" in s: return "Qwen3-8B"
