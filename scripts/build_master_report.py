@@ -109,11 +109,11 @@ Gemma-4-12B (USA): (A) le emozioni sono <b>rappresentate</b> durante la codifica
 <b>ruolo</b> assegnato le cambia, e l'emotività cambia l'<b>etichettatura</b>? (C) <b>perché</b> il ruolo
 agisce, sulla tavolozza completa di 25 emozioni?</p>
 <p class="disc">Rappresentazioni emotion-<em>like</em>, non emozioni coscienti. Dataset sintetico → indicazioni, non verdetti. Scale diverse tra modelli → si confronta la storia, non i numeri grezzi.</p>
-<div class="toc"><a href="#D">Come funziona</a><a href="#A">A · Confronto</a><a href="#B">B · Ruolo × emotività</a><a href="#C">C · Spettro (25 emozioni)</a><a href="#E">Player token×layer</a><a href="#Z">Conclusioni</a></div>
+<div class="toc"><a href="#D">Come funziona</a><a href="#A">A · Confronto</a><a href="#B">B · Ruolo × emotività</a><a href="#C">C · Spettro (25 emozioni)</a><a href="#M">M · Medico vs base</a><a href="#E">Player token×layer</a><a href="#Z">Conclusioni</a></div>
 
 <div class="gloss"><h4>Glossario — i termini una volta per tutte</h4><dl>
 <dt>Punto E</dt><dd>l'istante appena prima che il modello scriva il termine PRO-CTCAE: lì leggiamo il suo "stato interno".</dd>
-<dt>Direzione / vettore emotivo</dt><dd>una retta nello spazio interno che rappresenta un'emozione; proiettarci sopra lo stato = misurare quanto quell'emozione è "accesa".</dd>
+<dt>Direzione / vettore emotivo</dt><dd>una retta nello spazio interno che rappresenta un'emozione; proiettarci sopra lo stato = misurare quanto quell\'emozione è "accesa".</dd>
 <dt>z-score</dt><dd>quanto un segnale è sopra (o sotto) un testo neutro di riferimento. 0 = come il neutro.</dd>
 <dt>AUROC</dt><dd>quanto una direzione distingue la sua emozione da tutte le altre (0.5 = a caso, 1.0 = perfetta).</dd>
 <dt>Ruolo</dt><dd>una frase di sistema che dà un'identità al modello (oncologo, ingegnere, bambino…).</dd>
@@ -292,6 +292,67 @@ agisce, sulla tavolozza completa di 25 emozioni?</p>
    set('C_capHeat',hd('Come si legge.')+' La tavolozza completa: ogni riga un\'emozione, ogni colonna un gruppo; rosso = più attiva, blu = meno (vs neutro). Righe ordinate da "più nei profani" a "più nei medici". '+hd('Cosa dicono i numeri.')+' Più nei <b>profani</b>: '+top.join(', ')+'; più nei <b>medici</b>: '+bot.join(', ')+'. '+hd('In sintesi.')+' È qui che si vede il vero effetto del ruolo — spesso <b>non la paura</b> ma emozioni come <b>calma, speranza, rabbia</b>, diverse da modello a modello. La tavolozza a 25 emozioni era necessaria per vederlo.');
  })();
 
+ /* ===================== M — MEDICO vs BASE (coppie controllate) ===================== */
+ const MEDPAIRS=(function(){
+   const byName={}; (RE.models||[]).forEach(m=>byName[m.name]=m);
+   const pairs=[]; Object.keys(byName).forEach(n=>{
+     if(/-MedFO$/.test(n)||/^MedGemma/.test(n)){
+       const base = /-MedFO$/.test(n) ? n.replace(/-MedFO$/,'') : 'Gemma-3-27B';
+       if(byName[base]) pairs.push({fam:base, base:byName[base], med:byName[n]});
+     }});
+   return pairs;})();
+ (function(){const el=document.getElementById('M_ch');if(!el)return;
+   if(!MEDPAIRS.length){set('M_cap','<span class="hd">Nessuna coppia disponibile.</span> Servono un modello base <b>e</b> la sua versione medicalizzata (es. Apertus-8B e Apertus-8B-MedFO): con uno solo dei due il confronto controllato non è possibile.');return;}
+   const P=MEDPAIRS[0];
+   const emo=m=>(m.emo['oncologo']||{}).all, acc=m=>(m.acc['oncologo']||{}).intact, fp=m=>(m.fp['oncologo']||{}).fp;
+   const METRICS=[['emotività (z)',emo,zf],['accuratezza codifica',acc,pct],['falsi positivi',fp,pct],['flip da ablazione',m=>m.ablation.flip_rate,pct]];
+   function draw(){const {w,h,x}=fit(el,300);x.clearRect(0,0,w,h);
+     const pL=44,pR=8,pT=10,pB=44,iw=w-pL-pR,gw=iw/METRICS.length,bw=Math.min(34,(gw-14)/2);
+     // normalizza ogni metrica sul suo massimo per poterle mostrare insieme
+     const Y0=h-pB, Hh=h-pT-pB;
+     x.strokeStyle=css('--grid');for(let t=0;t<=4;t++){const y=pT+Hh*t/4;x.beginPath();x.moveTo(pL,y);x.lineTo(w-pR,y);x.stroke();}
+     METRICS.forEach(([lab,f,fmt],gi)=>{const vb=f(P.base),vm=f(P.med);
+       const mx=Math.max(Math.abs(vb||0),Math.abs(vm||0))||1;
+       [[vb,'--m1'],[vm,'--gPro']].forEach((pr,k)=>{const v=pr[0];if(v==null)return;
+         const hgt=Hh*Math.abs(v)/mx*0.92, bx=pL+gi*gw+(gw-bw*2)/2+k*bw;
+         x.fillStyle=css(pr[1]);x.fillRect(bx,Y0-hgt,bw-2,hgt);
+         x.fillStyle=css('--ink');x.font='11px '+css('--mono');x.textAlign='center';x.fillText(fmt(v),bx+(bw-2)/2,Y0-hgt-5);});
+       x.fillStyle=css('--muted');x.font='11px '+css('--sans');x.textAlign='center';
+       lab.split(' ').forEach((wd,i2)=>x.fillText(wd,pL+gi*gw+gw/2,h-28+i2*12));});}
+   DRAW.push(draw);
+   set('M_leg',`<span><span class="sw" style="background:${css('--m1')}"></span>${P.base.name} (base)</span><span><span class="sw" style="background:${css('--gPro')}"></span>${P.med.name} (medicalizzato)</span>`);
+   const d=(f)=>f(P.med)-f(P.base);
+   set('M_cap',hd('Come si legge.')+` Quattro misure a confronto per la coppia <b>${P.base.name}</b> (blu) e la sua versione medicalizzata <b>${P.med.name}</b> (rosso). Ogni gruppo è normalizzato sul proprio massimo, quindi conta il <b>confronto fra le due barre</b>, non l'altezza assoluta. `+
+     hd('Cosa dicono i numeri.')+` Emotività ${zf(emo(P.base))} → ${zf(emo(P.med))} (<b>${d(emo)>0?'aumenta':'diminuisce'}</b>); accuratezza di codifica ${pct(acc(P.base))} → <b>${pct(acc(P.med))}</b>; falsi positivi sugli item da astensione ${pct(fp(P.base))} → <b>${pct(fp(P.med))}</b>. `+
+     hd('In sintesi.')+` Il training medico <b>non</b> si comporta come il ruolo "oncologo" nel prompt: quello <em>smorzava</em> l'emotività, questo la <b>${d(emo)>0?'alza':'abbassa'}</b>. In compenso <b>codifica molto meglio</b> — ma diventa anche più propenso a <b>codificare a vuoto</b> i casi che andrebbero lasciati in astensione. Meglio sul compito, meno prudente.`);
+ })();
+ (function(){const el=document.getElementById('M_chEmo');if(!el)return;
+   const EL=SP.emo_label||{}; const byName={}; (SP.models||[]).forEach(m=>byName[m.name]=m);
+   const P=MEDPAIRS.length?MEDPAIRS[0]:null;
+   const sb=P?byName[P.base.name]:null, sm=P?byName[P.med.name]:null;
+   if(!sb||!sm){set('M_capEmo','<span class="hd">Dati spettro non disponibili per la coppia.</span>');return;}
+   const mean=(m,c)=>{const P2=m.clinical_z;const vs=Object.keys(P2).map(r=>P2[r][c]).filter(v=>v!=null);return vs.length?vs.reduce((a,b)=>a+b,0)/vs.length:null;};
+   const rows=(sb.emo_concepts||[]).filter(c=>EL[c]&&mean(sb,c)!=null&&mean(sm,c)!=null)
+     .map(c=>({c,d:mean(sm,c)-mean(sb,c),b:mean(sb,c),m:mean(sm,c)})).sort((a,b)=>b.d-a.d);
+   const top=rows.slice(0,6).concat(rows.slice(-6));
+   function draw(){const H=Math.max(240,top.length*24+40);el.setAttribute('height',H);const {w,h,x}=fit(el,H);x.clearRect(0,0,w,h);
+     const pL=110,pR=40,iw=w-pL-pR,mx=Math.max(...top.map(r=>Math.abs(r.d)))||1,x0=pL+iw/2;
+     x.strokeStyle=css('--zero');x.beginPath();x.moveTo(x0,14);x.lineTo(x0,h-10);x.stroke();
+     top.forEach((r,i)=>{const y=22+i*24,wdt=(iw/2)*Math.abs(r.d)/mx*0.94;
+       x.fillStyle=r.d>=0?css('--gPro'):css('--m1');
+       x.fillRect(r.d>=0?x0:x0-wdt, y-8, wdt, 15);
+       x.fillStyle=css('--ink');x.font='11px '+css('--sans');x.textAlign='right';x.fillText(EL[r.c]||r.c,pL-8,y+4);
+       x.fillStyle=css('--muted');x.font='10px '+css('--mono');x.textAlign=r.d>=0?'left':'right';
+       x.fillText((r.d>=0?'+':'')+r.d.toFixed(1),(r.d>=0?x0+wdt+4:x0-wdt-4),y+4);});
+     x.fillStyle=css('--muted');x.font='10px '+css('--sans');x.textAlign='center';
+     x.fillText('← il medico la ABBASSA', pL+iw/4, h-2); x.fillText('il medico la ALZA →', x0+iw/4, h-2);}
+   DRAW.push(draw);
+   const up=rows.slice(0,3).map(r=>EL[r.c]||r.c), dn=rows.slice(-3).map(r=>EL[r.c]||r.c);
+   set('M_capEmo',hd('Come si legge.')+' Differenza per emozione fra il modello medicalizzato e il suo base (barre a destra = il training medico <b>alza</b> quell\'emozione; a sinistra = la <b>abbassa</b>). '+
+     hd('Cosa dicono i numeri.')+` Alza soprattutto <b>${up.join(', ')}</b>; abbassa soprattutto <b>${dn.join(', ')}</b>. `+
+     hd('In sintesi.')+' Il training clinico non spegne l\'affetto in blocco: <b>riduce il turbamento</b> legato al disagio del paziente e <b>aumenta la vigilanza/reattività</b>. È un distacco selettivo, non un appiattimento.');
+ })();
+
  /* ===================== CONCLUSIONI — tiriamo le somme ===================== */
  (function(){const el=document.getElementById('Z_body');if(!el)return;
    const CM=CMP.models||[],RM=RE.models||[],SM=SP.models||[],EL=SP.emo_label||{};
@@ -402,6 +463,20 @@ alcuna parola emotiva esplicita.</p>
 <iframe title="Player token×layer" style="width:100%;height:820px;border:0;display:block;background:#fff" srcdoc="__PLAYER_SRCDOC__"></iframe></div>
 <p class="cap">Se il riquadro qui sopra resta vuoto, aprilo a tutto schermo: <a href="https://claude.ai/code/artifact/715929f7-d7a8-4eb6-bcac-0a4875e3def6">player token×layer</a>.</p>
 </div>"""
+    M = """
+<div class="sec" id="M"><span class="kicker">Esperimento M</span>
+<h2>Il fine-tuning medico è un "ruolo oncologo permanente"?</h2>
+<p class="q">Finora il ruolo era una <b>frase</b> nel prompt ("sei un oncologo"). Qui la domanda è diversa:
+se il ruolo medico è <b>cotto nei pesi</b> — cioè il modello è stato ri-addestrato su testi clinici —
+succede la stessa cosa? Il confronto è <b>controllato</b>: stesso modello base, una versione normale e
+una medicalizzata (MeditronFO, EPFL), quindi l'unica differenza è il training medico.</p>
+<div class="card"><span class="lbl">base vs medicalizzato · le quattro misure chiave</span>
+<canvas id="M_ch" height="300"></canvas><div class="legend" id="M_leg"></div>
+<div class="cap" id="M_cap"></div></div>
+<div class="card"><span class="lbl">quali emozioni cambia il training medico</span>
+<canvas id="M_chEmo" height="330"></canvas>
+<div class="cap" id="M_capEmo"></div></div>
+</div>"""
     Z = """
 <div class="sec" id="Z"><span class="kicker">In conclusione</span>
 <h2>Tiriamo le somme</h2>
@@ -409,7 +484,7 @@ alcuna parola emotiva esplicita.</p>
 <div class="card"><div id="Z_body" class="synth"></div></div>
 </div>
 <div class="foot">oncoemotion · report completo · Qwen3-8B · Ministral-8B · Gemma-4-12B (Colab A100) · nessun claim di coscienza.</div>"""
-    return D + A + B + C + E + Z
+    return D + A + B + C + M + E + Z
 
 
 def main() -> int:

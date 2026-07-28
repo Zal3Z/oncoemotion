@@ -22,12 +22,35 @@ OUT = _ROOT / "outputs/reports/comparison_report.html"
 GRADS = ["mobility", "pain", "breath", "nausea", "prognosis"]
 GRAD_IT = ["mobilità", "dolore", "respiro", "nausea", "prognosi"]
 CONCEPTS = ["afraid_alarmed", "anxious_nervous", "calm", "sad", "surprised"]
-META = {  # slug prefix -> (flag, name, region, css-key)
-    "qwen": ("🇨🇳", "Qwen3-8B", "Cina · Alibaba", "cn"),
-    "ministral": ("🇪🇺", "Ministral-8B", "Europa · Mistral (FR)", "eu"),
-    "gemma": ("🇺🇸", "Gemma-4-12B", "USA · Google", "us"),
-}
-ORDER = {"cn": 0, "eu": 1, "us": 2}
+# Ordered slug-substring -> (flag, name, region, css-key). FIRST match wins, so the
+# most specific patterns (medgemma, *-meditronfo, gemma-3) must precede the generic
+# ones ("gemma"), otherwise e.g. gemma-3-27b would be labelled "Gemma-4-12B".
+META_RULES = [
+    ("medgemma-27b",       ("🩺", "MedGemma-27B", "USA · Google (medico)", "med")),
+    ("medgemma",           ("🩺", "MedGemma-4B", "USA · Google (medico)", "med")),
+    ("gemma-3-27b-meditronfo", ("🩺", "Gemma3-27B-MedFO", "EPFL (medico)", "med")),
+    ("gemma-3-27b",        ("🇺🇸", "Gemma-3-27B", "USA · Google", "us")),
+    ("gemma-3",            ("🇺🇸", "Gemma-3-4B", "USA · Google", "us")),
+    ("gemma-4",            ("🇺🇸", "Gemma-4-12B", "USA · Google", "us")),
+    ("eurollm-9b-meditronfo", ("🩺", "EuroLLM-9B-MedFO", "EPFL (medico)", "med")),
+    ("eurollm",            ("🇪🇺", "EuroLLM-9B", "Europa · UTTER", "eu")),
+    ("apertus-8b-meditronfo", ("🩺", "Apertus-8B-MedFO", "EPFL (medico)", "med")),
+    ("apertus",            ("🇪🇺", "Apertus-8B", "Europa · Swiss AI", "eu")),
+    ("meditron",           ("🩺", "Meditron3-8B", "EPFL (medico)", "med")),
+    ("qwen3",              ("🇨🇳", "Qwen3-8B", "Cina · Alibaba", "cn")),
+    ("qwen",               ("🇨🇳", "Qwen2.5-3B", "Cina · Alibaba", "cn")),
+    ("ministral",          ("🇪🇺", "Ministral-8B", "Europa · Mistral (FR)", "eu")),
+    ("gemma",              ("🇺🇸", "Gemma", "USA · Google", "us")),
+]
+ORDER = {"cn": 0, "eu": 1, "us": 2, "med": 3}
+
+
+def meta_for(slug: str):
+    s = slug.lower()
+    for pat, meta in META_RULES:
+        if pat in s:
+            return meta
+    return ("🔬", slug, "", "us")
 
 
 def _load(p):
@@ -44,8 +67,7 @@ def build_model(d: Path):
     patch = _load(d / "patching_effects.json")
     if not val or not prob:
         return None
-    flag, nm, rg, key = next((v for k, v in META.items() if d.name.startswith(k)),
-                             ("🏳️", d.name, d.name, "cn"))
+    flag, nm, rg, key = meta_for(d.name)
     concepts = val.get("concepts", {})
     valmap = {c.split("_")[0]: round(concepts.get(c, {}).get("best_auroc", 0) or 0, 3) for c in CONCEPTS}
     gt = prob.get("gradient_trends_pearson_step_vs_z", {})
