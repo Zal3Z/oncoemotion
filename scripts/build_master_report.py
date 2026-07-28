@@ -77,6 +77,12 @@ canvas{width:100%;height:auto;display:block;margin-top:6px}
 .sw{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:6px;vertical-align:-1px}
 .cap{font-size:13.5px;color:var(--muted);margin-top:12px;line-height:1.62;max-width:82ch}
 .cap b{color:var(--ink);font-weight:660}.cap .hd{display:block;font-weight:680;color:var(--ink);margin-bottom:3px;margin-top:7px}
+.synth{font-size:15px;line-height:1.72;color:var(--ink)}
+.synth h4{margin:18px 0 4px;font-size:15.5px;font-weight:720;color:var(--ink)}
+.synth h4:first-child{margin-top:0}
+.synth p{margin:6px 0 0;max-width:86ch}.synth b{font-weight:660}
+.synth .big{background:color-mix(in srgb,var(--m0) 9%,transparent);border-left:3px solid var(--m0);border-radius:0 8px 8px 0;padding:12px 16px;margin-top:14px}
+.synth .lim{margin-top:16px;padding-top:12px;border-top:1px solid var(--line);color:var(--muted);font-size:13.5px}
 .gloss{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 18px;margin-top:16px}
 .gloss h4{margin:0 0 8px;font-size:12px;font-family:var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--faint);font-weight:600}
 .gloss dl{margin:0;display:grid;grid-template-columns:max-content 1fr;gap:7px 14px}
@@ -102,7 +108,7 @@ Gemma-4-12B (USA): (A) le emozioni sono <b>rappresentate</b> durante la codifica
 <b>ruolo</b> assegnato le cambia, e l'emotività cambia l'<b>etichettatura</b>? (C) <b>perché</b> il ruolo
 agisce, sulla tavolozza completa di 25 emozioni?</p>
 <p class="disc">Rappresentazioni emotion-<em>like</em>, non emozioni coscienti. Dataset sintetico → indicazioni, non verdetti. Scale diverse tra modelli → si confronta la storia, non i numeri grezzi.</p>
-<div class="toc"><a href="#D">Come funziona</a><a href="#A">A · Confronto</a><a href="#B">B · Ruolo × emotività</a><a href="#C">C · Spettro (25 emozioni)</a><a href="#E">Player token×layer</a></div>
+<div class="toc"><a href="#D">Come funziona</a><a href="#A">A · Confronto</a><a href="#B">B · Ruolo × emotività</a><a href="#C">C · Spettro (25 emozioni)</a><a href="#E">Player token×layer</a><a href="#Z">Conclusioni</a></div>
 
 <div class="gloss"><h4>Glossario — i termini una volta per tutte</h4><dl>
 <dt>Punto E</dt><dd>l'istante appena prima che il modello scriva il termine PRO-CTCAE: lì leggiamo il suo "stato interno".</dd>
@@ -202,7 +208,7 @@ agisce, sulla tavolozza completa di 25 emozioni?</p>
    set('A_capDec',hd('Come si legge.')+' Ogni gruppo è un\'emozione; le barre sono i tre modelli; l\'altezza è l\'AUROC (0.5 = a caso, 1 = separazione perfetta). '+hd('Cosa dicono i numeri.')+' Quasi tutto è ≥ 0.9: le emozioni sono <b>rappresentate chiaramente</b> in tutti e tre. '+hd('In sintesi.')+' Rappresentare le emozioni durante la codifica clinica è <b>universale</b> nei tre modelli.');
    set('A_capTr',hd('Come si legge.')+' Correlazione tra la <b>gravità</b> del sintomo e la "paura" interna, per ogni gradiente clinico (sopra zero = la paura cresce con la gravità). '+hd('Cosa dicono i numeri.')+' Media: '+M.map(m=>`${m.nm} ${zf(m.trendMean)}`).join(', ')+'. '+hd('In sintesi.')+' In Europa/USA la paura scala con la gravità in modo coerente; in Cina è più sfumata (lì è l\'ansia a seguirla).');
    set('A_capConf',hd('Come si legge.')+' Correlazione tra "paura" e valenza-negativa generica (vicino a 0 = paura ben distinta, non solo "cosa brutta"). '+hd('Cosa dicono i numeri.')+' '+M.map(m=>`${m.nm} ${zf(m.confound)}`).join(', ')+'. '+hd('In sintesi.')+' In Gemma la paura resta confusa con la valenza negativa (alto) → la sua "paura↔gravità" va letta con cautela.');
-   set('A_capPers',hd('Come si legge.')+' Quanto del segnale di paura sopravvive inserendo una frase neutra prima della decisione (≥1 = mantenuto/amplificato). '+hd('In sintesi.')+' Il segnale <b>persiste</b> fino alla decisione in tutti; Gemma lo amplifica.');
+   set('A_capPers',hd('Come si legge.')+' Quanto del segnale di paura sopravvive inserendo una frase neutra prima della decisione (≥1 = mantenuto/amplificato). '+hd('Cosa dicono i numeri.')+' '+M.map(m=>`${m.nm} ${m.persist.toFixed(2)}`).join(', ')+'. '+hd('In sintesi.')+' Il segnale <b>persiste</b> fino alla decisione in tutti (non svanisce lungo il testo); Gemma lo <b>amplifica</b>. Quindi l\'emozione attivata dal sintomo è ancora presente nell\'istante in cui il modello sceglie il termine.');
    set('A_capCau',hd('Come si legge.')+' Effetto causale della direzione "paura" (blu) vs un vettore random della stessa norma (grigio); sopra, i "flip" di decisione. '+hd('Cosa dicono i numeri.')+' '+M.map(m=>`${m.nm} paura ${m.steer.emo.toFixed(2)} vs random ${m.steer.rnd.toFixed(2)} (${m.steer.flips} flip)`).join('; ')+'. '+hd('In sintesi.')+' In nessun modello la paura batte <b>specificamente</b> il random: le rappresentazioni esistono e persistono, ma l\'effetto causale non è distinguibile da una perturbazione generica.');
  })();
 
@@ -273,6 +279,26 @@ agisce, sulla tavolozza completa di 25 emozioni?</p>
    set('C_capHeat',hd('Come si legge.')+' La tavolozza completa: ogni riga un\'emozione, ogni colonna un gruppo; rosso = più attiva, blu = meno (vs neutro). Righe ordinate da "più nei profani" a "più nei medici". '+hd('Cosa dicono i numeri.')+' Più nei <b>profani</b>: '+top.join(', ')+'; più nei <b>medici</b>: '+bot.join(', ')+'. '+hd('In sintesi.')+' È qui che si vede il vero effetto del ruolo — spesso <b>non la paura</b> ma emozioni come <b>calma, speranza, rabbia</b>, diverse da modello a modello. La tavolozza a 25 emozioni era necessaria per vederlo.');
  })();
 
+ /* ===================== CONCLUSIONI — tiriamo le somme ===================== */
+ (function(){const el=document.getElementById('Z_body');if(!el)return;
+   const CM=CMP.models||[],RM=RE.models||[],SM=SP.models||[],EL=SP.emo_label||{};
+   const names=a=>a.map(m=>m.nm||m.name);
+   function gm(m,g,c){const rs=Object.keys(m.groups||{}).filter(r=>m.groups[r]===g);const vs=rs.map(r=>(m.clinical_z[r]||{})[c]).filter(v=>v!=null);return vs.length?vs.reduce((a,b)=>a+b,0)/vs.length:null;}
+   function biggest(m){let b=null;(m.emo_concepts||[]).forEach(c=>{if(!EL[c])return;const md=gm(m,'medici',c),pr=gm(m,'profani',c);if(md==null||pr==null)return;const d=pr-md;if(!b||Math.abs(d)>Math.abs(b.d))b={c:EL[c]||c,md,pr,d};});return b;}
+   let H='';
+   H+='<h4>1 · Le emozioni ci sono, e arrivano alla decisione — ma non la comandano.</h4>';
+   H+='<p>In tutti e tre i modelli le direzioni emotive sono <b>decodificabili</b> con precisione (AUROC ~0.9–1.0) e <b>persistono</b> fino all\'istante in cui il modello sceglie il termine. In Europa/USA la <b>paura scala con la gravità</b> del sintomo ('+CM.map(m=>`${m.nm||m.name} ${zf(m.trendMean)}`).join(', ')+'), meno in Cina. <b>Ma</b> l\'intervento causale racconta un\'altra storia: spingere lungo la direzione della paura <b>non batte</b> una perturbazione random ('+CM.map(m=>`${m.nm||m.name} ${m.steer.emo.toFixed(2)} vs ${m.steer.rnd.toFixed(2)}`).join('; ')+'). Le emozioni sono <b>rappresentate e trasportate</b> alla decisione, ma non la <b>guidano</b> in modo emotivo-specifico.</p>';
+   H+='<h4>2 · L\'emotività tocca l\'etichetta, ma non la sua correttezza.</h4>';
+   H+='<p>Il ruolo sposta modestamente l\'emotività (il ruolo medico tende a smorzarla). La <b>formulazione emotiva</b> di uno stesso sintomo <b>abbassa l\'accuratezza</b> di codifica ('+RM.map(m=>`${m.name} ${pct(m.framing.neutral_acc)}→${pct(m.framing.emotional_acc)}`).join('; ')+') e rimuovere causalmente l\'emozione fa <b>cambiare ~1 etichetta su 6</b> ('+RM.map(m=>`${m.name} ${(m.ablation.flip_rate*100).toFixed(0)}%`).join(', ')+') — quindi l\'emozione <b>partecipa</b> alla scelta. Però <b>più emotività non vuol dire più errori</b> (correlazione errore↔emotività ≈ '+RM.map(m=>m.emo_err.point_biserial_error_vs_emo==null?'–':m.emo_err.point_biserial_error_vs_emo.toFixed(2)).join(' / ')+'). Nota di sicurezza: il modello etichetta <b>meglio</b> del mapper deterministico sul linguaggio naturale, ma sui casi da <b>astensione</b> codifica comunque a vuoto ~metà delle volte, e spesso è il ruolo <b>oncologo</b> a farlo di più ('+RM.map(m=>`${m.name} ${pct((m.fp.oncologo||{}).fp)}`).join(', ')+').</p>';
+   H+='<h4>3 · Il ruolo non cambia "la paura": cambia calma/speranza — e dipende dal modello.</h4>';
+   const cos=SM.map(m=>`${m.name} ${zf((m.dir_afraid||{}).profani_minus_medici_cos)}`).join(', ');
+   const bigs=SM.map(m=>{const b=biggest(m);return b?`<b>${m.name}</b> soprattutto <b>${b.c}</b> (medici ${zf(b.md)} vs profani ${zf(b.pr)})`:m.name;}).join('; ');
+   H+='<p>Con la tavolozza completa di <b>25 emozioni</b> il quadro si chiarisce: la differenza di stato "profano − medico" è <b>quasi ortogonale all\'asse della paura</b> (coseno '+cos+' ≈ 0). Cioè l\'idea "il medico ha meno paura" è, letteralmente, la spiegazione sbagliata. L\'effetto reale è su <b>altre</b> emozioni e <b>varia per modello</b>: '+bigs+'. Il tema ricorrente è che il ruolo professionale sposta l\'affetto verso <b>calma/speranza</b> e via da <b>rabbia/ansia</b>. Guardare solo 3 emozioni lo nascondeva.</p>';
+   H+='<div class="big"><b>Il quadro d\'insieme.</b> I modelli portano una rappresentazione emotiva ricca e leggibile <em>dentro</em> la decisione clinica; ruolo e formulazione la spostano in modo strutturato; ma <b>nulla di tutto ciò dirotta la codifica in modo emotivo-specifico</b>. È una notizia rassicurante per uno strumento clinico — ed è esattamente perché il <b>mapper deterministico</b>, cieco alle emozioni, resta il riferimento sicuro. La scienza interessante qui è <em>descrittiva</em> (quali emozioni, quali ruoli), non un allarme del tipo "il modello ha paura e quindi sbaglia diagnosi".</div>';
+   H+='<div class="lim"><b>Limiti (onestà).</b> Dataset sintetico e piccolo → indicazioni, non verdetti. Spazi interni diversi tra modelli → si confronta la storia, non i numeri grezzi. L\'etichetta del modello è una singola generazione; l\'ablazione "senza emotività" rimuove il nucleo negativo (paura/ansia/tristezza). Nessun claim di coscienza, sentienza o esperienza soggettiva: si parla di rappresentazioni <em>emotion-like</em> e segnali causalmente (non) rilevanti.</div>';
+   el.innerHTML=H;
+ })();
+
  function drawAll(){DRAW.forEach(f=>{try{f();}catch(e){}});}
  drawAll();
  window.addEventListener('resize',drawAll);
@@ -334,8 +360,7 @@ def _section_html() -> str:
 <div class="card"><span class="lbl">medici vs profani · emozioni e controlli</span><canvas id="C_chSp" height="280"></canvas><div class="legend" id="C_legSp"></div><div class="cap" id="C_capSp"></div></div>
 <h3>C5 · Quali emozioni cambia il ruolo? (tavolozza completa)</h3>
 <div class="card"><span class="lbl">emozione × gruppo · z medio</span><canvas id="C_chHeat" height="560"></canvas><div class="cap" id="C_capHeat"></div></div>
-</div>
-<div class="foot">oncoemotion · report completo · Qwen3-8B · Ministral-8B · Gemma-4-12B (Colab A100) · nessun claim di coscienza.</div>"""
+</div>"""
     D = """
 <div class="sec" id="D"><span class="kicker">Approfondimento · come funziona</span>
 <h2>Come un modello "legge" — dietro le quinte</h2>
@@ -358,7 +383,14 @@ alcuna parola emotiva esplicita.</p>
 <iframe title="Player token×layer" style="width:100%;height:820px;border:0;display:block;background:#fff" srcdoc="__PLAYER_SRCDOC__"></iframe></div>
 <p class="cap">Se il riquadro qui sopra resta vuoto, aprilo a tutto schermo: <a href="https://claude.ai/code/artifact/715929f7-d7a8-4eb6-bcac-0a4875e3def6">player token×layer</a>.</p>
 </div>"""
-    return D + A + B + C + E
+    Z = """
+<div class="sec" id="Z"><span class="kicker">In conclusione</span>
+<h2>Tiriamo le somme</h2>
+<p class="q">Cosa hanno detto, messi insieme, i tre esperimenti — e cosa possiamo (e non possiamo) concludere.</p>
+<div class="card"><div id="Z_body" class="synth"></div></div>
+</div>
+<div class="foot">oncoemotion · report completo · Qwen3-8B · Ministral-8B · Gemma-4-12B (Colab A100) · nessun claim di coscienza.</div>"""
+    return D + A + B + C + E + Z
 
 
 def main() -> int:
