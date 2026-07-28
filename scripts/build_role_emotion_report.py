@@ -29,10 +29,16 @@ ROLE_LABEL = {"oncologo": "Oncologo (medico)", "generico": "Assistente (non-medi
 
 def _model_name(slug: str) -> str:
     s = slug.lower()
+    if "medgemma" in s: return "MedGemma-27B" if "27" in s else "MedGemma-4B"
+    if "gemma" in s and "meditron" in s: return "Gemma3-27B-MedFO"
+    if "gemma-3" in s or "gemma3" in s: return "Gemma-3-27B" if "27" in s else "Gemma-3-4B"
+    if "gemma" in s: return "Gemma-4-12B"
     if "qwen3" in s: return "Qwen3-8B"
     if "qwen2.5" in s or "qwen2" in s: return "Qwen2.5-3B"
     if "ministral" in s: return "Ministral-8B"
-    if "gemma" in s: return "Gemma-4-12B"
+    if "eurollm" in s: return "EuroLLM-9B-MedFO" if "meditron" in s else "EuroLLM-9B"
+    if "apertus" in s: return "Apertus-8B-MedFO" if "meditron" in s else "Apertus-8B"
+    if "meditron" in s: return "Meditron3-8B"
     return slug
 
 
@@ -86,20 +92,60 @@ def _collect(dirp: Path) -> dict:
                         "emo_z": round(sum(r["z"][c] for c in ("afraid_alarmed", "anxious_nervous", "sad")
                                            if c in r["z"]) / 3, 2),
                     })
+    # per-item classification matrix: how EACH model labelled every open-text item
+    # (role=oncologo, intact) — the "how did each model classify the open PRO-CTCAE
+    # fields" study view.
+    per_model = []
+    for ap in sorted(dirp.glob("*__analysis.json")):
+        slug = ap.name.replace("__analysis.json", "")
+        rp = dirp / f"{slug}__rows.jsonl"
+        if not rp.exists():
+            continue
+        rows = [json.loads(l) for l in rp.read_text(encoding="utf-8").splitlines() if l.strip()]
+        idx = {r["record_id"]: r for r in rows if r["role"] == "oncologo" and not r["ablated"]}
+        per_model.append((_model_name(slug), idx))
+    order, seen = [], set()
+    for _, idx in per_model:
+        for rid in idx:
+            if rid not in seen:
+                seen.add(rid); order.append(rid)
+    mrows = []
+    for rid in order:
+        ref = next((idx[rid] for _, idx in per_model if rid in idx), None)
+        if ref is None:
+            continue
+        cells = []
+        for _, idx in per_model:
+            r = idx.get(rid)
+            if not r:
+                cells.append(None); continue
+            cells.append({
+                "id": r.get("model_top1_id"), "term": r.get("model_top1_term"),
+                "gen": r.get("model_generated"), "correct": r.get("correct"),
+                "matched": bool(r.get("model_matched", r.get("model_top1_id") is not None)),
+                "conf": r.get("model_map_score"),
+            })
+        mrows.append({
+            "text": ref.get("text", ""), "framing": ref["framing"], "category": ref["category"],
+            "gold": ref.get("gold_pro_id") or ref.get("gold_pro_status"),
+            "gold_id": ref.get("gold_pro_id"), "gold_class": ref.get("gold_class"),
+            "cells": cells,
+        })
+    class_matrix = {"models": [n for n, _ in per_model], "rows": mrows}
     return {"models": models, "sample_rows": sample_rows,
-            "role_label": ROLE_LABEL}
+            "role_label": ROLE_LABEL, "class_matrix": class_matrix}
 
 
 TEMPLATE = r"""<!doctype html><html lang=it><head><meta charset=utf-8>
 <meta name=viewport content="width=device-width,initial-scale=1">
 <title>oncoemotion — ruolo & emotività</title><style>
 :root{--bg:#f5f6f8;--panel:#fff;--ink:#12151b;--muted:#5a6473;--faint:#8b95a7;--line:#d7dbe2;--grid:#e6e9ee;
---m0:#0e7490;--m1:#2f6fd0;--m2:#e08a1e;--good:#15803d;--bad:#b91c1c;--zero:#98a2b3;
+--m0:#0e7490;--m1:#2f6fd0;--m2:#e08a1e;--m3:#7c3aed;--m4:#be123c;--m5:#4d7c0f;--good:#15803d;--bad:#b91c1c;--zero:#98a2b3;
 --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;--sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
 @media(prefers-color-scheme:dark){:root{--bg:#0e1116;--panel:#161b23;--ink:#e7ebf2;--muted:#9aa4b5;--faint:#6b7688;--line:#283041;--grid:#1f2733;
---m0:#22d3ee;--m1:#5b8def;--m2:#f0a94a;--good:#4ade80;--bad:#f87171;--zero:#5a6473;}}
-:root[data-theme="light"]{--bg:#f5f6f8;--panel:#fff;--ink:#12151b;--muted:#5a6473;--faint:#8b95a7;--line:#d7dbe2;--grid:#e6e9ee;--m0:#0e7490;--m1:#2f6fd0;--m2:#e08a1e;--good:#15803d;--bad:#b91c1c;--zero:#98a2b3;}
-:root[data-theme="dark"]{--bg:#0e1116;--panel:#161b23;--ink:#e7ebf2;--muted:#9aa4b5;--faint:#6b7688;--line:#283041;--grid:#1f2733;--m0:#22d3ee;--m1:#5b8def;--m2:#f0a94a;--good:#4ade80;--bad:#f87171;--zero:#5a6473;}
+--m0:#22d3ee;--m1:#5b8def;--m2:#f0a94a;--m3:#a78bfa;--m4:#fb7185;--m5:#a3e635;--good:#4ade80;--bad:#f87171;--zero:#5a6473;}}
+:root[data-theme="light"]{--bg:#f5f6f8;--panel:#fff;--ink:#12151b;--muted:#5a6473;--faint:#8b95a7;--line:#d7dbe2;--grid:#e6e9ee;--m0:#0e7490;--m1:#2f6fd0;--m2:#e08a1e;--m3:#7c3aed;--m4:#be123c;--m5:#4d7c0f;--good:#15803d;--bad:#b91c1c;--zero:#98a2b3;}
+:root[data-theme="dark"]{--bg:#0e1116;--panel:#161b23;--ink:#e7ebf2;--muted:#9aa4b5;--faint:#6b7688;--line:#283041;--grid:#1f2733;--m0:#22d3ee;--m1:#5b8def;--m2:#f0a94a;--m3:#a78bfa;--m4:#fb7185;--m5:#a3e635;--good:#4ade80;--bad:#f87171;--zero:#5a6473;}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.55}
 .wrap{max-width:960px;margin:0 auto;padding:30px 20px 70px}
 .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--m0);margin:0 0 8px}
@@ -130,7 +176,8 @@ table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
 th,td{text-align:left;padding:6px 9px;border-bottom:1px solid var(--line);vertical-align:top}
 th{font-family:var(--mono);font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--faint)}
 td.n{font-family:var(--mono);text-align:right;font-variant-numeric:tabular-nums}
-.ok{color:var(--good);font-weight:640}.no{color:var(--bad);font-weight:640}
+.ok{color:var(--good);font-weight:640}.no{color:var(--bad);font-weight:640}.fp{color:var(--m2);font-weight:640}
+#mtx td,#mtx th{white-space:nowrap}#mtx td:first-child{white-space:normal;min-width:220px}
 .pill{display:inline-block;padding:1px 7px;border-radius:20px;font-size:11px;font-family:var(--mono)}
 .pill.emo{background:color-mix(in srgb,var(--m2) 20%,transparent);color:var(--m2)}
 .pill.neu{background:color-mix(in srgb,var(--m1) 16%,transparent);color:var(--m1)}
@@ -230,6 +277,16 @@ soprattutto se un certo ruolo lo peggiora.</p>
 <input type="search" id="q" placeholder="filtra per testo, termine, categoria…">
 <div style="overflow-x:auto"><table id="tbl"></table></div></div>
 
+<h2>7 · Come OGNI modello ha classificato i campi aperti PRO-CTCAE</h2>
+<p class="q">Per ogni frase in campo libero, il termine PRO-CTCAE scelto da <b>ciascun modello</b>
+(ruolo oncologo, intatto). <span class="ok">✓ verde</span> = coincide con la gold; <span class="no">✗ rosso</span> =
+sbagliato; <span style="color:var(--m2)">arancione</span> = ha codificato un termine su un item che andava
+<b>lasciato in astensione</b> (falso positivo); <span style="color:var(--faint)">grigio "–"</span> = si è
+astenuto. Passa il mouse su una cella per vedere cosa ha generato. Cerca per testo/termine.</p>
+<div class="card">
+<input type="search" id="mq" placeholder="filtra per testo, termine, categoria…">
+<div style="overflow-x:auto"><table id="mtx"></table></div></div>
+
 <div class="foot" id="foot"></div>
 </div>
 <script>const DATA = /*__DATA__*/;</script>
@@ -237,7 +294,7 @@ soprattutto se un certo ruolo lo peggiora.</p>
 (function(){
  const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
  const M=DATA.models, RL=DATA.role_label;
- const mcol=i=>css('--m'+(i%3));
+ const mcol=i=>css('--m'+(i%6));
  const roles=M[0]?M[0].roles:[];
  // legends
  const legModels=id=>document.getElementById(id).innerHTML=M.map((m,i)=>`<span><span class="sw" style="background:${mcol(i)}"></span>${m.name}</span>`).join('');
@@ -361,6 +418,33 @@ soprattutto se un certo ruolo lo peggiora.</p>
  }
  draw('');
  document.getElementById('q').addEventListener('input',e=>draw(e.target.value));
+
+ // --- section 7: per-item x per-model classification matrix ---
+ const CX=DATA.class_matrix||{models:[],rows:[]};
+ function esc(s){return String(s==null?'':s).replace(/"/g,'&quot;').replace(/</g,'&lt;');}
+ function cellHtml(c,goldId,goldClass){
+   if(!c) return '<td class="n" style="color:var(--faint)">·</td>';
+   const title=esc((c.gen?('genera: "'+c.gen+'"'):'')+(c.term?('  ['+c.term+']'):''));
+   let cls='',txt=c.id||'–';
+   if(goldClass==='term'){ cls=c.correct===true?'ok':(c.correct===false?'no':''); }
+   else { // abstain item: coding a term = false positive (orange); abstained = grey ok
+     if(c.matched){cls='fp';txt=c.id;} else {return `<td class="n" title="${title}" style="color:var(--good)">–</td>`;}
+   }
+   return `<td class="n ${cls}" title="${title}">${txt}</td>`;
+ }
+ function drawMtx(f){
+   const q=(f||'').toLowerCase();
+   const rs=CX.rows.filter(r=>!q||(r.text+r.gold+r.category+r.cells.map(c=>c&&c.id).join(' ')).toLowerCase().includes(q));
+   const head='<tr><th>frase</th><th>fr.</th><th>gold</th>'+CX.models.map(m=>`<th>${m}</th>`).join('')+'</tr>';
+   document.getElementById('mtx').innerHTML=head+rs.map(r=>
+     `<tr><td>${esc(r.text)}</td>`+
+     `<td><span class="pill ${r.framing==='emotional'?'emo':'neu'}">${r.framing==='emotional'?'emo':'neu'}</span></td>`+
+     `<td class="n">${r.gold}</td>`+
+     r.cells.map(c=>cellHtml(c,r.gold_id,r.gold_class)).join('')+'</tr>').join('');
+ }
+ drawMtx('');
+ const mq=document.getElementById('mq'); if(mq) mq.addEventListener('input',e=>drawMtx(e.target.value));
+
  document.getElementById('foot').textContent=
    'oncoemotion · esperimento ruolo × emotività · '+M.map(m=>m.name).join(' · ')+' · nessun claim di coscienza.';
 

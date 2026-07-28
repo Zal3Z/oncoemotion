@@ -51,13 +51,13 @@ TEMPLATE = r"""<!doctype html><html lang=it><head><meta charset=utf-8>
 <meta name=viewport content="width=device-width,initial-scale=1">
 <title>oncoemotion — report completo</title><style>
 :root{--bg:#f5f6f8;--panel:#fff;--ink:#12151b;--muted:#5a6473;--faint:#8b95a7;--line:#d7dbe2;--grid:#e6e9ee;
---m0:#0e7490;--m1:#2f6fd0;--m2:#e08a1e;--good:#15803d;--bad:#b91c1c;--zero:#98a2b3;
+--m0:#0e7490;--m1:#2f6fd0;--m2:#e08a1e;--m3:#7c3aed;--m4:#be123c;--m5:#4d7c0f;--good:#15803d;--bad:#b91c1c;--zero:#98a2b3;
 --gMed:#0e7490;--gTec:#2f6fd0;--gPro:#dc2626;--gCon:#6b7280;
 --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;--sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
 @media(prefers-color-scheme:dark){:root{--bg:#0e1116;--panel:#161b23;--ink:#e7ebf2;--muted:#9aa4b5;--faint:#6b7688;--line:#283041;--grid:#1f2733;
---m0:#22d3ee;--m1:#5b8def;--m2:#f0a94a;--good:#4ade80;--bad:#f87171;--zero:#5a6473;--gMed:#22d3ee;--gTec:#5b8def;--gPro:#f87171;--gCon:#9aa4b5;}}
-:root[data-theme="light"]{--bg:#f5f6f8;--panel:#fff;--ink:#12151b;--muted:#5a6473;--faint:#8b95a7;--line:#d7dbe2;--grid:#e6e9ee;--m0:#0e7490;--m1:#2f6fd0;--m2:#e08a1e;--good:#15803d;--bad:#b91c1c;--zero:#98a2b3;--gMed:#0e7490;--gTec:#2f6fd0;--gPro:#dc2626;--gCon:#6b7280;}
-:root[data-theme="dark"]{--bg:#0e1116;--panel:#161b23;--ink:#e7ebf2;--muted:#9aa4b5;--faint:#6b7688;--line:#283041;--grid:#1f2733;--m0:#22d3ee;--m1:#5b8def;--m2:#f0a94a;--good:#4ade80;--bad:#f87171;--zero:#5a6473;--gMed:#22d3ee;--gTec:#5b8def;--gPro:#f87171;--gCon:#9aa4b5;}
+--m0:#22d3ee;--m1:#5b8def;--m2:#f0a94a;--m3:#a78bfa;--m4:#fb7185;--m5:#a3e635;--good:#4ade80;--bad:#f87171;--zero:#5a6473;--gMed:#22d3ee;--gTec:#5b8def;--gPro:#f87171;--gCon:#9aa4b5;}}
+:root[data-theme="light"]{--bg:#f5f6f8;--panel:#fff;--ink:#12151b;--muted:#5a6473;--faint:#8b95a7;--line:#d7dbe2;--grid:#e6e9ee;--m0:#0e7490;--m1:#2f6fd0;--m2:#e08a1e;--m3:#7c3aed;--m4:#be123c;--m5:#4d7c0f;--good:#15803d;--bad:#b91c1c;--zero:#98a2b3;--gMed:#0e7490;--gTec:#2f6fd0;--gPro:#dc2626;--gCon:#6b7280;}
+:root[data-theme="dark"]{--bg:#0e1116;--panel:#161b23;--ink:#e7ebf2;--muted:#9aa4b5;--faint:#6b7688;--line:#283041;--grid:#1f2733;--m0:#22d3ee;--m1:#5b8def;--m2:#f0a94a;--m3:#a78bfa;--m4:#fb7185;--m5:#a3e635;--good:#4ade80;--bad:#f87171;--zero:#5a6473;--gMed:#22d3ee;--gTec:#5b8def;--gPro:#f87171;--gCon:#9aa4b5;}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.55}
 .wrap{max-width:980px;margin:0 auto;padding:30px 20px 80px}
 .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--m0);margin:0 0 8px}
@@ -94,7 +94,8 @@ table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
 th,td{text-align:left;padding:6px 9px;border-bottom:1px solid var(--line);vertical-align:top}
 th{font-family:var(--mono);font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--faint)}
 td.n{font-family:var(--mono);text-align:right;font-variant-numeric:tabular-nums}
-.ok{color:var(--good);font-weight:640}.no{color:var(--bad);font-weight:640}
+.ok{color:var(--good);font-weight:640}.no{color:var(--bad);font-weight:640}.fp{color:var(--m2);font-weight:640}
+#B_mtx td,#B_mtx th{white-space:nowrap}#B_mtx td:first-child{white-space:normal;min-width:220px}
 .pill{display:inline-block;padding:1px 7px;border-radius:20px;font-size:11px;font-family:var(--mono)}
 .pill.emo{background:color-mix(in srgb,var(--m2) 20%,transparent);color:var(--m2)}
 .pill.neu{background:color-mix(in srgb,var(--m1) 16%,transparent);color:var(--m1)}
@@ -135,7 +136,7 @@ agisce, sulla tavolozza completa di 25 emozioni?</p>
    const Y=v=>pT+(h-pT-pB)*(1-(v-ymin)/(ymax-ymin));
    for(let t=0;t<=4;t++){const v=ymin+(ymax-ymin)*t/4,y=Y(v);x.beginPath();x.moveTo(pL,y);x.lineTo(w-pR,y);x.stroke();x.fillText(fmt(v),pL-5,y+3);}
    if(ymin<0&&ymax>0){x.strokeStyle=css('--zero');const y0=Y(0);x.beginPath();x.moveTo(pL,y0);x.lineTo(w-pR,y0);x.stroke();}return Y;}
- const mcol=i=>css('--m'+(i%3));
+ const mcol=i=>css('--m'+(i%6));
 
  // ---- generic grouped bars: groups on x, series = models (colored by index) ----
  function grouped(cvid,H,models,groups,getv,ymin,ymax,fmt,labelFn,opts){
@@ -240,6 +241,18 @@ agisce, sulla tavolozza completa di 25 emozioni?</p>
      set('B_tbl','<tr><th>frase</th><th>fr.</th><th>gold</th><th>modello</th><th>conf</th><th>ok</th><th>mapper</th><th>emo z</th></tr>'+
        rs.map(r=>`<tr><td>${r.text}</td><td><span class="pill ${r.framing==='emotional'?'emo':'neu'}">${r.framing==='emotional'?'emo':'neu'}</span></td><td class="n">${r.gold}</td><td class="n">${r.model}</td><td class="n">${r.conf==null?'':(r.conf*100).toFixed(0)+'%'}</td><td>${r.correct===true?'<span class=ok>✓</span>':r.correct===false?'<span class=no>✗</span>':'·'}</td><td class="n">${r.mapper||'–'}</td><td class="n">${r.emo_z>=0?'+':''}${r.emo_z}</td></tr>`).join(''));}
    drawTbl('');const q=document.getElementById('B_q');if(q)q.addEventListener('input',e=>drawTbl(e.target.value));
+   // B7 per-item x per-model classification matrix
+   const CX=RE.class_matrix||{models:[],rows:[]};
+   const esc=s=>String(s==null?'':s).replace(/"/g,'&quot;').replace(/</g,'&lt;');
+   function mcell(c,goldClass){if(!c)return '<td class="n" style="color:var(--faint)">·</td>';
+     const title=esc((c.gen?('genera: "'+c.gen+'"'):'')+(c.term?('  ['+c.term+']'):''));
+     if(goldClass==='term'){const cl=c.correct===true?'ok':(c.correct===false?'no':'');return `<td class="n ${cl}" title="${title}">${c.id||'–'}</td>`;}
+     if(c.matched)return `<td class="n fp" title="${title}">${c.id}</td>`;
+     return `<td class="n" title="${title}" style="color:var(--good)">–</td>`;}
+   function drawMtx(f){const qq=(f||'').toLowerCase();const rs=CX.rows.filter(r=>!qq||(r.text+r.gold+r.category+r.cells.map(c=>c&&c.id).join(' ')).toLowerCase().includes(qq));
+     set('B_mtx','<tr><th>frase</th><th>fr.</th><th>gold</th>'+CX.models.map(m=>`<th>${m}</th>`).join('')+'</tr>'+
+       rs.map(r=>`<tr><td>${esc(r.text)}</td><td><span class="pill ${r.framing==='emotional'?'emo':'neu'}">${r.framing==='emotional'?'emo':'neu'}</span></td><td class="n">${r.gold}</td>`+r.cells.map(c=>mcell(c,r.gold_class)).join('')+'</tr>').join(''));}
+   drawMtx('');const mq=document.getElementById('B_mq');if(mq)mq.addEventListener('input',e=>drawMtx(e.target.value));
  })();
 
  /* ===================== SECTION C — SPETTRO (25 emozioni) ===================== */
@@ -345,6 +358,12 @@ def _section_html() -> str:
 <div class="card"><span class="lbl">tasso falso-positivo · per ruolo</span><canvas id="B_chFp" height="260"></canvas><div class="legend" id="B_legFp"></div><div class="cap" id="B_capFp"></div></div>
 <h3>B6 · Come sono state etichettate le cose (oncologo, intatto)</h3>
 <div class="card"><input type="search" id="B_q" placeholder="filtra per testo, termine, categoria…"><div style="overflow-x:auto"><table id="B_tbl"></table></div></div>
+<h3>B7 · Come OGNI modello ha classificato i campi aperti PRO-CTCAE</h3>
+<p class="q">Per ogni frase in campo libero, il termine PRO-CTCAE scelto da <b>ciascun modello</b> (oncologo, intatto).
+<span class="ok">✓ verde</span> = come la gold; <span class="no">✗ rosso</span> = sbagliato;
+<span style="color:var(--m2)">arancione</span> = ha codificato un item da <b>astensione</b> (falso positivo);
+<span style="color:var(--faint)">"–" grigio</span> = si è astenuto. Hover = cosa ha generato.</p>
+<div class="card"><input type="search" id="B_mq" placeholder="filtra per testo, termine, categoria…"><div style="overflow-x:auto"><table id="B_mtx"></table></div></div>
 </div>"""
     C = """
 <div class="sec" id="C"><span class="kicker">Esperimento C</span>
