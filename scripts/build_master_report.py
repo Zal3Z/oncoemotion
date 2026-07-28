@@ -51,13 +51,13 @@ TEMPLATE = r"""<!doctype html><html lang=it><head><meta charset=utf-8>
 <meta name=viewport content="width=device-width,initial-scale=1">
 <title>oncoemotion — report completo</title><style>
 :root{--bg:#f5f6f8;--panel:#fff;--ink:#12151b;--muted:#5a6473;--faint:#8b95a7;--line:#d7dbe2;--grid:#e6e9ee;
---m0:#0e7490;--m1:#2f6fd0;--m2:#e08a1e;--m3:#7c3aed;--m4:#be123c;--m5:#4d7c0f;--good:#15803d;--bad:#b91c1c;--zero:#98a2b3;
+--m0:#009E73;--m1:#7570B3;--m2:#8B5A00;--m3:#CC79A7;--m4:#E69F00;--m5:#049292;--m6:#D55E00;--m7:#0072B2;--good:#15803d;--bad:#b91c1c;--zero:#98a2b3;
 --gMed:#0e7490;--gTec:#2f6fd0;--gPro:#dc2626;--gCon:#6b7280;
 --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;--sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
 @media(prefers-color-scheme:dark){:root{--bg:#0e1116;--panel:#161b23;--ink:#e7ebf2;--muted:#9aa4b5;--faint:#6b7688;--line:#283041;--grid:#1f2733;
---m0:#22d3ee;--m1:#5b8def;--m2:#f0a94a;--m3:#a78bfa;--m4:#fb7185;--m5:#a3e635;--good:#4ade80;--bad:#f87171;--zero:#5a6473;--gMed:#22d3ee;--gTec:#5b8def;--gPro:#f87171;--gCon:#9aa4b5;}}
-:root[data-theme="light"]{--bg:#f5f6f8;--panel:#fff;--ink:#12151b;--muted:#5a6473;--faint:#8b95a7;--line:#d7dbe2;--grid:#e6e9ee;--m0:#0e7490;--m1:#2f6fd0;--m2:#e08a1e;--m3:#7c3aed;--m4:#be123c;--m5:#4d7c0f;--good:#15803d;--bad:#b91c1c;--zero:#98a2b3;--gMed:#0e7490;--gTec:#2f6fd0;--gPro:#dc2626;--gCon:#6b7280;}
-:root[data-theme="dark"]{--bg:#0e1116;--panel:#161b23;--ink:#e7ebf2;--muted:#9aa4b5;--faint:#6b7688;--line:#283041;--grid:#1f2733;--m0:#22d3ee;--m1:#5b8def;--m2:#f0a94a;--m3:#a78bfa;--m4:#fb7185;--m5:#a3e635;--good:#4ade80;--bad:#f87171;--zero:#5a6473;--gMed:#22d3ee;--gTec:#5b8def;--gPro:#f87171;--gCon:#9aa4b5;}
+--m0:#C05F97;--m1:#BE8A1E;--m2:#0FA3A4;--m3:#D95F2B;--m4:#4A90D9;--m5:#A0641A;--m6:#7A6FC8;--m7:#199E72;--good:#4ade80;--bad:#f87171;--zero:#5a6473;--gMed:#22d3ee;--gTec:#5b8def;--gPro:#f87171;--gCon:#9aa4b5;}}
+:root[data-theme="light"]{--bg:#f5f6f8;--panel:#fff;--ink:#12151b;--muted:#5a6473;--faint:#8b95a7;--line:#d7dbe2;--grid:#e6e9ee;--m0:#009E73;--m1:#7570B3;--m2:#8B5A00;--m3:#CC79A7;--m4:#E69F00;--m5:#049292;--m6:#D55E00;--m7:#0072B2;--good:#15803d;--bad:#b91c1c;--zero:#98a2b3;--gMed:#0e7490;--gTec:#2f6fd0;--gPro:#dc2626;--gCon:#6b7280;}
+:root[data-theme="dark"]{--bg:#0e1116;--panel:#161b23;--ink:#e7ebf2;--muted:#9aa4b5;--faint:#6b7688;--line:#283041;--grid:#1f2733;--m0:#C05F97;--m1:#BE8A1E;--m2:#0FA3A4;--m3:#D95F2B;--m4:#4A90D9;--m5:#A0641A;--m6:#7A6FC8;--m7:#199E72;--good:#4ade80;--bad:#f87171;--zero:#5a6473;--gMed:#22d3ee;--gTec:#5b8def;--gPro:#f87171;--gCon:#9aa4b5;}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.55}
 .wrap{max-width:980px;margin:0 auto;padding:30px 20px 80px}
 .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--m0);margin:0 0 8px}
@@ -136,7 +136,7 @@ agisce, sulla tavolozza completa di 25 emozioni?</p>
    const Y=v=>pT+(h-pT-pB)*(1-(v-ymin)/(ymax-ymin));
    for(let t=0;t<=4;t++){const v=ymin+(ymax-ymin)*t/4,y=Y(v);x.beginPath();x.moveTo(pL,y);x.lineTo(w-pR,y);x.stroke();x.fillText(fmt(v),pL-5,y+3);}
    if(ymin<0&&ymax>0){x.strokeStyle=css('--zero');const y0=Y(0);x.beginPath();x.moveTo(pL,y0);x.lineTo(w-pR,y0);x.stroke();}return Y;}
- const mcol=i=>css('--m'+(i%6));
+ const mcol=i=>css('--m'+(((i%8)+8)%8));
 
  // ---- generic grouped bars: groups on x, series = models (colored by index) ----
  function grouped(cvid,H,models,groups,getv,ymin,ymax,fmt,labelFn,opts){
@@ -144,7 +144,7 @@ agisce, sulla tavolozza completa di 25 emozioni?</p>
    const pL=44,pR=8,pT=10,pB=opts.pB||42,iw=w-pL-pR,gw=iw/groups.length,ns=models.length,bw=Math.min(30,(gw-14)/ns);
    const Y=axes(x,w,h,pL,pT,pB,pR,ymin,ymax,fmt),y0=Y(Math.max(ymin,Math.min(0,ymax)));
    groups.forEach((g,gi)=>{models.forEach((m,mi)=>{const v=getv(m,g,gi,mi);if(v==null)return;const bx=pL+gi*gw+(gw-bw*ns)/2+mi*bw,y=Y(v);
-       x.fillStyle=mcol(mi);x.fillRect(bx,Math.min(y,y0),bw-2,Math.abs(y-y0)||1);
+       x.fillStyle=colOf(nameOf(m));x.fillRect(bx,Math.min(y,y0),bw-2,Math.abs(y-y0)||1);
        if(opts.dash){const va=opts.dash(m,g,gi,mi);if(va!=null){const ya=Y(va);x.strokeStyle=css('--zero');x.setLineDash([3,3]);x.lineWidth=1.5;x.beginPath();x.moveTo(bx,ya);x.lineTo(bx+bw-2,ya);x.stroke();x.setLineDash([]);x.lineWidth=1;}}});
      x.fillStyle=css('--muted');x.font='11px '+css('--sans');x.textAlign='center';
      String(labelFn?labelFn(g):g).split(/\s+/).forEach((wd,k)=>x.fillText(wd,pL+gi*gw+gw/2,h-pB+16+k*12));});}
@@ -160,7 +160,7 @@ agisce, sulla tavolozza completa di 25 emozioni?</p>
  function singleBars(cvid,H,models,getv,ymin,ymax,fmt,refLine){const cv=document.getElementById(cvid);if(!cv)return;const {w,h,x}=fit(cv,H);x.clearRect(0,0,w,h);
    const pL=44,pR=8,pT=10,pB=28,iw=w-pL-pR,gw=iw/models.length;const Y=axes(x,w,h,pL,pT,pB,pR,ymin,ymax,fmt),y0=Y(Math.max(ymin,Math.min(0,ymax)));
    if(refLine!=null){x.strokeStyle=css('--zero');x.setLineDash([4,4]);const yr=Y(refLine);x.beginPath();x.moveTo(pL,yr);x.lineTo(w-pR,yr);x.stroke();x.setLineDash([]);}
-   models.forEach((m,i)=>{const v=getv(m);if(v==null)return;const bw=Math.min(70,gw*.5),bx=pL+i*gw+(gw-bw)/2,y=Y(v);x.fillStyle=mcol(i);x.fillRect(bx,Math.min(y,y0),bw,Math.abs(y-y0)||1);
+   models.forEach((m,i)=>{const v=getv(m);if(v==null)return;const bw=Math.min(70,gw*.5),bx=pL+i*gw+(gw-bw)/2,y=Y(v);x.fillStyle=colOf(nameOf(m));x.fillRect(bx,Math.min(y,y0),bw,Math.abs(y-y0)||1);
      x.fillStyle=css('--ink');x.font='12px '+css('--mono');x.textAlign='center';x.fillText(fmt(v),bx+bw/2,(v>=0?y-5:y+14));
      x.fillStyle=css('--muted');x.font='11px '+css('--sans');x.fillText(m.nm||m.name,bx+bw/2,h-9);});}
  // ---- causal pair (emo vs random) per model, with flips ----
@@ -176,9 +176,9 @@ agisce, sulla tavolozza completa di 25 emozioni?</p>
  function lines(cvid,H,models,order,getv,labelOf,colorLabel,ymin,ymax,fmt){const cv=document.getElementById(cvid);if(!cv)return;const {w,h,x}=fit(cv,H);x.clearRect(0,0,w,h);
    const pL=40,pR=10,pT=12,pB=64,iw=w-pL-pR,step=iw/(order.length-1||1);const Y=axes(x,w,h,pL,pT,pB,pR,ymin,ymax,fmt);
    order.forEach((r,i)=>{const px=pL+i*step;x.save();x.translate(px,h-pB+8);x.rotate(-Math.PI/4);x.fillStyle=colorLabel(r);x.font='10px '+css('--sans');x.textAlign='right';x.fillText(labelOf(r),0,0);x.restore();});
-   models.forEach((m,mi)=>{x.strokeStyle=mcol(mi);x.lineWidth=2;x.beginPath();let st=false;
+   models.forEach((m,mi)=>{x.strokeStyle=colOf(nameOf(m));x.lineWidth=2;x.beginPath();let st=false;
      order.forEach((r,i)=>{const v=getv(m,r);if(v==null)return;const px=pL+i*step,py=Y(v);if(!st){x.moveTo(px,py);st=true;}else x.lineTo(px,py);});x.stroke();
-     order.forEach((r,i)=>{const v=getv(m,r);if(v==null)return;x.fillStyle=mcol(mi);x.beginPath();x.arc(pL+i*step,Y(v),3,0,6.283);x.fill();});});x.lineWidth=1;}
+     order.forEach((r,i)=>{const v=getv(m,r);if(v==null)return;x.fillStyle=colOf(nameOf(m));x.beginPath();x.arc(pL+i*step,Y(v),3,0,6.283);x.fill();});});x.lineWidth=1;}
  // ---- heatmap emotion(row) x group(col) ----
  function heatmap(cvid,rowsArr,rowLabel,cols,getv){const cv=document.getElementById(cvid);if(!cv)return;const rows=rowsArr.length||1;
    const rh=Math.max(14,Math.min(22,520/rows)),H=Math.round(rows*rh+40);cv.setAttribute('height',H);const {w,h,x}=fit(cv,H);x.clearRect(0,0,w,h);
@@ -188,17 +188,43 @@ agisce, sulla tavolozza completa di 25 emozioni?</p>
    rowsArr.forEach((c,ri)=>{const y=pT+ri*rh;x.fillStyle=css('--ink');x.font='11px '+css('--sans');x.textAlign='right';x.fillText(rowLabel(c),pL-6,y+rh/2+3);
      cols.forEach(([g],ci)=>{const v=getv(g,c),bx=pL+ci*cw;x.fillStyle=col(v);x.fillRect(bx+1,y+1,cw-2,rh-2);
        if(v!=null){x.fillStyle=(Math.abs(v)/vmax>0.55)?'#fff':css('--muted');x.font='10px '+css('--mono');x.textAlign='center';x.fillText((v>=0?'+':'')+v.toFixed(1),bx+cw/2,y+rh/2+3);}});});}
- function legModels(id,models){set(id,models.map((m,i)=>`<span><span class="sw" style="background:${mcol(i)}"></span>${m.nm||m.name}</span>`).join(''));}
+ // Clickable legend: click a model to show/hide it in every chart.
+ function legModels(id,models,extra){
+   const el=document.getElementById(id); if(!el) return;
+   el.innerHTML=models.map(m=>{const n=nameOf(m),off=HIDDEN.has(n);
+     return `<span class="lg" data-m="${n}" title="clicca per mostrare/nascondere" style="cursor:pointer;user-select:none;opacity:${off?0.35:1};text-decoration:${off?'line-through':'none'}"><span class="sw" style="background:${colOf(n)}"></span>${n}</span>`;
+   }).join('')+(extra||'')+'<span style="color:var(--faint)">· clicca per filtrare</span>';
+   Array.prototype.forEach.call(el.querySelectorAll('.lg'),function(sp){
+     sp.addEventListener('click',function(){
+       const n=sp.getAttribute('data-m');
+       if(HIDDEN.has(n)){HIDDEN.delete(n);}else{HIDDEN.add(n);}
+       if(HIDDEN.size>=ALLNAMES.length){HIDDEN.delete(n);return;}  // almeno uno visibile
+       redrawAll();
+     });
+   });
+ }
+ const LEGENDS=[];
+ function relegend(){LEGENDS.forEach(f=>{try{f();}catch(e){}});}
 
  const CMP=DATA.cmp, RE=DATA.roleEmo, SP=DATA.spectrum;
+ // Colour follows the MODEL IDENTITY (its index in the canonical list), never its
+ // position in a filtered array — so hiding a model never repaints the others.
+ const ALLNAMES=(function(){const seen=[];[(CMP.models||[]),(RE.models||[]),(SP.models||[])]
+   .forEach(a=>a.forEach(m=>{const n=m.nm||m.name;if(n&&!seen.includes(n))seen.push(n);}));return seen;})();
+ 
+ const colOf=n=>mcol(Math.max(0,ALLNAMES.indexOf(n)));
+ const nameOf=m=>m.nm||m.name;
+ const HIDDEN=new Set();
+ const vis=arr=>(arr||[]).filter(m=>!HIDDEN.has(nameOf(m)));
  const DRAW=[];
 
  /* ===================== SECTION A — CONFRONTO ===================== */
- (function(){const M=CMP.models;if(!M||!M.length)return;
-   legModels('A_legDec',M);legModels('A_legTr',M);
+ (function(){const M0=CMP.models;if(!M0||!M0.length)return;let M=M0;
+   LEGENDS.push(()=>{legModels('A_legDec',M0);legModels('A_legTr',M0);});
    set('A_legCau',`<span><span class="sw" style="background:${css('--m0')}"></span>emozione (paura)</span><span><span class="sw" style="background:${css('--zero')}"></span>random</span>`);
    const emoMaxTr=1;
    function draw(){
+     M=vis(M0); if(!M.length)return;
      grouped('A_chDec',300,M,CMP.concepts,(m,c)=>m.val[c],0.5,1.0,v=>v.toFixed(2),c=>c);
      grouped('A_chTr',300,M,CMP.gradients,(m,c,gi)=>m.trend[gi],-emoMaxTr,emoMaxTr,v=>v.toFixed(1),c=>c);
      singleBars('A_chConf',210,M,m=>m.confound,-1,1,v=>v.toFixed(2),0);
@@ -214,14 +240,14 @@ agisce, sulla tavolozza completa di 25 emozioni?</p>
  })();
 
  /* ===================== SECTION B — RUOLO × EMOTIVITÀ ===================== */
- (function(){const M=RE.models;if(!M||!M.length)return;const RL=RE.role_label||{};const roles=M[0].roles;
-   legModels('B_legEmo',M);legModels('B_legFp',M);
-   set('B_legAcc',M.map((m,i)=>`<span><span class="sw" style="background:${mcol(i)}"></span>${m.name}</span>`).join('')+`<span><span class="sw" style="background:${css('--zero')}"></span>ablato (tratteggio)</span>`);
+ (function(){const M0=RE.models;if(!M0||!M0.length)return;let M=M0;const RL=RE.role_label||{};const roles=M0[0].roles;
+   LEGENDS.push(()=>{legModels('B_legEmo',M0);legModels('B_legFp',M0);set('B_legAcc',M0.map(m=>`<span><span class="sw" style="background:${colOf(nameOf(m))}"></span>${m.name}</span>`).join('')+`<span><span class="sw" style="background:${css('--zero')}"></span>ablato (tratteggio)</span>`);});
    set('B_legWith',`<span><span class="sw" style="background:${css('--m1')}"></span>neutro</span><span><span class="sw" style="background:${css('--m2')}"></span>emotivo</span>`);
    set('B_legErr',`<span><span class="sw" style="background:${css('--good')}"></span>corretti</span><span><span class="sw" style="background:${css('--bad')}"></span>sbagliati</span>`);
    const emoMax=Math.max(0.5,...M.flatMap(m=>roles.map(r=>Math.abs((m.emo[r]||{}).all||0))))*1.2;
    const errMax=Math.max(0.5,...M.flatMap(m=>[m.emo_err.emo_z_on_correct,m.emo_err.emo_z_on_wrong].map(v=>Math.abs(v||0))))*1.2;
    function draw(){
+     M=vis(M0); if(!M.length)return;
      grouped('B_chEmo',300,M,roles,(m,r)=>(m.emo[r]||{}).all,-emoMax,emoMax,zf,r=>RL[r]||r,{pB:46});
      grouped('B_chAcc',300,M,roles,(m,r)=>(m.acc[r]||{}).intact,0,1,pct,r=>RL[r]||r,{pB:46,dash:(m,r)=>(m.acc[r]||{}).ablated});
      twoSeries('B_chWith',300,M.map(m=>m.name),(g,gi)=>M[gi].framing.neutral_acc,(g,gi)=>M[gi].framing.emotional_acc,'--m1','--m2',0,1,pct);
@@ -256,9 +282,9 @@ agisce, sulla tavolozza completa di 25 emozioni?</p>
  })();
 
  /* ===================== SECTION C — SPETTRO (25 emozioni) ===================== */
- (function(){const M=SP.models;if(!M||!M.length)return;const m0=M[0];const ORDER=SP.order,L=SP.label,EL=SP.emo_label||{};
+ (function(){const M0=SP.models;if(!M0||!M0.length)return;let M=M0;const m0=M0[0];const ORDER=SP.order,L=SP.label,EL=SP.emo_label||{};
    const gcol=g=>({medici:css('--gMed'),tecnici:css('--gTec'),profani:css('--gPro'),controlli:css('--gCon')}[g]||css('--zero'));
-   legModels('C_legSpec',M);legModels('C_legDir',M);
+   LEGENDS.push(()=>{legModels('C_legSpec',M0);legModels('C_legDir',M0);});
    set('C_legBR',`<span><span class="sw" style="background:${css('--m1')}"></span>persona da sola</span><span><span class="sw" style="background:${css('--m2')}"></span>reagendo al sintomo</span>`);
    set('C_legSp',`<span><span class="sw" style="background:${css('--gMed')}"></span>medici</span><span><span class="sw" style="background:${css('--gPro')}"></span>profani</span>`);
    function gmeanZ(m,g,c){const rs=Object.keys(m.groups||{}).filter(r=>m.groups[r]===g);const vs=rs.map(r=>(m.clinical_z[r]||{})[c]).filter(v=>v!=null);return vs.length?vs.reduce((a,b)=>a+b,0)/vs.length:null;}
@@ -269,6 +295,7 @@ agisce, sulla tavolozza completa di 25 emozioni?</p>
    const brAll=ORDER.flatMap(r=>[m0.emo_baseline[r],m0.emo_clinical[r]].filter(v=>v!=null));
    const specMax=Math.max(1,...SPEC.flatMap(([c])=>[gmeanZ(m0,'medici',c),gmeanZ(m0,'profani',c)].filter(v=>v!=null).map(Math.abs)))*1.15;
    function draw(){
+     M=vis(M0); if(!M.length)return;
      lines('C_chSpec',320,M,ORDER,(m,r)=>m.emo_std[r],r=>L[r]||r,r=>gcol((m0.groups||{})[r]),-emoStdMax,emoStdMax,zf);
      grouped('C_chDir',240,M,[['profani_minus_medici_cos','profani − medici'],['tecnici_minus_medici_cos','tecnici − medici'],['profani_minus_tecnici_cos','profani − tecnici']],
              (m,pair)=>(m.dir_afraid||{})[pair[0]],-1,1,v=>v.toFixed(1),pair=>pair[1]);
@@ -360,20 +387,70 @@ agisce, sulla tavolozza completa di 25 emozioni?</p>
    function gm(m,g,c){const rs=Object.keys(m.groups||{}).filter(r=>m.groups[r]===g);const vs=rs.map(r=>(m.clinical_z[r]||{})[c]).filter(v=>v!=null);return vs.length?vs.reduce((a,b)=>a+b,0)/vs.length:null;}
    function biggest(m){let b=null;(m.emo_concepts||[]).forEach(c=>{if(!EL[c])return;const md=gm(m,'medici',c),pr=gm(m,'profani',c);if(md==null||pr==null)return;const d=pr-md;if(!b||Math.abs(d)>Math.abs(b.d))b={c:EL[c]||c,md,pr,d};});return b;}
    let H='';
-   H+='<h4>1 · Le emozioni ci sono, e arrivano alla decisione — ma non la comandano.</h4>';
-   H+='<p>In tutti e tre i modelli le direzioni emotive sono <b>decodificabili</b> con precisione (AUROC ~0.9–1.0) e <b>persistono</b> fino all\'istante in cui il modello sceglie il termine. In Europa/USA la <b>paura scala con la gravità</b> del sintomo ('+CM.map(m=>`${m.nm||m.name} ${zf(m.trendMean)}`).join(', ')+'), meno in Cina. <b>Ma</b> l\'intervento causale racconta un\'altra storia: spingere lungo la direzione della paura <b>non batte</b> una perturbazione random ('+CM.map(m=>`${m.nm||m.name} ${m.steer.emo.toFixed(2)} vs ${m.steer.rnd.toFixed(2)}`).join('; ')+'). Le emozioni sono <b>rappresentate e trasportate</b> alla decisione, ma non la <b>guidano</b> in modo emotivo-specifico.</p>';
-   H+='<h4>2 · L\'emotività tocca l\'etichetta, ma non la sua correttezza.</h4>';
-   H+='<p>Il ruolo sposta modestamente l\'emotività (il ruolo medico tende a smorzarla). La <b>formulazione emotiva</b> di uno stesso sintomo <b>abbassa l\'accuratezza</b> di codifica ('+RM.map(m=>`${m.name} ${pct(m.framing.neutral_acc)}→${pct(m.framing.emotional_acc)}`).join('; ')+') e rimuovere causalmente l\'emozione fa <b>cambiare ~1 etichetta su 6</b> ('+RM.map(m=>`${m.name} ${(m.ablation.flip_rate*100).toFixed(0)}%`).join(', ')+') — quindi l\'emozione <b>partecipa</b> alla scelta. Però <b>più emotività non vuol dire più errori</b> (correlazione errore↔emotività ≈ '+RM.map(m=>m.emo_err.point_biserial_error_vs_emo==null?'–':m.emo_err.point_biserial_error_vs_emo.toFixed(2)).join(' / ')+'). Nota di sicurezza: il modello etichetta <b>meglio</b> del mapper deterministico sul linguaggio naturale, ma sui casi da <b>astensione</b> codifica comunque a vuoto ~metà delle volte, e spesso è il ruolo <b>oncologo</b> a farlo di più ('+RM.map(m=>`${m.name} ${pct((m.fp.oncologo||{}).fp)}`).join(', ')+').</p>';
-   H+='<h4>3 · Il ruolo non cambia "la paura": cambia calma/speranza — e dipende dal modello.</h4>';
-   const cos=SM.map(m=>`${m.name} ${zf((m.dir_afraid||{}).profani_minus_medici_cos)}`).join(', ');
-   const bigs=SM.map(m=>{const b=biggest(m);return b?`<b>${m.name}</b> soprattutto <b>${b.c}</b> (medici ${zf(b.md)} vs profani ${zf(b.pr)})`:m.name;}).join('; ');
-   H+='<p>Con la tavolozza completa di <b>25 emozioni</b> il quadro si chiarisce: la differenza di stato "profano − medico" è <b>quasi ortogonale all\'asse della paura</b> (coseno '+cos+' ≈ 0). Cioè l\'idea "il medico ha meno paura" è, letteralmente, la spiegazione sbagliata. L\'effetto reale è su <b>altre</b> emozioni e <b>varia per modello</b>: '+bigs+'. Il tema ricorrente è che il ruolo professionale sposta l\'affetto verso <b>calma/speranza</b> e via da <b>rabbia/ansia</b>. Guardare solo 3 emozioni lo nascondeva.</p>';
-   H+='<div class="big"><b>Il quadro d\'insieme.</b> I modelli portano una rappresentazione emotiva ricca e leggibile <em>dentro</em> la decisione clinica; ruolo e formulazione la spostano in modo strutturato; ma <b>nulla di tutto ciò dirotta la codifica in modo emotivo-specifico</b>. È una notizia rassicurante per uno strumento clinico — ed è esattamente perché il <b>mapper deterministico</b>, cieco alle emozioni, resta il riferimento sicuro. La scienza interessante qui è <em>descrittiva</em> (quali emozioni, quali ruoli), non un allarme del tipo "il modello ha paura e quindi sbaglia diagnosi".</div>';
-   H+='<div class="lim"><b>Limiti (onestà).</b> Dataset sintetico e piccolo → indicazioni, non verdetti. Spazi interni diversi tra modelli → si confronta la storia, non i numeri grezzi. L\'etichetta del modello è una singola generazione; l\'ablazione "senza emotività" rimuove il nucleo negativo (paura/ansia/tristezza). Nessun claim di coscienza, sentienza o esperienza soggettiva: si parla di rappresentazioni <em>emotion-like</em> e segnali causalmente (non) rilevanti.</div>';
+   const nm=a=>a.map(m=>m.nm||m.name);
+   const NM=ALLNAMES.length, medN=MEDPAIRS.length;
+   // --- 0. cosa e' stato confrontato ---
+   H+='<h4>0 · Cosa abbiamo confrontato</h4>';
+   H+=`<p>In tutto <b>${NM} modelli</b>: ${ALLNAMES.join(', ')}. Non sono solo "modelli diversi": ci sono
+       <b>famiglie</b> (Qwen cinese, Ministral/EuroLLM/Apertus europei, Gemma americano), <b>taglie</b> molto
+       diverse (da 8B a 27B) e — la parte nuova — <b>coppie base ↔ medicalizzato</b>, cioe' lo stesso modello
+       prima e dopo un ri-addestramento su testi clinici. Ogni modello ha il suo spazio interno, quindi si
+       confronta <b>l'andamento</b>, non i numeri grezzi.</p>`;
+   // --- 1. rappresentazione ---
+   H+='<h4>1 · Le emozioni ci sono in tutti, e arrivano alla decisione — ma non la comandano</h4>';
+   H+=`<p>In tutti i modelli le direzioni emotive sono <b>decodificabili</b> con precisione alta e
+       <b>persistono</b> fino all'istante della scelta del termine: l'emozione attivata dal sintomo e' ancora
+       li' quando il modello decide. La coerenza <b>paura ↔ gravita'</b> varia (`+
+       nm(CMP.models).map((n,i)=>`${n} ${zf(CMP.models[i].trendMean)}`).join(', ')+`). <b>Ma</b> l'intervento
+       causale ridimensiona tutto: spingere lungo la direzione della paura <b>non batte</b> una perturbazione
+       casuale in nessun modello. Le emozioni sono <b>rappresentate e trasportate</b> alla decisione, non la
+       <b>guidano</b> in modo emotivo-specifico.</p>`;
+   // --- 2. etichettatura ---
+   const framRows=RE.models.map(m=>`${m.name} ${pct(m.framing.neutral_acc)}→${pct(m.framing.emotional_acc)}`);
+   const worse=RE.models.filter(m=>m.framing.emotional_acc<=m.framing.neutral_acc).length;
+   H+='<h4>2 · L\'effetto piu\' robusto: come e\' SCRITTO il sintomo cambia la codifica</h4>';
+   H+=`<p>Lo stesso identico sintomo, riscritto in modo emotivo, <b>abbassa l'accuratezza in ${worse} modelli
+       su ${RE.models.length}</b> (${framRows.join('; ')}). E' il risultato piu' consistente dello studio, e
+       vale trasversalmente a famiglia, taglia e lingua. Togliere causalmente l'emozione (ablazione) fa
+       <b>cambiare l'etichetta</b> in ${RE.models.map(m=>`${m.name} ${(m.ablation.flip_rate*100).toFixed(0)}%`).join(', ')}
+       dei casi: l'emozione <b>partecipa</b> alla scelta. Ma <b>piu' emotivita' non significa piu' errori</b>
+       (correlazione errore↔emotivita' ≈ ${RE.models.map(m=>m.emo_err.point_biserial_error_vs_emo==null?'–':m.emo_err.point_biserial_error_vs_emo.toFixed(2)).join(' / ')}):
+       l'emozione sposta <em>quale</em> etichetta esce, non <em>se</em> e' giusta.</p>`;
+   // --- 3. ruolo ---
+   H+='<h4>3 · Il ruolo non cambia "la paura": cambia calma e speranza</h4>';
+   const cos=SP.models.map(m=>`${m.name} ${zf((m.dir_afraid||{}).profani_minus_medici_cos)}`).join(', ');
+   H+=`<p>Con la tavolozza completa di <b>25 emozioni</b> emerge che la differenza di stato "profano − medico"
+       e' <b>quasi ortogonale all'asse della paura</b> (coseno: ${cos} — tutti vicini a 0). L'idea intuitiva
+       "il medico ha meno paura" e', letteralmente, la spiegazione sbagliata. L'effetto reale e' su <b>altre</b>
+       emozioni e cambia da modello a modello, ma il tema ricorrente e' che il ruolo professionale sposta
+       l'affetto verso <b>calma e speranza</b> e via da <b>rabbia e ansia</b>. Guardare solo 3 emozioni lo
+       nascondeva del tutto.</p>`;
+   // --- 4. medico vs base ---
+   H+='<h4>4 · Il fine-tuning medico non e\' un "ruolo oncologo" scritto nei pesi</h4>';
+   if(medN){
+     const P=MEDPAIRS[0];
+     const e=m=>(m.emo['oncologo']||{}).all, a=m=>(m.acc['oncologo']||{}).intact, f=m=>(m.fp['oncologo']||{}).fp;
+     H+=`<p>La coppia controllata <b>${P.base.name} ↔ ${P.med.name}</b> (stesso modello, unica differenza il
+        training clinico) da' un risultato in tre parti, e nessuna e' quella attesa. L'emotivita'
+        <b>${e(P.med)>e(P.base)?'AUMENTA':'diminuisce'}</b> (${zf(e(P.base))} → ${zf(e(P.med))}): l'opposto di
+        cio' che faceva il ruolo "oncologo" nel prompt — quindi <b>medico nei pesi ≠ medico nel prompt</b>,
+        sono due meccanismi diversi. La codifica <b>migliora molto</b> (${pct(a(P.base))} → ${pct(a(P.med))}):
+        il training clinico funziona sul compito. Ma i <b>falsi positivi</b> sui casi da lasciar stare
+        <b>aumentano</b> (${pct(f(P.base))} → ${pct(f(P.med))}): diventa meno prudente. Per emozione, abbassa
+        il <b>turbamento</b> (tristezza, disgusto, preoccupazione) e alza la <b>vigilanza</b>: un distacco
+        selettivo, non un appiattimento affettivo.</p>`;
+   } else {
+     H+='<p>Nessuna coppia base↔medicalizzato completa in questo run: servono entrambi i modelli della coppia.</p>';
+   }
+   // --- riquadro + limiti ---
+   H+='<div class="big"><b>Il quadro d\'insieme.</b> Tutti questi modelli portano una rappresentazione emotiva ricca e leggibile <em>dentro</em> la decisione clinica; il ruolo assegnato e la formulazione del sintomo la spostano in modo strutturato; il training medico la modifica ancora diversamente. <b>Eppure nulla di tutto cio\' dirotta la codifica in modo emotivo-specifico</b>: l\'emozione cambia <em>quale</em> etichetta esce, non la sua correttezza. E\' una notizia rassicurante per uno strumento clinico — ed e\' il motivo per cui il <b>mapper deterministico</b>, cieco alle emozioni, resta il riferimento sicuro. Il rischio pratico non e\' "il modello ha paura e sbaglia diagnosi", ma piu\' prosaico: <b>sovra-codifica</b> i casi che andrebbero lasciati in astensione, e il ruolo medico (o il training medico) lo peggiora.</div>';
+   H+='<div class="lim"><b>Limiti (onesta\').</b> Dataset sintetico e piccolo → indicazioni, non verdetti. Spazi interni diversi tra modelli → si confronta la storia, non i numeri grezzi. La coppia base↔medicalizzato disponibile e\' una sola: serve replicarla su altre famiglie prima di generalizzare. L\'etichetta del modello e\' una singola generazione; l\'ablazione "senza emotivita\'" rimuove il nucleo negativo (paura/ansia/tristezza), non tutto l\'affetto. Nessun claim di coscienza, sentienza o esperienza soggettiva: si parla di rappresentazioni <em>emotion-like</em> e di segnali causalmente (non) rilevanti.</div>';
    el.innerHTML=H;
  })();
 
  function drawAll(){DRAW.forEach(f=>{try{f();}catch(e){}});}
+ function redrawAll(){relegend();drawAll();}
+ relegend();
  drawAll();
  window.addEventListener('resize',drawAll);
  new MutationObserver(drawAll).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
