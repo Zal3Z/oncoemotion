@@ -25,7 +25,8 @@ sys.path.insert(0, str(_ROOT / "src"))
 from oncoemotion.config import ModelConfig  # noqa: E402
 from oncoemotion.models.base import load_adapter  # noqa: E402
 from oncoemotion.patching.runtime import PatchingRuntime  # noqa: E402
-from oncoemotion.clinical.prompt import build_decision_prompt  # noqa: E402
+from oncoemotion.clinical.prompt import (  # noqa: E402
+    build_decision_ids, build_padded_personas)
 from oncoemotion.emotion_vectors.vectors import random_vector  # noqa: E402
 
 # source (high-affect) -> recipient (low-affect) pairs
@@ -49,6 +50,9 @@ def main() -> int:
     ap.add_argument("--vecs", type=Path, default=_ROOT / "outputs/checkpoints/emotion_vectors.npz")
     ap.add_argument("--val-report", type=Path, default=_ROOT / "outputs/reports/vector_validation.json")
     ap.add_argument("--report", type=Path, default=_ROOT / "outputs/reports/patching_effects.json")
+    ap.add_argument("--role", default="none",
+                    help="persona used for the prompt; defaults to the no-role "
+                         "control so this path matches the role experiments")
     args = ap.parse_args()
 
     V = np.load(args.vecs, allow_pickle=True)
@@ -63,13 +67,17 @@ def main() -> int:
     adapter = load_adapter(args.model, cfg)
     print(f"Loading {adapter.config.model_id} ...", flush=True)
     adapter.load()
+    # same construction path as the role experiments, so A3/A4/A5 and C2/C5
+    # are finally measured on the same object
+    PERSONAS, _PT = build_padded_personas(adapter.tokenizer)
     pr = PatchingRuntime(adapter)
     print(f"Patching at layer {layer} (concept={args.concept}, key={key})", flush=True)
 
     results = {"model_id": adapter.config.model_id, "layer": int(layer),
                "concept": args.concept, "vector_key": key, "pairs": {}}
     for tag, src, rec in PAIRS:
-        sp, rp = build_decision_prompt(src), build_decision_prompt(rec)
+        sp = build_decision_ids(adapter, src, role=args.role, personas=PERSONAS)
+        rp = build_decision_ids(adapter, rec, role=args.role, personas=PERSONAS)
         emo = pr.patch_and_summarize(sp, rp, layer, direction, mode="direction")
         rnd = pr.patch_and_summarize(sp, rp, layer, rand_dir, mode="direction")
         full = pr.patch_and_summarize(sp, rp, layer, direction, mode="full")

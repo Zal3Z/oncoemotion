@@ -30,7 +30,8 @@ sys.path.insert(0, str(_ROOT / "src"))
 
 from oncoemotion.config import ModelConfig  # noqa: E402
 from oncoemotion.models.base import load_adapter  # noqa: E402
-from oncoemotion.clinical.prompt import build_decision_prompt, NEUTRAL_FILLER  # noqa: E402
+from oncoemotion.clinical.prompt import (  # noqa: E402
+    build_decision_ids, build_padded_personas, NEUTRAL_FILLER)
 from oncoemotion.clinical.measure import point_e_hidden, project_scores, zscore, decision_summary  # noqa: E402
 from oncoemotion.clinical.measure_dataset import build_measure_items  # noqa: E402
 
@@ -56,6 +57,9 @@ def main() -> int:
     ap.add_argument("--val-report", type=Path, default=_ROOT / "outputs/reports/vector_validation.json")
     ap.add_argument("--report", type=Path, default=_ROOT / "outputs/reports/clinical_probing.json")
     ap.add_argument("--figure", type=Path, default=_ROOT / "outputs/figures/clinical_gradients.png")
+    ap.add_argument("--role", default="none",
+                    help="persona used for the prompt; defaults to the no-role "
+                         "control so this path matches the role experiments")
     args = ap.parse_args()
 
     V = np.load(args.vecs, allow_pickle=True)
@@ -77,6 +81,9 @@ def main() -> int:
     adapter = load_adapter(args.model, cfg)
     print(f"Loading {adapter.config.model_id} ...", flush=True)
     adapter.load()
+    # same construction path as the role experiments, so A3/A4/A5 and C2/C5
+    # are finally measured on the same object
+    PERSONAS, _PT = build_padded_personas(adapter.tokenizer)
 
     items = build_measure_items()
     print(f"Measuring {len(items)} clinical inputs at point E ...", flush=True)
@@ -85,7 +92,7 @@ def main() -> int:
     raw = {}
     summaries = {}
     for it in items:
-        prompt = build_decision_prompt(it.text)
+        prompt = build_decision_ids(adapter, it.text, role=args.role, personas=PERSONAS)
         h = point_e_hidden(adapter, prompt)
         raw[it.item_id] = project_scores(h, vectors, layer_of)
         summaries[it.item_id] = decision_summary(adapter, prompt)
@@ -122,7 +129,9 @@ def main() -> int:
     for it in items:
         if not it.group.startswith("gradient:"):
             continue
-        h_f = point_e_hidden(adapter, build_decision_prompt(it.text, neutral_filler=NEUTRAL_FILLER))
+        h_f = point_e_hidden(adapter, build_decision_ids(
+            adapter, it.text, role=args.role, neutral_filler=NEUTRAL_FILLER,
+            personas=PERSONAS))
         zf = zscore(project_scores(h_f, vectors, layer_of), base_mean, base_std)
         persistence[it.item_id] = {c: round(zf[c], 3) for c in concepts}
     # retained fraction for the key emotions (|z_with_filler| / |z_without|)

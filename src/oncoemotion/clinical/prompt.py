@@ -159,11 +159,35 @@ def build_padded_personas(tokenizer, target: int | None = None,
     return out, counts
 
 
+def build_decision_ids(adapter, free_text: str, role: str = "none",
+                       neutral_filler: str | None = None, personas: dict | None = None):
+    """Token ids for the decision prompt, whose LAST token is measurement point E.
+
+    The single construction path. Before this, the probing / steering / patching
+    scripts used :func:`build_decision_prompt` -- a raw string with no chat template
+    and no system role -- while the two role experiments used
+    :func:`build_decision_messages` with a templated system persona. A3 and A4 were
+    therefore measured on a different object than C2 and C5, and the master report
+    placed them side by side as though they were the same experiment.
+
+    ``role`` defaults to the no-role control, which is now a real padded system
+    block rather than an absent one.
+    """
+    system, user = build_decision_messages(free_text, role=role,
+                                           neutral_filler=neutral_filler,
+                                           personas=personas)
+    return adapter.build_prompt_ids(user, system, assistant_prefix=TEACHER_PREFIX)
+
+
 def build_decision_prompt(free_text: str, neutral_filler: str | None = None) -> str:
     """Return the full raw prompt whose LAST token is measurement point E.
 
-    Legacy single-string path (no chat template / no system role) used by
-    ``run_probing.py``. For the role experiment use :func:`build_decision_messages`.
+    DEPRECATED for measurement. No chat template, no system role, so a model that
+    was instruction-tuned on a chat format sees something it was never trained on,
+    and the result is not comparable with the role experiments. Every measurement
+    script now goes through :func:`build_decision_ids`; what is left on this path is
+    the x-ray viewer and the dashboard, which display a single prompt rather than
+    produce numbers that enter the analysis.
     """
     parts = [
         DECISION_INSTRUCTION,

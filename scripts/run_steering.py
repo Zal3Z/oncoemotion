@@ -28,7 +28,8 @@ sys.path.insert(0, str(_ROOT / "src"))
 from oncoemotion.config import ModelConfig  # noqa: E402
 from oncoemotion.models.base import load_adapter  # noqa: E402
 from oncoemotion.steering.runtime import SteeringRuntime  # noqa: E402
-from oncoemotion.clinical.prompt import build_decision_prompt  # noqa: E402
+from oncoemotion.clinical.prompt import (  # noqa: E402
+    build_decision_ids, build_padded_personas)
 from oncoemotion.emotion_vectors.vectors import random_vector  # noqa: E402
 
 ALPHA_GRID = [-0.10, -0.05, -0.02, 0.0, 0.02, 0.05, 0.10]
@@ -56,6 +57,9 @@ def main() -> int:
     ap.add_argument("--val-report", type=Path, default=_ROOT / "outputs/reports/vector_validation.json")
     ap.add_argument("--report", type=Path, default=_ROOT / "outputs/reports/steering_effects.json")
     ap.add_argument("--figure", type=Path, default=_ROOT / "outputs/figures/steering_effects.png")
+    ap.add_argument("--role", default="none",
+                    help="persona used for the prompt; defaults to the no-role "
+                         "control so this path matches the role experiments")
     args = ap.parse_args()
 
     V = np.load(args.vecs, allow_pickle=True)
@@ -80,6 +84,9 @@ def main() -> int:
     adapter = load_adapter(args.model, cfg)
     print(f"Loading {adapter.config.model_id} ...", flush=True)
     adapter.load()
+    # same construction path as the role experiments, so A3/A4/A5 and C2/C5
+    # are finally measured on the same object
+    PERSONAS, _PT = build_padded_personas(adapter.tokenizer)
     rt = SteeringRuntime(adapter)
     print(f"Steering at layer {layer} (concept={args.concept})", flush=True)
 
@@ -94,7 +101,7 @@ def main() -> int:
     }
 
     for tag, text in INPUTS:
-        prompt = build_decision_prompt(text)
+        prompt = build_decision_ids(adapter, text, role=args.role, personas=PERSONAS)
         entry = {"text": text, "add": {}, "ablation": None}
         for cond, v in add_conditions.items():
             curve = []
