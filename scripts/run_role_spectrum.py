@@ -46,6 +46,7 @@ from oncoemotion.models.base import load_adapter  # noqa: E402
 from oncoemotion.clinical.prompt import build_decision_messages, TEACHER_PREFIX  # noqa: E402
 from oncoemotion.clinical.measure import point_e_hidden, project_scores, zscore  # noqa: E402
 from oncoemotion.emotion_vectors.vectors import random_vector  # noqa: E402
+from oncoemotion.clinical.baseline import NEUTRAL_BASELINE  # noqa: E402
 
 # Confounders (everything else in the vector set is treated as an emotion).
 CONFOUNDERS = ["uncertainty", "urgency", "clinical_severity", "safety_policy",
@@ -60,16 +61,6 @@ SPECTRUM = [
     ("generico", "controlli"), ("empatico", "controlli"), ("none", "controlli"),
 ]
 
-NEUTRAL_BASELINE = [
-    "Il modulo è stato compilato correttamente.",
-    "La procedura di registrazione è terminata.",
-    "Il documento è stato archiviato negli atti.",
-    "L'appuntamento è confermato per la data prevista.",
-    "I dati anagrafici risultano aggiornati.",
-    "La pratica è stata protocollata questa mattina.",
-    "Il questionario contiene dieci domande in totale.",
-    "La sala d'attesa è al primo piano dell'edificio.",
-]
 
 
 def _key_for(V, c, method, variant):

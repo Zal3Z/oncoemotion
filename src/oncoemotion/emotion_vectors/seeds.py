@@ -518,4 +518,57 @@ CONTROL_SEEDS: dict[str, list[tuple[str, str]]] = {
         ("Un disastro totale, orrendo.", "cross_domain"),
         ("Non ho parole, è semplicemente terribile.", "implicit"),
     ],
+    # --- lexical controls: the ontological gate -----------------------------
+    # An emotion direction has to be a direction for a *state*, not a detector for
+    # the word that names it. These two concepts hold sentences that are saturated
+    # with emotion vocabulary while carrying no emotional state: the word is quoted,
+    # defined, counted, or explicitly denied. If cos(emotion_axis, lexical_axis) is
+    # high, the axis is a word detector and the study's first step does not hold.
+    # Report that cosine per model; it is a gate, not a diagnostic.
+    "emotion_word_mention": [
+        ("La parola «paura» compare tre volte nel referto.", "explicit"),
+        ("Il termine «ansia» va codificato con l'item PRO-CTCAE corrispondente.", "explicit"),
+        ("Scrivi «tristezza» nella casella delle note.", "implicit"),
+        ("«Angoscia» è un sostantivo femminile singolare.", "cross_domain"),
+        ("Nel questionario la voce si chiama «preoccupazione».", "implicit"),
+        ("Il paziente ha barrato la casella etichettata «terrore».", "implicit"),
+        ("La categoria «rabbia» non era prevista dal modulo.", "implicit"),
+        ("Come si scrive «sgomento», con la esse o con la zeta?", "short"),
+        ("L'etichetta da assegnare è «disperazione».", "short"),
+        ("Cerca la stringa «panico» nel testo libero.", "cross_domain"),
+        ("Il glossario definisce «apprensione» come uno stato di attesa inquieta.", "long"),
+        ("Nella scala di Likert l'ancora estrema recita «molto spaventato».", "long"),
+        ("Il codice associato alla voce «tristezza» è PRO_056.", "implicit"),
+        ("Sostituisci «timore» con «paura» in tutto il documento.", "paraphrase"),
+        ("Quante volte ricorre «preoccupato» in questa pagina?", "short"),
+        ("Il campo di testo accetta anche la parola «sconforto».", "implicit"),
+        ("«Colpa» e «vergogna» sono due item distinti del questionario.", "implicit"),
+        ("La voce «nervosismo» è stata rimossa dalla versione italiana.", "paraphrase"),
+    ],
+    "emotion_negated": [
+        ("Il paziente non ha paura.", "explicit"),
+        ("Non provo alcuna ansia in questo momento.", "explicit"),
+        ("Nessun segno di tristezza al colloquio odierno.", "implicit"),
+        ("Non riferisce preoccupazione per l'esito degli esami.", "implicit"),
+        ("Assenza di angoscia riferita dal paziente.", "paraphrase"),
+        ("Non c'è traccia di panico nella sua descrizione.", "implicit"),
+        ("Nessuna rabbia, nessun rancore verso il personale.", "short"),
+        ("Non si rileva alcuno stato di allarme.", "paraphrase"),
+        ("Non ha mai manifestato timore per la procedura.", "implicit"),
+        ("Non era per niente spaventato durante la visita.", "implicit"),
+        ("Nessun vissuto depressivo emerge dal colloquio.", "cross_domain"),
+        ("Non provava vergogna nel parlarne.", "short"),
+        ("Non risulta alcuna apprensione rispetto alla terapia.", "implicit"),
+        ("Il modulo non segnala nervosismo né agitazione.", "cross_domain"),
+        ("Non ho sentito nessuna disperazione nelle sue parole.", "implicit"),
+        ("Non emerge alcun senso di colpa dal racconto.", "paraphrase"),
+        ("Non manifesta sconforto rispetto al percorso di cura, e non ne ha mai manifestato "
+         "nelle precedenti valutazioni.", "long"),
+        ("Nessun elemento di allarme o di terrore viene riportato in cartella al momento "
+         "della dimissione.", "long"),
+    ],
 }
+
+# Concepts that exist only to be measured *against* the emotion axes, never to be
+# treated as emotions themselves.
+LEXICAL_CONTROLS = ("emotion_word_mention", "emotion_negated")

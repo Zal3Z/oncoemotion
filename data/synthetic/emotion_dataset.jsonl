@@ -396,39 +396,75 @@
 {"concept": "general_negative_valence", "text": "Tutto pessimo, non lo rifarei mai.", "label": 1, "condition": "comprehension", "variety": "paraphrase", "split": "test"}
 {"concept": "general_negative_valence", "text": "Un disastro totale, orrendo.", "label": 1, "condition": "comprehension", "variety": "cross_domain", "split": "extraction"}
 {"concept": "general_negative_valence", "text": "Non ho parole, è semplicemente terribile.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
-{"concept": "neutral", "text": "Il treno parte dal binario quattro alle nove del mattino.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "test"}
-{"concept": "neutral", "text": "La ricetta prevede due uova, farina e un bicchiere di latte.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "test"}
-{"concept": "neutral", "text": "L'ufficio è aperto dal lunedì al venerdì.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "validation"}
+{"concept": "emotion_word_mention", "text": "La parola «paura» compare tre volte nel referto.", "label": 1, "condition": "comprehension", "variety": "explicit", "split": "test"}
+{"concept": "emotion_word_mention", "text": "Il termine «ansia» va codificato con l'item PRO-CTCAE corrispondente.", "label": 1, "condition": "comprehension", "variety": "explicit", "split": "extraction"}
+{"concept": "emotion_word_mention", "text": "Scrivi «tristezza» nella casella delle note.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "emotion_word_mention", "text": "«Angoscia» è un sostantivo femminile singolare.", "label": 1, "condition": "comprehension", "variety": "cross_domain", "split": "validation"}
+{"concept": "emotion_word_mention", "text": "Nel questionario la voce si chiama «preoccupazione».", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "emotion_word_mention", "text": "Il paziente ha barrato la casella etichettata «terrore».", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "emotion_word_mention", "text": "La categoria «rabbia» non era prevista dal modulo.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "emotion_word_mention", "text": "Come si scrive «sgomento», con la esse o con la zeta?", "label": 1, "condition": "comprehension", "variety": "short", "split": "extraction"}
+{"concept": "emotion_word_mention", "text": "L'etichetta da assegnare è «disperazione».", "label": 1, "condition": "comprehension", "variety": "short", "split": "extraction"}
+{"concept": "emotion_word_mention", "text": "Cerca la stringa «panico» nel testo libero.", "label": 1, "condition": "comprehension", "variety": "cross_domain", "split": "extraction"}
+{"concept": "emotion_word_mention", "text": "Il glossario definisce «apprensione» come uno stato di attesa inquieta.", "label": 1, "condition": "comprehension", "variety": "long", "split": "test"}
+{"concept": "emotion_word_mention", "text": "Nella scala di Likert l'ancora estrema recita «molto spaventato».", "label": 1, "condition": "comprehension", "variety": "long", "split": "validation"}
+{"concept": "emotion_word_mention", "text": "Il codice associato alla voce «tristezza» è PRO_056.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "emotion_word_mention", "text": "Sostituisci «timore» con «paura» in tutto il documento.", "label": 1, "condition": "comprehension", "variety": "paraphrase", "split": "validation"}
+{"concept": "emotion_word_mention", "text": "Quante volte ricorre «preoccupato» in questa pagina?", "label": 1, "condition": "comprehension", "variety": "short", "split": "extraction"}
+{"concept": "emotion_word_mention", "text": "Il campo di testo accetta anche la parola «sconforto».", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "test"}
+{"concept": "emotion_word_mention", "text": "«Colpa» e «vergogna» sono due item distinti del questionario.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "validation"}
+{"concept": "emotion_word_mention", "text": "La voce «nervosismo» è stata rimossa dalla versione italiana.", "label": 1, "condition": "comprehension", "variety": "paraphrase", "split": "extraction"}
+{"concept": "emotion_negated", "text": "Il paziente non ha paura.", "label": 1, "condition": "comprehension", "variety": "explicit", "split": "test"}
+{"concept": "emotion_negated", "text": "Non provo alcuna ansia in questo momento.", "label": 1, "condition": "comprehension", "variety": "explicit", "split": "extraction"}
+{"concept": "emotion_negated", "text": "Nessun segno di tristezza al colloquio odierno.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "validation"}
+{"concept": "emotion_negated", "text": "Non riferisce preoccupazione per l'esito degli esami.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "emotion_negated", "text": "Assenza di angoscia riferita dal paziente.", "label": 1, "condition": "comprehension", "variety": "paraphrase", "split": "extraction"}
+{"concept": "emotion_negated", "text": "Non c'è traccia di panico nella sua descrizione.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "emotion_negated", "text": "Nessuna rabbia, nessun rancore verso il personale.", "label": 1, "condition": "comprehension", "variety": "short", "split": "extraction"}
+{"concept": "emotion_negated", "text": "Non si rileva alcuno stato di allarme.", "label": 1, "condition": "comprehension", "variety": "paraphrase", "split": "extraction"}
+{"concept": "emotion_negated", "text": "Non ha mai manifestato timore per la procedura.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "test"}
+{"concept": "emotion_negated", "text": "Non era per niente spaventato durante la visita.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "validation"}
+{"concept": "emotion_negated", "text": "Nessun vissuto depressivo emerge dal colloquio.", "label": 1, "condition": "comprehension", "variety": "cross_domain", "split": "extraction"}
+{"concept": "emotion_negated", "text": "Non provava vergogna nel parlarne.", "label": 1, "condition": "comprehension", "variety": "short", "split": "extraction"}
+{"concept": "emotion_negated", "text": "Non risulta alcuna apprensione rispetto alla terapia.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "extraction"}
+{"concept": "emotion_negated", "text": "Il modulo non segnala nervosismo né agitazione.", "label": 1, "condition": "comprehension", "variety": "cross_domain", "split": "validation"}
+{"concept": "emotion_negated", "text": "Non ho sentito nessuna disperazione nelle sue parole.", "label": 1, "condition": "comprehension", "variety": "implicit", "split": "validation"}
+{"concept": "emotion_negated", "text": "Non emerge alcun senso di colpa dal racconto.", "label": 1, "condition": "comprehension", "variety": "paraphrase", "split": "extraction"}
+{"concept": "emotion_negated", "text": "Non manifesta sconforto rispetto al percorso di cura, e non ne ha mai manifestato nelle precedenti valutazioni.", "label": 1, "condition": "comprehension", "variety": "long", "split": "test"}
+{"concept": "emotion_negated", "text": "Nessun elemento di allarme o di terrore viene riportato in cartella al momento della dimissione.", "label": 1, "condition": "comprehension", "variety": "long", "split": "extraction"}
+{"concept": "neutral", "text": "Il treno parte dal binario quattro alle nove del mattino.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "extraction"}
+{"concept": "neutral", "text": "La ricetta prevede due uova, farina e un bicchiere di latte.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "extraction"}
+{"concept": "neutral", "text": "L'ufficio è aperto dal lunedì al venerdì.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "test"}
 {"concept": "neutral", "text": "Ho comprato una nuova lampada per lo studio.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "extraction"}
 {"concept": "neutral", "text": "Il documento contiene dodici pagine numerate.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "extraction"}
-{"concept": "neutral", "text": "La riunione è stata spostata in un'altra sala.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "extraction"}
-{"concept": "neutral", "text": "Le chiavi sono sul tavolo accanto all'ingresso.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "validation"}
-{"concept": "neutral", "text": "Il fiume attraversa la città da nord a sud.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "validation"}
-{"concept": "neutral", "text": "Abbiamo aggiornato il software alla versione più recente.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "validation"}
+{"concept": "neutral", "text": "La riunione è stata spostata in un'altra sala.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "validation"}
+{"concept": "neutral", "text": "Le chiavi sono sul tavolo accanto all'ingresso.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "extraction"}
+{"concept": "neutral", "text": "Il fiume attraversa la città da nord a sud.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "extraction"}
+{"concept": "neutral", "text": "Abbiamo aggiornato il software alla versione più recente.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "extraction"}
 {"concept": "neutral", "text": "Il negozio vende matite, quaderni e penne.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "extraction"}
 {"concept": "neutral", "text": "La biblioteca chiude alle otto di sera.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "extraction"}
-{"concept": "neutral", "text": "Il pacco è stato consegnato ieri pomeriggio.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "validation"}
-{"concept": "neutral", "text": "Il grafico mostra i valori medi mensili.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "test"}
-{"concept": "neutral", "text": "Ho parcheggiato l'auto nel garage sotterraneo.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "extraction"}
+{"concept": "neutral", "text": "Il pacco è stato consegnato ieri pomeriggio.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "extraction"}
+{"concept": "neutral", "text": "Il grafico mostra i valori medi mensili.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "extraction"}
+{"concept": "neutral", "text": "Ho parcheggiato l'auto nel garage sotterraneo.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "validation"}
 {"concept": "neutral", "text": "La conferenza durerà circa due ore.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "extraction"}
-{"concept": "neutral", "text": "Il termometro segna diciotto gradi.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "extraction"}
+{"concept": "neutral", "text": "Il termometro segna diciotto gradi.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "validation"}
 {"concept": "neutral", "text": "Ho annaffiato le piante sul balcone.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "extraction"}
-{"concept": "neutral", "text": "Il modulo va compilato in stampatello.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "validation"}
-{"concept": "neutral", "text": "La strada principale è stata asfaltata la settimana scorsa.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "extraction"}
-{"concept": "neutral", "text": "Il catalogo elenca i prodotti in ordine alfabetico.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "test"}
-{"concept": "neutral", "text": "La lezione di matematica comincia alle dieci.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "extraction"}
-{"concept": "neutral", "text": "Il ponte collega le due sponde del canale.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "test"}
-{"concept": "neutral", "text": "Ho ordinato un caffè e un cornetto al bar.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "extraction"}
-{"concept": "neutral", "text": "Il file è stato salvato nella cartella condivisa.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "test"}
+{"concept": "neutral", "text": "Il modulo va compilato in stampatello.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "test"}
+{"concept": "neutral", "text": "La strada principale è stata asfaltata la settimana scorsa.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "test"}
+{"concept": "neutral", "text": "Il catalogo elenca i prodotti in ordine alfabetico.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "extraction"}
+{"concept": "neutral", "text": "La lezione di matematica comincia alle dieci.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "validation"}
+{"concept": "neutral", "text": "Il ponte collega le due sponde del canale.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "validation"}
+{"concept": "neutral", "text": "Ho ordinato un caffè e un cornetto al bar.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "validation"}
+{"concept": "neutral", "text": "Il file è stato salvato nella cartella condivisa.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "extraction"}
 {"concept": "neutral", "text": "Le finestre danno sul cortile interno.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "extraction"}
-{"concept": "neutral", "text": "Il volo atterra alle sedici e trenta.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "extraction"}
+{"concept": "neutral", "text": "Il volo atterra alle sedici e trenta.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "test"}
 {"concept": "neutral", "text": "La stampante è al secondo piano vicino all'ascensore.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "extraction"}
-{"concept": "neutral", "text": "Il libro ha una copertina di colore verde.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "extraction"}
-{"concept": "neutral", "text": "L'orologio della stazione è appena stato riparato.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "extraction"}
+{"concept": "neutral", "text": "Il libro ha una copertina di colore verde.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "validation"}
+{"concept": "neutral", "text": "L'orologio della stazione è appena stato riparato.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "test"}
 {"concept": "neutral", "text": "Il corso prevede dieci incontri settimanali.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "extraction"}
-{"concept": "neutral", "text": "Ho piegato la biancheria e riordinato l'armadio.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "test"}
+{"concept": "neutral", "text": "Ho piegato la biancheria e riordinato l'armadio.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "extraction"}
 {"concept": "neutral", "text": "La mappa indica tre percorsi alternativi.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "extraction"}
-{"concept": "neutral", "text": "Il forno va preriscaldato a centottanta gradi.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "validation"}
-{"concept": "neutral", "text": "Il parcheggio dispone di duecento posti auto.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "extraction"}
+{"concept": "neutral", "text": "Il forno va preriscaldato a centottanta gradi.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "test"}
+{"concept": "neutral", "text": "Il parcheggio dispone di duecento posti auto.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "test"}
 {"concept": "neutral", "text": "La bottiglia contiene mezzo litro d'acqua.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "extraction"}
 {"concept": "neutral", "text": "Il calendario segna martedì come giorno festivo.", "label": 0, "condition": "comprehension", "variety": "neutral", "split": "extraction"}

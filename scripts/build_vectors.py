@@ -31,10 +31,16 @@ from oncoemotion.activations.extract import pooled_hidden_states  # noqa: E402
 from oncoemotion.emotion_vectors.build import build_layer_vector  # noqa: E402
 from oncoemotion.emotion_vectors.vectors import orthogonalize  # noqa: E402
 from oncoemotion.emotion_vectors.dataset import build_dataset, load_jsonl, save_jsonl  # noqa: E402
-from oncoemotion.emotion_vectors.seeds import EMOTION_SEEDS, CONTROL_SEEDS  # noqa: E402
+from oncoemotion.emotion_vectors.seeds import (  # noqa: E402
+    EMOTION_SEEDS, CONTROL_SEEDS, LEXICAL_CONTROLS)
 
 EMOTIONS = list(EMOTION_SEEDS)
 CONTROLS = list(CONTROL_SEEDS)
+# The lexical controls are built like any other direction but are deliberately kept
+# OUT of the residualization basis. Orthogonalizing an emotion axis against the
+# "the word paura appears in the text" axis would remove exactly the overlap the
+# gate is meant to measure, and would guarantee a passing cosine by construction.
+CONFOUNDER_BASIS = [c for c in CONTROLS if c not in LEXICAL_CONTROLS]
 
 
 def main() -> int:
@@ -131,7 +137,7 @@ def main() -> int:
                 continue
             resid = np.zeros_like(vec_store[key])
             for l in range(n_layers):
-                C = np.stack([vec_store[f"{c}|{ctrl_key}"][l] for c in CONTROLS
+                C = np.stack([vec_store[f"{c}|{ctrl_key}"][l] for c in CONFOUNDER_BASIS
                               if f"{c}|{ctrl_key}" in vec_store])
                 resid[l] = orthogonalize(vec_store[key][l], C).astype(np.float32)
             vec_store[f"{key}|resid"] = resid

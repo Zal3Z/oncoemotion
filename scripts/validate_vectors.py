@@ -27,10 +27,14 @@ sys.path.insert(0, str(_ROOT / "src"))
 from oncoemotion.probing.probe import evaluate_direction, projection_scores  # noqa: E402
 from oncoemotion.emotion_vectors.vectors import cosine, orthogonalize  # noqa: E402
 from oncoemotion.emotion_vectors.build import build_layer_vector  # noqa: E402
-from oncoemotion.emotion_vectors.seeds import CONTROL_SEEDS, EMOTION_SEEDS  # noqa: E402
+from oncoemotion.emotion_vectors.seeds import (  # noqa: E402
+    CONTROL_SEEDS, EMOTION_SEEDS, LEXICAL_CONTROLS)
 
 EMOTIONS = set(EMOTION_SEEDS)
 CONTROLS = set(CONTROL_SEEDS)
+# see build_vectors.py: the lexical controls are measured against the emotion axes,
+# never residualized out of them
+CONFOUNDER_BASIS = sorted(CONTROLS - set(LEXICAL_CONTROLS))
 
 
 def vec_key(V, concept, method, variant):
@@ -69,7 +73,7 @@ def cross_validated_scores(acts, concepts_arr, all_concepts, band, k, seed, meth
             Xl = acts[:, l, :]
             # control directions first: they are the confounder basis
             ctrl = {}
-            for c in sorted(CONTROLS):
+            for c in CONFOUNDER_BASIS:
                 pos = tr & (concepts_arr == c)
                 neg = tr & (concepts_arr != c)
                 if pos.sum() == 0 or neg.sum() == 0:
@@ -90,6 +94,58 @@ def cross_validated_scores(acts, concepts_arr, all_concepts, band, k, seed, meth
                     v = orthogonalize(v, C)
                 scores[c][li, te_idx] = projection_scores(Xl[te_idx], v)
     return scores
+
+
+def _lexical_gate(V, args, layer: int) -> dict:
+    """cos(emotion axis, lexical-control axis) at the layer actually used downstream.
+
+    The ontological gate. An emotion direction has to encode a state, not the
+    presence of the word naming it. ``emotion_word_mention`` holds sentences where
+    the emotion word is quoted, defined or counted; ``emotion_negated`` holds
+    sentences where it is explicitly denied. Both are saturated with emotion
+    vocabulary and carry no emotional state, so a high cosine means the axis is a
+    word detector and the study's first step does not hold.
+    """
+    out = {"layer": layer, "per_emotion": {}, "controls_used": []}
+    lex = {}
+    for c in LEXICAL_CONTROLS:
+        key = f"{c}|{args.method}"
+        if key in V:
+            lex[c] = V[key][layer]
+    out["controls_used"] = sorted(lex)
+    if not lex:
+        out["note"] = ("lexical control directions absent: rebuild vectors after adding "
+                       "emotion_word_mention / emotion_negated to seeds.py")
+        return out
+    for c in sorted(EMOTIONS):
+        key = vec_key(V, c, args.method, args.variant)
+        if key not in V:
+            continue
+        v = V[key][layer]
+        out["per_emotion"][c] = {name: round(cosine(v, lv), 4) for name, lv in lex.items()}
+    if out["per_emotion"]:
+        allv = [abs(x) for d in out["per_emotion"].values() for x in d.values()]
+        out["max_abs_cos"] = round(max(allv), 4)
+        out["median_abs_cos"] = round(float(np.median(allv)), 4)
+        out["fear"] = out["per_emotion"].get("afraid_alarmed")
+    return out
+
+
+def _print_lexical_gate(g: dict) -> None:
+    print(f"\n=== CANCELLO LESSICALE (layer {g['layer']}) ===")
+    if not g.get("per_emotion"):
+        print(f"  {g.get('note', 'non calcolabile')}")
+        return
+    print(f"  cos con gli assi lessicali: mediana |cos| {g['median_abs_cos']}, "
+          f"massimo {g['max_abs_cos']}")
+    if g.get("fear"):
+        print(f"  asse paura: " + "  ".join(f"{k}={v:+.3f}" for k, v in g["fear"].items()))
+    worst = sorted(g["per_emotion"].items(),
+                   key=lambda kv: -max(abs(x) for x in kv[1].values()))[:3]
+    for name, d in worst:
+        print(f"  piu lessicale: {name:20s} " + "  ".join(f"{k}={v:+.3f}" for k, v in d.items()))
+    if g["max_abs_cos"] > 0.5:
+        print("  [!] un asse supera 0.5 di allineamento col lessico: e un rilevatore di parole.")
 
 
 def _run_cv(args, acts, concepts, all_concepts, band, n_layers, V, report) -> int:
@@ -154,10 +210,13 @@ def _run_cv(args, acts, concepts, all_concepts, band, n_layers, V, report) -> in
             "auroc_by_layer": {str(l): per_layer_auroc[li][c] for li, l in enumerate(band)},
         }
 
+    report["lexical_gate"] = _lexical_gate(V, args, shared)
+
     args.report.parent.mkdir(parents=True, exist_ok=True)
     args.report.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"Wrote report -> {args.report}")
 
+    _print_lexical_gate(report["lexical_gate"])
     print(f"\nbanda layer {report['layer_band']} di {n_layers} | {args.cv}-fold CV")
     print(f"layer condiviso scelto: {shared} (profondita {report['shared_layer_depth']}), "
           f"AUROC media emozioni {per_layer_mean[best_li]:.3f}")

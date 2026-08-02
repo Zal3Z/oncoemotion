@@ -229,27 +229,56 @@ def main() -> int:
         "resolution_floor": round(1.0 / n_pairs_ref, 4) if n_pairs_ref else None,
     }
 
-    # ---- F. ablation effect (same record intact vs ablated) ----
+    # ---- F. ablation effect, per arm, against the random control ----
+    # A flip rate on its own answers "what happens if you disturb the state", not
+    # "what happens if you remove fear". The random arm ablates directions of the
+    # same norm at the same layers, so the difference between the two flip rates is
+    # the only part attributable to the emotion direction. This is the mechanistic
+    # gate: if it does not clear the control, the causal leg comes out of the paper.
     idx = {}
     for r in rows:
-        idx.setdefault((r["record_id"], r["role"]), {})[r["ablated"]] = r
-    flips_abl, comp = 0, 0
-    acc_intact, acc_ablate = [], []
-    for k, d in idx.items():
-        if False in d and True in d:
+        idx.setdefault((r["record_id"], r["role"]), {})[r.get("arm", "emotion" if r["ablated"] else "intact")] = r
+    arms = sorted({a for d in idx.values() for a in d} - {"intact"})
+    F = {"arms": arms}
+    for arm in arms:
+        flips, comp = 0, 0
+        acc_i, acc_a = [], []
+        for k, d in idx.items():
+            if "intact" not in d or arm not in d:
+                continue
             comp += 1
-            if d[False]["model_top1_id"] != d[True]["model_top1_id"]:
-                flips_abl += 1
-            if d[False]["gold_class"] == "term":
-                acc_intact.append(int(bool(d[False]["correct"])))
-                acc_ablate.append(int(bool(d[True]["correct"])))
-    F = {
-        "label_flips_intact_vs_ablated": flips_abl,
-        "flip_rate": round(flips_abl / comp, 4) if comp else None,
-        "term_acc_intact": round(_mean(acc_intact), 4) if acc_intact else None,
-        "term_acc_ablated": round(_mean(acc_ablate), 4) if acc_ablate else None,
-        "n_compared": comp,
-    }
+            if d["intact"]["model_top1_id"] != d[arm]["model_top1_id"]:
+                flips += 1
+            if d["intact"]["gold_class"] == "term":
+                acc_i.append(int(bool(d["intact"]["correct"])))
+                acc_a.append(int(bool(d[arm]["correct"])))
+        F[arm] = {
+            "label_flips": flips,
+            "flip_rate": round(flips / comp, 4) if comp else None,
+            "term_acc_intact": round(_mean(acc_i), 4) if acc_i else None,
+            "term_acc_ablated": round(_mean(acc_a), 4) if acc_a else None,
+            "n_compared": comp,
+        }
+    if "emotion" in F and "random" in F:
+        fe, fr = F["emotion"]["flip_rate"], F["random"]["flip_rate"]
+        F["gate_emotion_vs_random"] = {
+            "flip_rate_difference": round(fe - fr, 4) if fe is not None and fr is not None else None,
+            "flip_rate_ratio": round(fe / fr, 3) if fe and fr else None,
+            "passes": bool(fe is not None and fr is not None and fe > fr),
+        }
+    else:
+        F["gate_emotion_vs_random"] = {
+            "passes": None,
+            "note": "random control arm absent: rerun run_role_emotion.py with --arms "
+                    "intact emotion random",
+        }
+    # kept so older readers of this file keep working
+    if "emotion" in F:
+        F.update({"label_flips_intact_vs_ablated": F["emotion"]["label_flips"],
+                  "flip_rate": F["emotion"]["flip_rate"],
+                  "term_acc_intact": F["emotion"]["term_acc_intact"],
+                  "term_acc_ablated": F["emotion"]["term_acc_ablated"],
+                  "n_compared": F["emotion"]["n_compared"]})
 
     analysis = {
         "rows_file": str(args.rows), "n_rows": len(rows), "roles": roles,
@@ -286,8 +315,17 @@ def main() -> int:
           f"| point-biserial(err,emo)={D['point_biserial_error_vs_emo']}")
     print(f"E) Framing: acc neutral={E['neutral_acc']} vs emotional={E['emotional_acc']} "
           f"| label flips={E['label_flips_neutral_vs_emotional']}/{E['n_pairs']}")
-    print(f"F) Ablation: term acc intact={F['term_acc_intact']} vs ablated={F['term_acc_ablated']} "
-          f"| label flips={F['label_flips_intact_vs_ablated']}/{F['n_compared']} ({F['flip_rate']})")
+    print("F) Ablazione per braccio:")
+    for arm in F["arms"]:
+        f = F[arm]
+        print(f"   {arm:8} flip={f['label_flips']}/{f['n_compared']} ({f['flip_rate']})  "
+              f"term acc {f['term_acc_intact']} -> {f['term_acc_ablated']}")
+    g = F["gate_emotion_vs_random"]
+    if g.get("passes") is None:
+        print(f"   cancello causale: {g.get('note')}")
+    else:
+        print(f"   cancello causale emozione vs casuale: differenza {g['flip_rate_difference']:+.4f}, "
+              f"rapporto {g['flip_rate_ratio']} -> {'PASSA' if g['passes'] else 'NON PASSA'}")
     print(f"\nG) PRIMARY - role x framing (reference role: {G['reference_role']}, "
           f"resolution floor {G['resolution_floor']}):")
     for role in roles:

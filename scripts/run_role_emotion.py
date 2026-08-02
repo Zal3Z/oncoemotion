@@ -4,7 +4,9 @@ and does emotionality change how it LABELS PRO-CTCAE (right vs wrong)?
 
 Factorial per dataset item (each item is already a neutral or emotional framing):
     role     in {oncologo (medical), generico (non-medical), none (baseline)}
-    ablation in {intact, ablated}   # ablated = emotion directions removed at point E
+    arm in {intact, emotion, random}  # emotion = fear/anxiety/sad directions removed
+                                      # at point E; random = norm- and layer-matched
+                                      # random directions removed instead (the control)
 
 For every (item, role, ablation) we record, at the identical teacher-forced point E:
   * emotion-like z-scores (projection onto Phase-2 emotion vectors vs a neutral
@@ -45,6 +47,8 @@ from oncoemotion.steering.runtime import SteeringRuntime  # noqa: E402
 from oncoemotion.terminology.pro_ctcae import load_pro_ctcae  # noqa: E402
 from oncoemotion.factory import build_default_mapper  # noqa: E402
 from oncoemotion.schemas import MapRequest  # noqa: E402
+from oncoemotion.clinical.baseline import NEUTRAL_BASELINE  # noqa: E402
+from oncoemotion.emotion_vectors.vectors import random_vector  # noqa: E402
 
 # All concepts that are NOT confounders are treated as emotions (derived from the
 # vector set, so adding emotions to seeds.py flows through automatically).
@@ -54,17 +58,8 @@ CONFOUNDERS = ["uncertainty", "urgency", "clinical_severity", "safety_policy",
 # negative-affect core (kept small so the intervention is interpretable).
 ABLATE_CONCEPTS = ["afraid_alarmed", "anxious_nervous", "sad"]
 
-# Emotionally-neutral, non-clinical routine sentences for the z-score baseline.
-NEUTRAL_BASELINE = [
-    "Il modulo è stato compilato correttamente.",
-    "La procedura di registrazione è terminata.",
-    "Il documento è stato archiviato negli atti.",
-    "L'appuntamento è confermato per la data prevista.",
-    "I dati anagrafici risultano aggiornati.",
-    "La pratica è stata protocollata questa mattina.",
-    "Il questionario contiene dieci domande in totale.",
-    "La sala d'attesa è al primo piano dell'edificio.",
-]
+# The z-score baseline is shared with run_role_spectrum.py so that the z-scores of
+# experiments B and C are finally on the same scale (see clinical/baseline.py).
 
 
 def _key_for(V, c, method, variant):
@@ -74,7 +69,8 @@ def _key_for(V, c, method, variant):
     return f"{c}|{method}"
 
 
-def _ablation_ctx(rt: SteeringRuntime, ablate_vecs, layer_of):
+def _ablation_ctx(rt: SteeringRuntime, ablate_vecs, layer_of, arm: str = "emotion",
+                  seed: int = 12345):
     """Nested ablation of each emotion direction so its projection at the readout
     layer is removed AND the change propagates to the decision.
 
@@ -82,13 +78,24 @@ def _ablation_ctx(rt: SteeringRuntime, ablate_vecs, layer_of):
     an index into that tuple. To zero the component at readout layer ``L`` we hook
     block ``L-1`` (whose output is ``hidden_states[L]``), using the direction at
     ``L``. This is the off-by-one fix vs. hooking block ``L`` directly.
+
+    ``arm="random"`` ablates random directions of the same norm, at the same
+    layers, in the same number -- the control the ablation never had. Without it a
+    flip rate of 11-38% measures "what happens if you disturb the state", not "what
+    happens if you remove fear". The steering experiment already suggests the
+    control matters: the emotion direction beats a random one of equal norm in
+    about half the models, and in Gemma-4-12B the random direction is roughly
+    fourteen times more effective.
     """
     stack = ExitStack()
-    for c, vec_LH in ablate_vecs.items():
+    for i, (c, vec_LH) in enumerate(sorted(ablate_vecs.items())):
         l = int(layer_of[c])
         l = min(l, vec_LH.shape[0] - 1)
+        v = vec_LH[l]
+        if arm == "random":
+            v = random_vector(v.shape[0], seed=seed + i, norm=float(np.linalg.norm(v)))
         hook_layer = max(0, l - 1)
-        stack.enter_context(rt.intervene(hook_layer, vec_LH[l], 0.0, mode="ablate"))
+        stack.enter_context(rt.intervene(hook_layer, v, 0.0, mode="ablate"))
     return stack
 
 
@@ -114,6 +121,11 @@ def main() -> int:
     ap.add_argument("--vecs", type=Path, default=_ROOT / "outputs/checkpoints/emotion_vectors.npz")
     ap.add_argument("--val-report", type=Path, default=_ROOT / "outputs/reports/vector_validation.json")
     ap.add_argument("--out", type=Path, default=_ROOT / "outputs/role_emotion")
+    ap.add_argument("--arms", nargs="+", default=["intact", "emotion", "random"],
+                    choices=["intact", "emotion", "random"],
+                    help="'random' is the norm- and layer-matched control for 'emotion'; "
+                         "without it a flip rate measures disturbance, not fear removal")
+    ap.add_argument("--ablation-seed", type=int, default=12345)
     args = ap.parse_args()
 
     V = np.load(args.vecs, allow_pickle=True)
@@ -136,7 +148,7 @@ def main() -> int:
                 break
             pairs.append(it)
         items = pairs
-    print(f"{len(items)} items | roles={args.roles} | ablation=[intact,ablated] | concepts={concepts}")
+    print(f"{len(items)} items | roles={args.roles} | arms={args.arms} | concepts={concepts}")
 
     cfg = ModelConfig(dtype=args.dtype, device_map=args.device)
     adapter = load_adapter(args.model, cfg)
@@ -163,13 +175,15 @@ def main() -> int:
 
     rows = []
     for role in args.roles:
-        for ablated in (False, True):
-            tag = f"{role}/{'ablated' if ablated else 'intact'}"
+        for arm in args.arms:
+            ablated = arm != "intact"
+            tag = f"{role}/{arm}"
             # 1) baseline projections under this condition
             base_raw = {c: [] for c in concepts}
             for txt in NEUTRAL_BASELINE:
                 system, user = build_decision_messages(txt, role=role)
-                with (_ablation_ctx(rt, ablate_vecs, layer_of) if ablated else nullcontext()):
+                with (_ablation_ctx(rt, ablate_vecs, layer_of, arm, args.ablation_seed)
+                      if ablated else nullcontext()):
                     _, sc = _raw_scores(adapter, system, user, vectors, layer_of)
                 for c in concepts:
                     base_raw[c].append(sc[c])
@@ -179,7 +193,8 @@ def main() -> int:
             # 2) items
             for it in items:
                 system, user = build_decision_messages(it["text"], role=role)
-                with (_ablation_ctx(rt, ablate_vecs, layer_of) if ablated else nullcontext()):
+                with (_ablation_ctx(rt, ablate_vecs, layer_of, arm, args.ablation_seed)
+                      if ablated else nullcontext()):
                     ids, raw = _raw_scores(adapter, system, user, vectors, layer_of)
                     pred = predict_generative(adapter, ids, matcher,
                                               max_new_tokens=args.max_new_tokens, floor=args.map_floor)
@@ -192,7 +207,7 @@ def main() -> int:
                     "framing": it["framing"], "category": it["category"],
                     "gold_class": it["gold_class"], "gold_pro_id": it["gold_pro_id"],
                     "gold_pro_status": it["gold_pro_status"], "urgent": it["urgent"],
-                    "role": role, "ablated": ablated,
+                    "role": role, "ablated": ablated, "arm": arm,
                     "model_generated": pred.term_str,
                     "model_top1_id": pred.top1_id, "model_top1_term": pred.top1_term,
                     "model_map_score": pred.map_score,
@@ -203,7 +218,7 @@ def main() -> int:
                     "decision_entropy": round(dsum["entropy"], 3),
                     **mapper_ref[it["record_id"]],
                 })
-            done = sum(1 for r in rows if r["role"] == role and r["ablated"] == ablated)
+            done = sum(1 for r in rows if r["role"] == role and r["arm"] == arm)
             print(f"  [{tag:20}] {done} items measured", flush=True)
 
     args.out.mkdir(parents=True, exist_ok=True)
