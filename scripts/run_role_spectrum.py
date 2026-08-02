@@ -43,7 +43,8 @@ sys.path.insert(0, str(_ROOT / "src"))
 
 from oncoemotion.config import ModelConfig  # noqa: E402
 from oncoemotion.models.base import load_adapter  # noqa: E402
-from oncoemotion.clinical.prompt import build_decision_messages, TEACHER_PREFIX  # noqa: E402
+from oncoemotion.clinical.prompt import (  # noqa: E402
+    build_decision_messages, build_padded_personas, TEACHER_PREFIX)
 from oncoemotion.clinical.measure import point_e_hidden, project_scores, zscore  # noqa: E402
 from oncoemotion.emotion_vectors.vectors import random_vector  # noqa: E402
 from oncoemotion.clinical.baseline import NEUTRAL_BASELINE  # noqa: E402
@@ -81,7 +82,7 @@ def _measure(adapter, role, texts, vectors, layer_of, emo_concepts):
     proj_acc = {c: [] for c in vectors}
     hid_acc = {c: [] for c in emo_concepts if c in vectors}
     for t in texts:
-        system, user = build_decision_messages(t, role=role)
+        system, user = build_decision_messages(t, role=role, personas=PERSONAS)
         ids = adapter.build_prompt_ids(user, system, assistant_prefix=TEACHER_PREFIX)
         h = point_e_hidden(adapter, ids)                    # [L+1, H]
         sc = project_scores(h, vectors, layer_of)
@@ -133,10 +134,19 @@ def main() -> int:
     print(f"Loading {adapter.config.model_id} ...", flush=True)
     adapter.load()
 
+    # Token-matched role spans, computed against THIS tokenizer: the same string
+    # is a different number of tokens in each model, so a fixed pad would
+    # equalize one and skew the rest. Without this everything after the system
+    # block sits at a role-dependent absolute position and the role effect is
+    # confounded with position; 'none' had no system block at all.
+    PERSONAS, PERSONA_TOKENS = build_padded_personas(adapter.tokenizer)
+    print(f'span di ruolo appaiati: {min(PERSONA_TOKENS.values())}-'
+          f'{max(PERSONA_TOKENS.values())} token su {len(PERSONA_TOKENS)} ruoli', flush=True)
+
     # fixed reference baseline: neutral texts, NO role
     ref_proj_acc = {c: [] for c in concepts}
     for t in NEUTRAL_BASELINE:
-        system, user = build_decision_messages(t, role="none")
+        system, user = build_decision_messages(t, role="none", personas=PERSONAS)
         ids = adapter.build_prompt_ids(user, system, assistant_prefix=TEACHER_PREFIX)
         sc = project_scores(point_e_hidden(adapter, ids), vectors, layer_of)
         for c in concepts:

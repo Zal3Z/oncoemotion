@@ -40,7 +40,8 @@ sys.path.insert(0, str(_ROOT / "src"))
 
 from oncoemotion.config import ModelConfig  # noqa: E402
 from oncoemotion.models.base import load_adapter  # noqa: E402
-from oncoemotion.clinical.prompt import build_decision_messages, TEACHER_PREFIX  # noqa: E402
+from oncoemotion.clinical.prompt import (  # noqa: E402
+    build_decision_messages, build_padded_personas, TEACHER_PREFIX)
 from oncoemotion.clinical.measure import point_e_hidden, project_scores, zscore, decision_summary  # noqa: E402
 from oncoemotion.clinical.classify import build_term_matcher, predict_generative  # noqa: E402
 from oncoemotion.steering.runtime import SteeringRuntime  # noqa: E402
@@ -99,6 +100,28 @@ def _ablation_ctx(rt: SteeringRuntime, ablate_vecs, layer_of, arm: str = "emotio
     return stack
 
 
+def _subsample_pairs(items, n_pairs, seed):
+    """Keep ``n_pairs`` item pairs, stratified by gold category.
+
+    Taking the first N in file order would take only EXACT_PRO_MATCH items -- the
+    term block comes first -- so a smoke run would never touch the abstain path and
+    a reduced ablation arm would silently drop the false-positive categories.
+    """
+    by_cat = {}
+    for it in items:
+        by_cat.setdefault(it["category"], {}).setdefault(it["pair_id"], []).append(it)
+    total = len({it["pair_id"] for it in items})
+    if not n_pairs or n_pairs >= total:
+        return items, total
+    rng = np.random.default_rng(seed)
+    keep = set()
+    for cat, pairs in sorted(by_cat.items()):
+        ids = sorted(pairs)
+        take = max(1, round(n_pairs * len(ids) / total))
+        keep.update(rng.permutation(ids)[:take].tolist())
+    return [it for it in items if it["pair_id"] in keep], len(keep)
+
+
 def _raw_scores(adapter, system, user, vectors, layer_of):
     ids = adapter.build_prompt_ids(user, system, assistant_prefix=TEACHER_PREFIX)
     h = point_e_hidden(adapter, ids)
@@ -116,7 +139,8 @@ def main() -> int:
     ap.add_argument("--max-new-tokens", type=int, default=10)
     ap.add_argument("--map-floor", type=float, default=0.72,
                     help="fuzzy score floor to accept the generated term as a PRO code")
-    ap.add_argument("--limit", type=int, default=0, help="only first N pairs (smoke test)")
+    ap.add_argument("--limit", type=int, default=0,
+                    help="use only N item pairs, stratified by category (smoke test)")
     ap.add_argument("--dataset", type=Path, default=_ROOT / "data/synthetic/clinical_labeled.jsonl")
     ap.add_argument("--vecs", type=Path, default=_ROOT / "outputs/checkpoints/emotion_vectors.npz")
     ap.add_argument("--val-report", type=Path, default=_ROOT / "outputs/reports/vector_validation.json")
@@ -144,21 +168,22 @@ def main() -> int:
 
     items = [json.loads(l) for l in args.dataset.read_text(encoding="utf-8").splitlines() if l.strip()]
     if args.limit:
-        pairs = []
-        seen = set()
-        for it in items:
-            if it["pair_id"] not in seen:
-                seen.add(it["pair_id"])
-            if len(seen) > args.limit:
-                break
-            pairs.append(it)
-        items = pairs
+        items, _ = _subsample_pairs(items, args.limit, args.ablation_seed)
     print(f"{len(items)} items | roles={args.roles} | arms={args.arms} | concepts={concepts}")
 
     cfg = ModelConfig(dtype=args.dtype, device_map=args.device)
     adapter = load_adapter(args.model, cfg)
     print(f"Loading {adapter.config.model_id} ...", flush=True)
     adapter.load()
+
+    # Token-matched role spans, computed against THIS tokenizer: the same string
+    # is a different number of tokens in each model, so a fixed pad would
+    # equalize one and skew the rest. Without this everything after the system
+    # block sits at a role-dependent absolute position and the role effect is
+    # confounded with position; 'none' had no system block at all.
+    PERSONAS, PERSONA_TOKENS = build_padded_personas(adapter.tokenizer)
+    print(f'span di ruolo appaiati: {min(PERSONA_TOKENS.values())}-'
+          f'{max(PERSONA_TOKENS.values())} token su {len(PERSONA_TOKENS)} ruoli', flush=True)
     rt = SteeringRuntime(adapter)
 
     library = load_pro_ctcae()
@@ -184,19 +209,9 @@ def main() -> int:
     # -- and that is what keeps the three-arm design affordable on Colab.
     abl_items = items
     if args.ablation_limit:
-        by_cat = {}
-        for it in items:
-            by_cat.setdefault(it["category"], {}).setdefault(it["pair_id"], []).append(it)
-        rng = np.random.default_rng(args.ablation_seed)
-        keep = set()
-        n_pairs = len({it["pair_id"] for it in items})
-        for cat, pairs in sorted(by_cat.items()):
-            ids = sorted(pairs)
-            take = max(1, round(args.ablation_limit * len(ids) / n_pairs))
-            keep.update(rng.permutation(ids)[:take].tolist())
-        abl_items = [it for it in items if it["pair_id"] in keep]
-        print(f"bracci di ablazione su {len(keep)} coppie / {n_pairs} "
-              f"({len(abl_items)} item), stratificate per categoria")
+        abl_items, n_kept = _subsample_pairs(items, args.ablation_limit, args.ablation_seed)
+        print(f"bracci di ablazione su {n_kept} coppie ({len(abl_items)} item), "
+              f"stratificate per categoria", flush=True)
 
     rows = []
     for role in args.roles:
@@ -207,7 +222,7 @@ def main() -> int:
             # 1) baseline projections under this condition
             base_raw = {c: [] for c in concepts}
             for txt in NEUTRAL_BASELINE:
-                system, user = build_decision_messages(txt, role=role)
+                system, user = build_decision_messages(txt, role=role, personas=PERSONAS)
                 with (_ablation_ctx(rt, ablate_vecs, layer_of, arm, args.ablation_seed)
                       if ablated else nullcontext()):
                     _, sc = _raw_scores(adapter, system, user, vectors, layer_of)
@@ -218,7 +233,7 @@ def main() -> int:
 
             # 2) items
             for it in arm_items:
-                system, user = build_decision_messages(it["text"], role=role)
+                system, user = build_decision_messages(it["text"], role=role, personas=PERSONAS)
                 with (_ablation_ctx(rt, ablate_vecs, layer_of, arm, args.ablation_seed)
                       if ablated else nullcontext()):
                     ids, raw = _raw_scores(adapter, system, user, vectors, layer_of)

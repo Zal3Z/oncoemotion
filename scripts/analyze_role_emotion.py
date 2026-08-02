@@ -55,6 +55,12 @@ def _point_biserial(binary, cont):
     return float(np.corrcoef(b, c)[0, 1])
 
 
+def _fmt(x, spec="+.3f"):
+    """Empty cells are normal on small runs and on unbalanced role sets; they must
+    not take the summary down with them."""
+    return format(x, spec) if isinstance(x, (int, float)) else "n/d"
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--rows", type=Path, required=True)
@@ -301,8 +307,8 @@ def main() -> int:
     print("\nA) Emotionality (neg-affect z at point E, intact):")
     for role in roles:
         a = A[role]
-        print(f"   {role:10} all={a['all']['emo_z']:+.3f}  "
-              f"neutral={a['neutral']['emo_z']:+.3f}  emotional={a['emotional']['emo_z']:+.3f}")
+        print(f"   {role:10} all={_fmt(a['all']['emo_z'])}  "
+              f"neutral={_fmt(a['neutral']['emo_z'])}  emotional={_fmt(a['emotional']['emo_z'])}")
     print(f"\nB) Model term-accuracy (intact|all) vs mapper {mapper_term_acc}:")
     for role in roles:
         print(f"   {role:10} intact={B[role]['intact|all']['acc']}  ablated={B[role]['ablated|all']['acc']}"
@@ -310,7 +316,7 @@ def main() -> int:
     print("\nC) False-positive coding on abstain (mean_conf / fp_rate, intact|all):")
     for role in roles:
         c = C[role]['intact|all']
-        print(f"   {role:10} conf={c['mean_conf']:.3f}  fp_rate={c['fp_rate']}")
+        print(f"   {role:10} conf={_fmt(c['mean_conf'], '.3f')}  fp_rate={c['fp_rate']}  n={c['n']}")
     print(f"\nD) Emotion vs error: emo_z wrong={D['emo_z_on_wrong']} vs correct={D['emo_z_on_correct']} "
           f"| point-biserial(err,emo)={D['point_biserial_error_vs_emo']}")
     print(f"E) Framing: acc neutral={E['neutral_acc']} vs emotional={E['emotional_acc']} "
@@ -324,7 +330,7 @@ def main() -> int:
     if g.get("passes") is None:
         print(f"   cancello causale: {g.get('note')}")
     else:
-        print(f"   cancello causale emozione vs casuale: differenza {g['flip_rate_difference']:+.4f}, "
+        print(f"   cancello causale emozione vs casuale: differenza {_fmt(g['flip_rate_difference'], '+.4f')}, "
               f"rapporto {g['flip_rate_ratio']} -> {'PASSA' if g['passes'] else 'NON PASSA'}")
     print(f"\nG) PRIMARY - role x framing (reference role: {G['reference_role']}, "
           f"resolution floor {G['resolution_floor']}):")
@@ -332,12 +338,12 @@ def main() -> int:
         g = G["by_role"][role]
         mark = "  <- ref" if role == G["reference_role"] else ""
         print(f"   {role:10} {g['neutral_acc']} -> {g['emotional_acc']}  "
-              f"delta={g['delta']:+.4f}  (n={g['n_pairs']}, disc {g['discordant_neutral_only']}/"
+              f"delta={_fmt(g['delta'], '+.4f')}  (n={g['n_pairs']}, disc {g['discordant_neutral_only']}/"
               f"{g['discordant_emotional_only']}){mark}")
     for role, ct in G["contrasts_vs_reference"].items():
         flag = "" if ct["delta_difference"] is None or G["resolution_floor"] is None else (
             "" if abs(ct["delta_difference"]) >= G["resolution_floor"] else "  [sotto la risoluzione]")
-        print(f"   contrasto {role} vs {G['reference_role']}: {ct['delta_difference']:+.4f} "
+        print(f"   contrasto {role} vs {G['reference_role']}: {_fmt(ct['delta_difference'], '+.4f')} "
               f"(meglio {ct['items_role_better']} / peggio {ct['items_role_worse']} / "
               f"pari {ct['items_tied']}){flag}")
     print(f"\nWrote -> {out}")

@@ -44,3 +44,51 @@ def test_projection_and_zscore():
     assert abs(scores["afraid_alarmed"] - 2.0) < 1e-9   # projection = 2
     z = zscore(scores, {"afraid_alarmed": 0.0}, {"afraid_alarmed": 1.0})
     assert abs(z["afraid_alarmed"] - 2.0) < 1e-9
+
+
+class _FakeTok:
+    """Whitespace tokenizer: enough to exercise the padding logic without a model."""
+
+    def __call__(self, text, add_special_tokens=False):
+        class _Enc:
+            input_ids = text.split()
+        return _Enc()
+
+
+def test_padded_role_spans_are_token_matched():
+    from oncoemotion.clinical.prompt import ROLE_PERSONAS, build_padded_personas
+
+    personas, counts = build_padded_personas(_FakeTok())
+    assert set(personas) == set(ROLE_PERSONAS)
+    # the whole point: everything after the system block must land at the same
+    # absolute position in every condition
+    assert max(counts.values()) - min(counts.values()) <= 2
+
+
+def test_no_role_control_has_a_system_block():
+    """'none' used to be the absence of a system message, which is a structurally
+    different prompt rather than a control."""
+    from oncoemotion.clinical.prompt import ROLE_PERSONAS, build_padded_personas
+
+    assert ROLE_PERSONAS["none"] is None
+    personas, counts = build_padded_personas(_FakeTok())
+    assert personas["none"]
+    assert counts["none"] >= max(counts.values()) - 2
+
+
+def test_padded_personas_keep_their_identity():
+    from oncoemotion.clinical.prompt import build_padded_personas
+
+    personas, _ = build_padded_personas(_FakeTok())
+    assert personas["oncologo"].startswith("Sei un oncologo")
+    assert "oncologo" not in personas["none"]
+
+
+def test_build_decision_messages_uses_the_padded_table():
+    from oncoemotion.clinical.prompt import build_decision_messages, build_padded_personas
+
+    personas, _ = build_padded_personas(_FakeTok())
+    sys_none, _ = build_decision_messages("ho nausea", role="none", personas=personas)
+    assert sys_none is not None
+    sys_default, _ = build_decision_messages("ho nausea", role="none")
+    assert sys_default is None      # unpadded default keeps the old behaviour

@@ -82,6 +82,83 @@ NEUTRAL_FILLER = (
 )
 
 
+# --- token-matched role spans -------------------------------------------------
+# The personas were written freehand and come out between 18 and 29 tokens, and the
+# "none" control had no system block at all -- zero tokens. Everything after the
+# system block therefore sat at a different absolute position in every condition,
+# and in a transformer position is not neutral: the C2 result was confounded with it
+# by construction. Worse, "none" was not a control at all, it was a structurally
+# different prompt.
+#
+# Padding is computed against the real tokenizer at run time, never hardcoded: the
+# same string is a different number of tokens in Qwen, Gemma and EuroLLM, so a fixed
+# pad would equalize one model and skew the rest. The clauses are procedural, carry
+# no identity, no affect and no clinical content, and go after the persona so that
+# the end of the system block -- and hence every later position -- lands identically.
+# Graded in length so a greedy fill lands on the target with real sentences instead
+# of a repeated stub.
+ROLE_PAD_CLAUSES = [
+    "La sessione segue la procedura ordinaria prevista dal servizio.",
+    "Il formato della risposta e' quello consueto.",
+    "Le voci restano in ordine standard.",
+    "La registrazione avviene come sempre.",
+    "I passaggi sono quelli abituali.",
+    "Il riferimento resta invariato.",
+    "L'ordine non cambia.",
+    "Come di consueto.",
+    "Come sempre.",
+    "Si procede.",
+]
+
+# Semantically empty stand-in for "no role": present in structure, absent in
+# identity, so it can be padded to the same length as every persona.
+NO_ROLE_STUB = "Questa e' una sessione di codifica."
+
+
+def build_padded_personas(tokenizer, target: int | None = None,
+                          personas: dict | None = None) -> tuple[dict, dict]:
+    """Return ``(padded_personas, token_counts)`` all of identical token length.
+
+    ``target`` defaults to the longest persona, rounded up to fit whole padding
+    clauses. Raises if any span cannot be brought to the target, so a silent
+    mismatch is impossible.
+    """
+    src = dict(personas or ROLE_PERSONAS)
+    src = {k: (v if v else NO_ROLE_STUB) for k, v in src.items()}
+
+    def n_tok(s: str) -> int:
+        return len(tokenizer(s, add_special_tokens=False).input_ids)
+
+    base = {k: n_tok(v) for k, v in src.items()}
+    # (cost, clause) sorted longest first, so the greedy fill closes most of the gap
+    # with one real sentence and trims with the short ones
+    clauses = sorted(((n_tok(" " + c), c) for c in ROLE_PAD_CLAUSES), reverse=True)
+    goal = target or max(base.values())
+
+    out, counts = {}, {}
+    for k, text in src.items():
+        cur = base[k]
+        used = set()
+        progress = True
+        while cur < goal and progress:
+            progress = False
+            for i, (cost, clause) in enumerate(clauses):
+                if i not in used and cur + cost <= goal:
+                    text += " " + clause
+                    cur += cost
+                    used.add(i)
+                    progress = True
+                    break
+        out[k], counts[k] = text, cur
+
+    spread = max(counts.values()) - min(counts.values())
+    if spread > 2:
+        raise ValueError(
+            f"role spans still differ by {spread} tokens after padding "
+            f"({counts}); add shorter entries to ROLE_PAD_CLAUSES")
+    return out, counts
+
+
 def build_decision_prompt(free_text: str, neutral_filler: str | None = None) -> str:
     """Return the full raw prompt whose LAST token is measurement point E.
 
@@ -101,17 +178,23 @@ def build_decision_prompt(free_text: str, neutral_filler: str | None = None) -> 
 
 
 def build_decision_messages(
-    free_text: str, role: str | None = None, neutral_filler: str | None = None
+    free_text: str, role: str | None = None, neutral_filler: str | None = None,
+    personas: dict | None = None
 ) -> tuple[str | None, str]:
     """Return ``(system_text, user_text)`` for the role-conditioned decision.
 
-    The persona (``ROLE_PERSONAS[role]``) becomes the SYSTEM message; the constant
-    coding task + patient text + JSON instruction become the USER message. The
-    teacher-forced prefix (``TEACHER_PREFIX``) is added by the adapter as the start
-    of the assistant turn, so point E remains the identical final token across
-    roles. ``role=None`` or ``"none"`` yields no system message.
+    The persona becomes the SYSTEM message; the constant coding task + patient text
+    + JSON instruction become the USER message. The teacher-forced prefix
+    (``TEACHER_PREFIX``) is added by the adapter as the start of the assistant turn,
+    so point E remains the identical final token across roles.
+
+    Pass ``personas`` from :func:`build_padded_personas` to get token-matched spans,
+    including a real length-matched control for ``role="none"``. Without it the
+    unpadded ``ROLE_PERSONAS`` are used and everything after the system block sits
+    at a role-dependent position.
     """
-    system = ROLE_PERSONAS.get(role) if role else None
+    table = personas if personas is not None else ROLE_PERSONAS
+    system = table.get(role) if role else None
     parts = [
         TASK_INSTRUCTION,
         f'Testo del paziente: "{free_text}"',
