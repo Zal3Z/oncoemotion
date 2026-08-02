@@ -76,13 +76,13 @@ def _unit(v):
     return v / n if n > 0 else v
 
 
-def _measure(adapter, role, texts, vectors, layer_of, emo_concepts):
+def _measure(adapter, role, texts, vectors, layer_of, emo_concepts, personas):
     """Mean projection over `texts` under `role`; also the mean point-E hidden at
     each emotion best-layer (for the directional analysis)."""
     proj_acc = {c: [] for c in vectors}
     hid_acc = {c: [] for c in emo_concepts if c in vectors}
     for t in texts:
-        system, user = build_decision_messages(t, role=role, personas=PERSONAS)
+        system, user = build_decision_messages(t, role=role, personas=personas)
         ids = adapter.build_prompt_ids(user, system, assistant_prefix=TEACHER_PREFIX)
         h = point_e_hidden(adapter, ids)                    # [L+1, H]
         sc = project_scores(h, vectors, layer_of)
@@ -157,8 +157,8 @@ def main() -> int:
     rows = {}
     hidden_clinical = {}   # role -> {concept: [H]}
     for role, group in SPECTRUM:
-        cli_proj, cli_hid = _measure(adapter, role, stim, vectors, layer_of, emo_concepts)
-        base_proj, _ = _measure(adapter, role, NEUTRAL_BASELINE, vectors, layer_of, emo_concepts)
+        cli_proj, cli_hid = _measure(adapter, role, stim, vectors, layer_of, emo_concepts, PERSONAS)
+        base_proj, _ = _measure(adapter, role, NEUTRAL_BASELINE, vectors, layer_of, emo_concepts, PERSONAS)
         zc = zscore(cli_proj, bmean, bstd)
         zb = zscore(base_proj, bmean, bstd)
         rows[role] = {
