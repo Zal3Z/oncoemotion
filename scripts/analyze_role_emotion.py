@@ -9,7 +9,15 @@ Reads ``outputs/role_emotion/<slug>__rows.jsonl`` and computes:
      confidence + FP-rate per cell;
   D. emotion-vs-error link (emotion z on correct vs wrong; point-biserial r);
   E. framing effect (emotional vs neutral, paired);
-  F. ablation effect (label flips intact->ablated; accuracy delta).
+  F. ablation effect (label flips intact->ablated; accuracy delta);
+  G. PRIMARY ENDPOINT — role x framing interaction.
+
+E and G are not the same question. E pools the roles and therefore measures a
+property of the patient's text: emotional phrasing is harder to code. G asks
+whether the *assigned role* changes how much that phrasing costs, which is the
+claim the study actually makes. Everything in G is paired within item and within
+role. The per-model contrast is descriptive; the single inferential test lives in
+``analyze_results.py``, which pools every model.
 
 Writes ``<slug>__analysis.json`` and prints a summary.
 
@@ -53,6 +61,9 @@ def main() -> int:
     ap.add_argument("--out", type=Path, default=None)
     ap.add_argument("--fp-threshold", type=float, default=0.5,
                     help="softmax_top1 above which a forced code counts as a false-positive")
+    ap.add_argument("--reference-role", default="none",
+                    help="baseline role the primary contrast is taken against "
+                         "(the no-role control, so a positive contrast means the role protects)")
     args = ap.parse_args()
 
     rows = [json.loads(l) for l in args.rows.read_text(encoding="utf-8").splitlines() if l.strip()]
@@ -151,6 +162,73 @@ def main() -> int:
         "n_pairs": both,
     }
 
+    # ---- G. PRIMARY ENDPOINT: role x framing interaction ----
+    # E above pools the roles, so it answers "does emotional phrasing hurt?" -- a
+    # property of the patient's text. The study's claim is about the role, so the
+    # quantifier has to be the role: does the assigned role modulate how much the
+    # emotional phrasing hurts? Everything here is within item and within role, so
+    # the item is its own control on both factors.
+    ref = args.reference_role if args.reference_role in roles else (
+        "none" if "none" in roles else roles[0])
+    per_role = {}
+    for role in roles:
+        pairs = {}
+        for r in term:
+            if r["role"] == role and not r["ablated"]:
+                pairs.setdefault(r["pair_id"], {})[r["framing"]] = r
+        neu, emo, b, c = [], [], 0, 0
+        for pid, d in pairs.items():
+            if "neutral" not in d or "emotional" not in d:
+                continue
+            n_ok, e_ok = bool(d["neutral"]["correct"]), bool(d["emotional"]["correct"])
+            neu.append(int(n_ok)); emo.append(int(e_ok))
+            b += int(n_ok and not e_ok)
+            c += int(e_ok and not n_ok)
+        per_role[role] = {
+            "neutral_acc": round(_mean(neu), 4) if neu else None,
+            "emotional_acc": round(_mean(emo), 4) if emo else None,
+            "delta": round(_mean(emo) - _mean(neu), 4) if neu else None,
+            "n_pairs": len(neu),
+            "discordant_neutral_only": b,
+            "discordant_emotional_only": c,
+            # per-item framing effect, kept so the pooled model and the
+            # within-model sign test read the same numbers
+            "item_deltas": {pid: int(bool(d["emotional"]["correct"])) - int(bool(d["neutral"]["correct"]))
+                            for pid, d in pairs.items() if len(d) == 2},
+        }
+
+    contrasts = {}
+    ref_deltas = per_role.get(ref, {}).get("item_deltas", {})
+    for role in roles:
+        if role == ref:
+            continue
+        rd = per_role[role]["item_deltas"]
+        shared = sorted(set(rd) & set(ref_deltas))
+        diffs = [rd[p] - ref_deltas[p] for p in shared]
+        pos = sum(1 for x in diffs if x > 0)
+        neg = sum(1 for x in diffs if x < 0)
+        contrasts[role] = {
+            # >0 means the role protects: the framing penalty is smaller than the
+            # no-role control's
+            "delta_difference": round(_mean(diffs), 4) if diffs else None,
+            "n_items": len(diffs),
+            "items_role_better": pos,
+            "items_role_worse": neg,
+            "items_tied": len(diffs) - pos - neg,
+        }
+
+    # resolution floor: with n paired items one discordant item moves the delta by
+    # 1/n, so an effect below that is not measurable however it is tested
+    n_pairs_ref = per_role.get(ref, {}).get("n_pairs") or 0
+    G = {
+        "primary_endpoint": "role x framing interaction on term-item accuracy",
+        "reference_role": ref,
+        "by_role": {k: {kk: vv for kk, vv in v.items() if kk != "item_deltas"}
+                    for k, v in per_role.items()},
+        "contrasts_vs_reference": contrasts,
+        "resolution_floor": round(1.0 / n_pairs_ref, 4) if n_pairs_ref else None,
+    }
+
     # ---- F. ablation effect (same record intact vs ablated) ----
     idx = {}
     for r in rows:
@@ -182,6 +260,7 @@ def main() -> int:
         "D_emotion_vs_error": D,
         "E_framing_effect": E,
         "F_ablation_effect": F,
+        "G_role_by_framing": G,
         "fp_threshold": args.fp_threshold,
     }
     out = args.out or args.rows.with_name(args.rows.name.replace("__rows.jsonl", "__analysis.json"))
@@ -209,6 +288,20 @@ def main() -> int:
           f"| label flips={E['label_flips_neutral_vs_emotional']}/{E['n_pairs']}")
     print(f"F) Ablation: term acc intact={F['term_acc_intact']} vs ablated={F['term_acc_ablated']} "
           f"| label flips={F['label_flips_intact_vs_ablated']}/{F['n_compared']} ({F['flip_rate']})")
+    print(f"\nG) PRIMARY - role x framing (reference role: {G['reference_role']}, "
+          f"resolution floor {G['resolution_floor']}):")
+    for role in roles:
+        g = G["by_role"][role]
+        mark = "  <- ref" if role == G["reference_role"] else ""
+        print(f"   {role:10} {g['neutral_acc']} -> {g['emotional_acc']}  "
+              f"delta={g['delta']:+.4f}  (n={g['n_pairs']}, disc {g['discordant_neutral_only']}/"
+              f"{g['discordant_emotional_only']}){mark}")
+    for role, ct in G["contrasts_vs_reference"].items():
+        flag = "" if ct["delta_difference"] is None or G["resolution_floor"] is None else (
+            "" if abs(ct["delta_difference"]) >= G["resolution_floor"] else "  [sotto la risoluzione]")
+        print(f"   contrasto {role} vs {G['reference_role']}: {ct['delta_difference']:+.4f} "
+              f"(meglio {ct['items_role_better']} / peggio {ct['items_role_worse']} / "
+              f"pari {ct['items_tied']}){flag}")
     print(f"\nWrote -> {out}")
     return 0
 

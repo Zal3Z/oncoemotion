@@ -45,6 +45,7 @@ from oncoemotion.config import ModelConfig  # noqa: E402
 from oncoemotion.models.base import load_adapter  # noqa: E402
 from oncoemotion.clinical.prompt import build_decision_messages, TEACHER_PREFIX  # noqa: E402
 from oncoemotion.clinical.measure import point_e_hidden, project_scores, zscore  # noqa: E402
+from oncoemotion.emotion_vectors.vectors import random_vector  # noqa: E402
 
 # Confounders (everything else in the vector set is treated as an emotion).
 CONFOUNDERS = ["uncertainty", "urgency", "clinical_severity", "safety_policy",
@@ -114,6 +115,9 @@ def main() -> int:
     ap.add_argument("--vecs", type=Path, default=_ROOT / "outputs/checkpoints/emotion_vectors.npz")
     ap.add_argument("--val-report", type=Path, default=_ROOT / "outputs/reports/vector_validation.json")
     ap.add_argument("--out", type=Path, default=_ROOT / "outputs/role_spectrum")
+    ap.add_argument("--null-draws", type=int, default=2000,
+                    help="random directions used to build the null for each cosine")
+    ap.add_argument("--null-seed", type=int, default=12345)
     args = ap.parse_args()
 
     V = np.load(args.vecs, allow_pickle=True)
@@ -194,11 +198,87 @@ def main() -> int:
             d = a - b
             nd = np.linalg.norm(d)
             return round(float(np.dot(d, u) / nd), 3) if nd > 1e-9 else 0.0
+        # Null distribution: the same group-difference vector projected on random
+        # unit directions of the same dimensionality. Without it a cosine has no
+        # scale -- the previous read of this block called 0.2 "low" and concluded
+        # the shift was not fear, but the largest cosine observed over 9 models x
+        # 25 axes was 0.186, so every axis passed that threshold and the test could
+        # not fail. What matters is where an axis sits against chance and against
+        # the other axes, not against 1.0.
+        null_cos = {}
+        for pair_name, (a, b) in (("profani_minus_medici", (prof, med)),
+                                  ("profani_minus_tecnici", (prof, tec)),
+                                  ("tecnici_minus_medici", (tec, med))):
+            if a is None or b is None:
+                null_cos[pair_name] = None
+                continue
+            d = a - b
+            nd = np.linalg.norm(d)
+            if nd <= 1e-9:
+                null_cos[pair_name] = None
+                continue
+            draws = [float(np.dot(d, random_vector(d.shape[0], seed=args.null_seed + k)) / nd)
+                     for k in range(args.null_draws)]
+            null_cos[pair_name] = {
+                "mean": round(float(np.mean(draws)), 5),
+                "sd": round(float(np.std(draws)), 5),
+                "abs_p95": round(float(np.percentile(np.abs(draws), 95)), 5),
+                "n_draws": args.null_draws,
+            }
+
+        # Anisotropy at this concept's extraction layer: mean pairwise cosine of
+        # the raw persona states. Reported, not corrected -- the quantities above
+        # are differences of means, in which an additive common component cancels
+        # on both sides. This is the number Jeong (arXiv:2604.11050) asks for so a
+        # reader can flag models above ~0.95.
+        hv = np.stack(list(H.values())) if len(H) > 1 else None
+        if hv is not None:
+            hn = hv / (np.linalg.norm(hv, axis=1, keepdims=True) + 1e-9)
+            gram = hn @ hn.T
+            iu = np.triu_indices(len(hn), k=1)
+            aniso = round(float(np.mean(gram[iu])), 4)
+        else:
+            aniso = None
+
         direction[c] = {
             "per_persona_alignment": align,
             "profani_minus_medici_cos": cos(prof, med),
             "profani_minus_tecnici_cos": cos(prof, tec),
             "tecnici_minus_medici_cos": cos(tec, med),
+            "null_cos": null_cos,
+            "anisotropy_at_layer": aniso,
+        }
+
+    # ---- DIRECTION SUMMARY: rank each axis, and score it against its own null ----
+    # This is what the C2 section of the report should show. An absolute cosine is
+    # uninterpretable on its own; a rank among the 25 axes and a z against random
+    # directions are both interpretable and neither depends on a chosen threshold.
+    direction_summary = {}
+    for pair_name in ("profani_minus_medici", "profani_minus_tecnici", "tecnici_minus_medici"):
+        key = f"{pair_name}_cos"
+        vals = {c: direction[c][key] for c in emo_concepts if direction[c].get(key) is not None}
+        if not vals:
+            continue
+        order = sorted(vals, key=lambda c: -abs(vals[c]))
+        ranks = {c: i + 1 for i, c in enumerate(order)}
+        med_abs = float(np.median([abs(v) for v in vals.values()]))
+        per_axis = {}
+        for c, v in vals.items():
+            nc = direction[c].get("null_cos", {}).get(pair_name)
+            z = round(v / nc["sd"], 2) if nc and nc["sd"] > 1e-12 else None
+            per_axis[c] = {
+                "cos": v,
+                "rank": ranks[c],
+                "abs_over_median": round(abs(v) / med_abs, 2) if med_abs > 1e-12 else None,
+                "z_vs_random": z,
+                "exceeds_null_p95": (nc is not None and abs(v) > nc["abs_p95"]),
+            }
+        direction_summary[pair_name] = {
+            "n_axes": len(vals),
+            "median_abs_cos": round(med_abs, 5),
+            "max_abs_cos": round(max(abs(v) for v in vals.values()), 5),
+            "ranked_axes": order,
+            "per_axis": per_axis,
         }
 
     slug = re.sub(r"[^a-z0-9]+", "-", adapter.config.model_id.split("/")[-1].lower()).strip("-")
@@ -208,6 +288,7 @@ def main() -> int:
         "emo_concepts": emo_concepts, "controls": ctrl_concepts,
         "spectrum": [r for r, _ in SPECTRUM], "groups": group_of,
         "personas": rows, "direction": direction,
+        "direction_summary": direction_summary,
     }
     args.out.mkdir(parents=True, exist_ok=True)
     (args.out / f"{slug}__spectrum.json").write_text(json.dumps(out, ensure_ascii=False, indent=2),
