@@ -126,6 +126,11 @@ def main() -> int:
                     help="'random' is the norm- and layer-matched control for 'emotion'; "
                          "without it a flip rate measures disturbance, not fear removal")
     ap.add_argument("--ablation-seed", type=int, default=12345)
+    ap.add_argument("--ablation-limit", type=int, default=0,
+                    help="run the ablation arms on only N item pairs (0 = all). The intact "
+                         "arm always sees every item because the primary endpoint needs it; "
+                         "the ablation arms feed a flip rate, which is precise long before "
+                         "the full set is used.")
     args = ap.parse_args()
 
     V = np.load(args.vecs, allow_pickle=True)
@@ -173,10 +178,31 @@ def main() -> int:
             "mapper_urgent": bool(r.safety.urgent_human_review),
         }
 
+    # The intact arm needs every item: it carries the primary endpoint. The ablation
+    # arms feed a label flip rate, which is already precise on a few hundred
+    # comparisons, so they can run on a stratified subsample without losing anything
+    # -- and that is what keeps the three-arm design affordable on Colab.
+    abl_items = items
+    if args.ablation_limit:
+        by_cat = {}
+        for it in items:
+            by_cat.setdefault(it["category"], {}).setdefault(it["pair_id"], []).append(it)
+        rng = np.random.default_rng(args.ablation_seed)
+        keep = set()
+        n_pairs = len({it["pair_id"] for it in items})
+        for cat, pairs in sorted(by_cat.items()):
+            ids = sorted(pairs)
+            take = max(1, round(args.ablation_limit * len(ids) / n_pairs))
+            keep.update(rng.permutation(ids)[:take].tolist())
+        abl_items = [it for it in items if it["pair_id"] in keep]
+        print(f"bracci di ablazione su {len(keep)} coppie / {n_pairs} "
+              f"({len(abl_items)} item), stratificate per categoria")
+
     rows = []
     for role in args.roles:
         for arm in args.arms:
             ablated = arm != "intact"
+            arm_items = abl_items if ablated else items
             tag = f"{role}/{arm}"
             # 1) baseline projections under this condition
             base_raw = {c: [] for c in concepts}
@@ -191,7 +217,7 @@ def main() -> int:
             bstd = {c: float(np.std(base_raw[c]) + 1e-9) for c in concepts}
 
             # 2) items
-            for it in items:
+            for it in arm_items:
                 system, user = build_decision_messages(it["text"], role=role)
                 with (_ablation_ctx(rt, ablate_vecs, layer_of, arm, args.ablation_seed)
                       if ablated else nullcontext()):
@@ -232,6 +258,9 @@ def main() -> int:
         "roles": args.roles, "concepts": concepts, "layer_of": layer_of,
         "ablate_concepts": list(ablate_vecs.keys()),
         "n_items": len(items), "n_rows": len(rows),
+        "arms": args.arms, "ablation_seed": args.ablation_seed,
+        "ablation_limit": args.ablation_limit or None,
+        "n_items_ablation_arms": len(abl_items),
     }
     (args.out / f"{slug}__meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=2),
                                                  encoding="utf-8")

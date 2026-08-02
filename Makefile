@@ -5,7 +5,7 @@ PY ?= .venv/Scripts/python.exe
 
 .PHONY: help venv install install-ml terminology test test-v api mapping lint clean \
         terminology-official vectors validate probing steering patching pipeline \
-        dashboard docker-build docker-up
+        smoke dashboard docker-build docker-up
 
 help:
 	@echo "Targets: venv install install-ml terminology test api mapping lint clean"
@@ -60,6 +60,39 @@ pipeline: vectors validate probing steering patching
 
 viz:
 	$(PY) scripts/visualize_internals.py
+
+# --- local smoke test: validates the whole chain before spending Colab time ---
+# Sized for an 8 GB card. Qwen2.5-1.5B in fp16 is ~3 GB of weights and leaves room
+# for activations; 3B is the practical ceiling on 8 GB and will be tight. The point
+# is not the numbers, it is that every stage runs and every artefact appears with
+# the fields the analyses expect. Run this after any change to prompts, seeds,
+# layer selection or the ablation arms.
+SMOKE_MODEL ?= Qwen/Qwen2.5-1.5B-Instruct
+SMOKE_DIR   ?= outputs/smoke
+
+smoke:
+	$(PY) scripts/generate_labeled_clinical.py --check-only
+	$(PY) scripts/generate_emotion_dataset.py
+	$(PY) scripts/build_vectors.py --model $(SMOKE_MODEL) --dtype float16 --device cuda \
+	    --methods diff_of_means \
+	    --acts-out $(SMOKE_DIR)/emotion_acts.npz --vec-out $(SMOKE_DIR)/emotion_vectors.npz
+	$(PY) scripts/validate_vectors.py --acts $(SMOKE_DIR)/emotion_acts.npz \
+	    --vecs $(SMOKE_DIR)/emotion_vectors.npz \
+	    --report $(SMOKE_DIR)/vector_validation.json --figure $(SMOKE_DIR)/layer_sweep.png
+	$(PY) scripts/run_role_emotion.py --model $(SMOKE_MODEL) --dtype float16 --device cuda \
+	    --limit 6 --arms intact emotion random --ablation-limit 4 \
+	    --vecs $(SMOKE_DIR)/emotion_vectors.npz --val-report $(SMOKE_DIR)/vector_validation.json \
+	    --out $(SMOKE_DIR)/role_emotion
+	for f in $(SMOKE_DIR)/role_emotion/*__rows.jsonl; do $(PY) scripts/analyze_role_emotion.py --rows "$$f"; done
+	$(PY) scripts/run_role_spectrum.py --model $(SMOKE_MODEL) --dtype float16 --device cuda \
+	    --limit 4 --null-draws 200 \
+	    --vecs $(SMOKE_DIR)/emotion_vectors.npz --val-report $(SMOKE_DIR)/vector_validation.json \
+	    --out $(SMOKE_DIR)/role_spectrum
+	$(PY) scripts/reanalyze_direction.py --dir $(SMOKE_DIR)/role_spectrum
+	$(PY) scripts/analyze_results.py --rows-glob "$(SMOKE_DIR)/role_emotion/*__rows.jsonl" \
+	    --out $(SMOKE_DIR)/primary_analysis.json
+	@echo ""
+	@echo "smoke OK - ogni fase ha prodotto i suoi artefatti in $(SMOKE_DIR)"
 
 # --- multi-model comparison (needs a big GPU + HF_TOKEN for gated models) ---
 models:
