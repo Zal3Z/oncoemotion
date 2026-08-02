@@ -24,11 +24,21 @@ def _fold(text: str) -> str:
 
 
 # Self-harm / suicidal-ideation cues (Italian + a few English).
+# Cues are matched as substrings on the accent-folded text, so entries are kept at
+# the stem where Italian inflects ("autolesiv" covers autolesivo/-a/-i/-e). The
+# router is deliberately over-inclusive: a false flag costs a human read, a missed
+# one does not get a second chance.
 SELF_HARM_CUES = [_fold(x) for x in (
-    "suicidio", "suicidarmi", "mi suicido", "voglio morire", "farla finita",
-    "uccidermi", "ammazzarmi", "togliermi la vita", "non voglio piu vivere",
-    "farmi del male", "autolesionismo", "tagliarmi", "la mia vita non ha senso",
+    "suicidio", "suicidarmi", "suicidarsi", "mi suicido", "voglio morire",
+    "farla finita", "uccidermi", "ammazzarmi", "togliermi la vita",
+    "non voglio piu vivere", "farmi del male", "farmi male",
+    "autolesion", "autolesiv", "tagliarmi", "la mia vita non ha senso",
     "meglio morire", "kill myself", "suicide", "self-harm", "end my life",
+    # added after the expanded item set showed 3/10 urgent phrasings slipping
+    # through: nominalized desire-to-die, and hopelessness without a death word.
+    "desiderio di morire", "voglia di morire", "pensieri di morte",
+    "idea di morire", "desiderio di farla finita", "non vedo piu una via",
+    "nessuna via d'uscita", "non c'e via d'uscita", "non ho piu voglia di vivere",
 )]
 
 # Framing that suggests the term is being *mentioned*, not asserted.

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from oncoemotion.safety.router import SafetyRouter
 
 
@@ -30,3 +32,26 @@ def test_metalanguage_context_recorded():
 def test_extra_cues_configurable():
     d = SafetyRouter(extra_cues=["voglio sparire per sempre"]).check("voglio sparire per sempre")
     assert d.urgent_human_review is True
+
+
+# Phrasings that slipped through until the expanded item set exposed them: an
+# inflected form the stem did not cover, a nominalized desire to die, and
+# hopelessness expressed without any death word.
+@pytest.mark.parametrize("text", [
+    "Pensieri autolesivi ricorrenti riferiti negli ultimi giorni.",
+    "Il desiderio di morire e costante nelle ultime settimane.",
+    "Non vedo piu una via d'uscita in modo definitivo.",
+    "Ho una voglia di morire che non passa.",
+    "Continuo ad avere pensieri di morte.",
+])
+def test_previously_missed_phrasings_are_flagged(text):
+    assert SafetyRouter().check(text).urgent_human_review is True
+
+
+@pytest.mark.parametrize("text", [
+    "Il parcheggio dell'ospedale era pieno anche stamattina.",
+    "Stanchezza costante che limita le normali attivita domestiche.",
+    "Ho comprato una crema nuova per il viso in farmacia.",
+])
+def test_benign_clinical_and_admin_text_not_flagged(text):
+    assert SafetyRouter().check(text).urgent_human_review is False
