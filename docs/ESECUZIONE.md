@@ -11,16 +11,40 @@ La GPU locale è da **8 GB**: serve a validare la catena, non a produrre risulta
 In fp16 ci stanno modelli fino a ~1,5–3 B di parametri. Tutto ciò che conta gira su
 Colab tramite `notebooks/colab_multimodel.ipynb`.
 
-```
-make smoke                     # ~10 min su 8 GB, Qwen2.5-1.5B
-make smoke SMOKE_MODEL=Qwen/Qwen2.5-3B-Instruct   # tetto pratico degli 8 GB
+```bash
+# su Windows make non c'e': usa lo script, che fa esattamente le stesse cose
+.venv/Scripts/python.exe scripts/smoke.py
+.venv/Scripts/python.exe scripts/smoke.py --model Qwen/Qwen2.5-3B-Instruct  # tetto degli 8 GB
+.venv/Scripts/python.exe scripts/smoke.py --stage data   # solo i vincoli, nessun modello
+make smoke                                               # equivalente su Linux/Colab
 ```
 
-`make smoke` percorre l'intera catena — generazione item, vettori, validazione con
+Lo smoke test percorre l'intera catena — generazione item, vettori, validazione con
 cross-validation, i tre bracci di ablazione, spettro con null casuale, analisi
 primaria — con limiti minuscoli. Non produce numeri interpretabili: verifica che
 ogni fase giri e che ogni artefatto esca con i campi che le analisi si aspettano.
 **Va rilanciato dopo ogni modifica a prompt, seed, selezione del layer o bracci.**
+
+## Cosa è cambiato nel prompt
+
+Due modifiche strutturali, entrambe da tenere presenti leggendo i numeri nuovi.
+
+**Gli span di ruolo sono appaiati in token.** Le personae erano scritte a mano e
+uscivano fra 18 e 29 token, e il controllo `none` non aveva proprio il blocco
+system. Tutto ciò che veniva dopo stava quindi in una posizione assoluta diversa in
+ogni condizione, e la posizione in un transformer non è neutra. Il padding è
+calcolato sul tokenizer del modello a run time — la stessa stringa vale un numero
+diverso di token in Qwen, Gemma ed EuroLLM — e i due script di ruolo stampano
+all'avvio l'intervallo ottenuto. Se lo spread supera i 2 token la funzione solleva
+un errore invece di proseguire.
+
+**C'è un solo percorso di costruzione del prompt.** `run_probing`, `run_steering` e
+`run_patching` usavano una stringa grezza senza chat template e senza ruolo, mentre
+i due esperimenti di ruolo usavano il template con la persona nel system. A3, A4 e
+A5 erano quindi misurati su un oggetto diverso da C2 e C5, e il master report li
+accostava come se fossero lo stesso esperimento. Ora passano tutti da
+`build_decision_ids`. **I numeri di A3/A4/A5 si muoveranno**: è il punto: diventano
+confrontabili invece che soltanto affiancati.
 
 ## Le direzioni vanno congelate prima del run
 
@@ -80,7 +104,7 @@ cambia forma, e va saputo presto.
 
 ### Cancello 1 — comportamentale: l'interazione ruolo × framing
 
-```
+```bash
 python scripts/analyze_results.py --rows-glob "outputs/role_emotion/*__rows.jsonl"
 ```
 
