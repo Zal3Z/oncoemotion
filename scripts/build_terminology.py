@@ -121,12 +121,35 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     default_out = Path(__file__).resolve().parents[1] / "terminology" / "pro_ctcae_terms.json"
     parser.add_argument("--out", type=Path, default=default_out)
+    parser.add_argument("--require-official", action="store_true",
+                        help="fail instead of silently falling back to synthetic surfaces")
     args = parser.parse_args()
 
     doc = build_document()
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(doc, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"Wrote {len(doc['terms'])} PRO-CTCAE terms -> {args.out}")
+
+    # The fallback used to be silent, and that silence cost the study its baseline.
+    # terminology/official/* is gitignored (NCI terms of use), the Colab notebook
+    # does a fresh clone, so on Colab this file is absent and the mapper falls back
+    # to synthetic surfaces only. Its term accuracy drops from 0.614 to 0.329 on the
+    # identical item set -- and every "the model beats the mapper" comparison in the
+    # reports was made against the degraded number. With the correct reference, no
+    # model beats the mapper.
+    if not doc.get("official_labels_loaded"):
+        msg = (f"official Italian labels NOT loaded (expected at {DEFAULT_OFFICIAL}). "
+               "The mapper will run on synthetic surfaces only and its accuracy is NOT "
+               "comparable to a run that has them.")
+        if args.require_official:
+            print(f"[FATAL] {msg}")
+            return 2
+        print(f"\n[!!] {msg}")
+        print("     Su Colab: copiare pro_ctcae_italian_labels.json da Drive in")
+        print("     terminology/official/ PRIMA di questo passo, oppure lanciare con")
+        print("     --require-official per fallire invece di degradare in silenzio.")
+    else:
+        print(f"official Italian labels loaded ({doc.get('source_version') or 'unversioned'})")
     return 0
 
 
