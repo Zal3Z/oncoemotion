@@ -53,18 +53,27 @@ def best_threshold_accuracy(scores: np.ndarray, y: np.ndarray) -> float:
     return best
 
 
-def evaluate_direction(X: np.ndarray, y: np.ndarray, v: np.ndarray, seed: int = 12345) -> dict:
+def evaluate_direction(X: np.ndarray, y: np.ndarray, v: np.ndarray, seed: int = 12345,
+                       n_boot: int = 500) -> dict:
+    """Evaluate one direction on one layer.
+
+    ``n_boot=0`` skips the bootstrap and returns ``auroc_ci = [None, None]``. Use it
+    when sweeping layers to pick one: only the layer that gets reported needs an
+    interval, and the bootstrap dominates the cost of a full sweep.
+    """
     y = np.asarray(y).astype(int)
     scores = projection_scores(X, v)
     auroc = _auroc(scores, y)
-    # bootstrap CI on AUROC (resample indices)
-    idx = np.arange(len(y))
+    if n_boot:
+        idx = np.arange(len(y))
 
-    def _auc_stat(sample_idx):
-        sample_idx = sample_idx.astype(int)
-        return _auroc(scores[sample_idx], y[sample_idx])
+        def _auc_stat(sample_idx):
+            sample_idx = sample_idx.astype(int)
+            return _auroc(scores[sample_idx], y[sample_idx])
 
-    point, lo, hi = bootstrap_ci(idx, statistic=_auc_stat, n_boot=500, seed=seed, strata=y)
+        point, lo, hi = bootstrap_ci(idx, statistic=_auc_stat, n_boot=n_boot, seed=seed, strata=y)
+    else:
+        lo = hi = None
     return {
         "auroc": auroc,
         "auroc_ci": [lo, hi],
