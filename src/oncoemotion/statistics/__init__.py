@@ -62,3 +62,23 @@ def benjamini_hochberg(pvalues, alpha: float = 0.05):
     kmax = np.max(np.where(below)[0])
     cutoff = ranked[kmax]
     return p <= cutoff
+
+
+def bh_adjusted_pvalues(pvalues):
+    """BH step-up adjusted p-values (q-values), in the input order.
+
+    Companion to :func:`benjamini_hochberg`, which returns rejections at a fixed
+    alpha. Reporting the adjusted value as well lets a reader apply their own
+    threshold instead of taking ours.
+    """
+    p = np.asarray(pvalues, dtype=np.float64)
+    m = len(p)
+    if m == 0:
+        return np.array([], dtype=np.float64)
+    order = np.argsort(p)
+    ranked = p[order]
+    adj = ranked * m / np.arange(1, m + 1)
+    adj = np.minimum.accumulate(adj[::-1])[::-1]   # enforce monotonicity
+    out = np.empty(m, dtype=np.float64)
+    out[order] = np.clip(adj, 0.0, 1.0)
+    return out

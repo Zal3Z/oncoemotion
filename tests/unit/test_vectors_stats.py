@@ -88,3 +88,26 @@ def test_benjamini_hochberg():
     pvals = [0.001, 0.2, 0.03, 0.9]
     rej = benjamini_hochberg(pvals, alpha=0.05)
     assert rej[0] and not rej[3]
+
+
+def test_bh_adjusted_pvalues_are_monotone_and_bounded():
+    from oncoemotion.statistics import bh_adjusted_pvalues
+
+    p = [0.001, 0.008, 0.039, 0.041, 0.9]
+    adj = bh_adjusted_pvalues(p)
+    assert len(adj) == len(p)
+    assert all(0.0 <= a <= 1.0 for a in adj)
+    # BH is a step-up procedure: adjusted values must not decrease with raw p
+    order = sorted(range(len(p)), key=lambda i: p[i])
+    ranked = [adj[i] for i in order]
+    assert ranked == sorted(ranked)
+    assert bh_adjusted_pvalues([]).size == 0
+
+
+def test_bh_adjusted_agrees_with_rejections():
+    from oncoemotion.statistics import benjamini_hochberg, bh_adjusted_pvalues
+
+    p = [0.001, 0.02, 0.3, 0.7]
+    rej = benjamini_hochberg(p, alpha=0.05)
+    adj = bh_adjusted_pvalues(p)
+    assert list(rej) == [a <= 0.05 for a in adj]
