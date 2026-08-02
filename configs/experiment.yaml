@@ -14,6 +14,11 @@ mapping:
   ctcae_allow_synthetic: true
   language: "it"
 
+# Autoritativi sono i seed in src/oncoemotion/emotion_vectors/seeds.py: il codice
+# legge quelli, non questo file. Queste liste erano ferme a 9 emozioni e 11
+# controlli mentre il codice ne spediva 25 e 7, ed elencavano concetti (harmfulness,
+# novelty, lexical_difficulty, decision_conflict, response_refusal, text_length)
+# che non sono mai esistiti nei seed. Rigenerate da seeds.py.
 emotion_concepts:
   - afraid_alarmed
   - concerned
@@ -24,19 +29,34 @@ emotion_concepts:
   - compassionate
   - sad
   - anxious_nervous
+  - joy_happy
+  - anger
+  - disgust
+  - shame
+  - guilt
+  - pride
+  - gratitude
+  - hope
+  - relief
+  - excitement
+  - love_affection
+  - loneliness
+  - disappointment
+  - embarrassment
+  - curiosity
+  - boredom
 
-control_concepts:            # non-emotion confounders (spec section 7)
+control_concepts:            # confondenti, residualizzati via dalle emozioni
   - uncertainty
-  - clinical_severity
   - urgency
-  - harmfulness
+  - clinical_severity
   - safety_policy
-  - novelty
-  - lexical_difficulty
-  - decision_conflict
-  - response_refusal
   - general_negative_valence
-  - text_length
+
+lexical_controls:            # MISURATI contro gli assi emotivi, mai residualizzati
+                             # via: sono il cancello ontologico
+  - emotion_word_mention
+  - emotion_negated
 
 vector_methods:
   - diff_of_means
