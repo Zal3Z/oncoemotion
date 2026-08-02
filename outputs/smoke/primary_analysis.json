@@ -1,0 +1,124 @@
+{
+  "models": [
+    "qwen2-5-1-5b-instruct"
+  ],
+  "n_rows": 144,
+  "primary": {
+    "model": "conditional logistic, strata = item x model",
+    "reference_role": "none",
+    "n_observations": 30,
+    "n_strata": 5,
+    "n_informative_strata": 3,
+    "terms": {
+      "emotional": {
+        "log_odds": -0.3389,
+        "odds_ratio": 0.7126,
+        "ci95_odds_ratio": [
+          0.0,
+          2.165925921846126e+84
+        ],
+        "se": 99.2512,
+        "p": 0.99728
+      },
+      "role[oncologo]": {
+        "log_odds": 10.1254,
+        "odds_ratio": 24969.4716,
+        "ci95_odds_ratio": [
+          0.0,
+          2.14328048493393e+73
+        ],
+        "se": 80.984,
+        "p": 0.9005
+      },
+      "role[generico]": {
+        "log_odds": 10.1254,
+        "odds_ratio": 24969.4716,
+        "ci95_odds_ratio": [
+          0.0,
+          2.1432804849337473e+73
+        ],
+        "se": 80.984,
+        "p": 0.9005
+      },
+      "emotional x role[oncologo]": {
+        "log_odds": 4.888,
+        "odds_ratio": 132.6883,
+        "ci95_odds_ratio": [
+          0.0,
+          Infinity
+        ],
+        "se": 687.6668,
+        "p": 0.99433
+      },
+      "emotional x role[generico]": {
+        "log_odds": 4.888,
+        "odds_ratio": 132.6883,
+        "ci95_odds_ratio": [
+          0.0,
+          Infinity
+        ],
+        "se": 687.6668,
+        "p": 0.99433
+      }
+    },
+    "primary_terms": [
+      "emotional x role[oncologo]",
+      "emotional x role[generico]"
+    ],
+    "primary_p": 0.99433
+  },
+  "per_model": {
+    "qwen2-5-1-5b-instruct": {
+      "oncologo vs none": {
+        "mean_difference": 0.0,
+        "ci95": [
+          0.0,
+          0.0
+        ],
+        "n_items": 5,
+        "resolution_floor": 0.2
+      },
+      "generico vs none": {
+        "mean_difference": 0.0,
+        "ci95": [
+          0.0,
+          0.0
+        ],
+        "n_items": 5,
+        "resolution_floor": 0.2
+      }
+    }
+  },
+  "secondary": {
+    "framing_main_effect": {
+      "odds_ratio": 1.0,
+      "p": 1.0,
+      "p_adjusted": 1.0,
+      "significant_after_bh": false
+    },
+    "ablation_emotion_vs_random": {
+      "flip_rate_emotion": 0.1429,
+      "flip_rate_random": 0.0952,
+      "difference": 0.0476,
+      "ci95": [
+        -0.0952,
+        0.1905
+      ],
+      "p": 0.577,
+      "gate_passes": false,
+      "p_adjusted": 1.0,
+      "significant_after_bh": false
+    },
+    "framing_effect_on_mapper": {
+      "neutral": 0.2,
+      "emotional": 0.4,
+      "difference": 0.2,
+      "note": "a purely lexical system should be framing-invariant on the template item set; a non-zero difference means the manipulation leaks into surface form"
+    }
+  },
+  "secondary_family": [
+    "framing_main_effect",
+    "ablation_emotion_vs_random",
+    "framing_effect_on_mapper"
+  ]
+}

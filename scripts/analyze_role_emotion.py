@@ -302,7 +302,7 @@ def main() -> int:
     out.write_text(json.dumps(analysis, ensure_ascii=False, indent=2), encoding="utf-8")
 
     # ---- console summary ----
-    print(f"\n=== Role x Emotion — {args.rows.name} ===")
+    print(f"\n=== Role x Emotion - {args.rows.name} ===")
     print(f"rows={len(rows)}  term={len(term)}  abstain={len(abst)}  roles={roles}")
     print("\nA) Emotionality (neg-affect z at point E, intact):")
     for role in roles:

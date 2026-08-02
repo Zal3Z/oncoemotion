@@ -49,12 +49,17 @@ from oncoemotion.terminology.pro_ctcae import load_pro_ctcae  # noqa: E402
 from oncoemotion.factory import build_default_mapper  # noqa: E402
 from oncoemotion.schemas import MapRequest  # noqa: E402
 from oncoemotion.clinical.baseline import NEUTRAL_BASELINE  # noqa: E402
+from oncoemotion.emotion_vectors.seeds import LEXICAL_CONTROLS  # noqa: E402
 from oncoemotion.emotion_vectors.vectors import random_vector  # noqa: E402
 
 # All concepts that are NOT confounders are treated as emotions (derived from the
 # vector set, so adding emotions to seeds.py flows through automatically).
+# Concepts excluded from the emotion set. The five original confounders, plus the
+# two lexical controls: those exist to be measured AGAINST the emotion axes, so
+# leaving them in would put them in the C2 ranking and the C5 heatmap as if they
+# were emotions.
 CONFOUNDERS = ["uncertainty", "urgency", "clinical_severity", "safety_policy",
-               "general_negative_valence"]
+               "general_negative_valence", *LEXICAL_CONTROLS]
 # The causal "remove emotionality" ablation targets the clinically-relevant
 # negative-affect core (kept small so the intervention is interpretable).
 ABLATE_CONCEPTS = ["afraid_alarmed", "anxious_nervous", "sad"]
@@ -149,6 +154,10 @@ def main() -> int:
                     choices=["intact", "emotion", "random"],
                     help="'random' is the norm- and layer-matched control for 'emotion'; "
                          "without it a flip rate measures disturbance, not fear removal")
+    ap.add_argument("--baseline-limit", type=int, default=0,
+                    help="use only the first N neutral baseline sentences (0 = all). The "
+                         "baseline is re-measured per cell, so on a tiny run it dominates the "
+                         "cost; keep it full for anything whose z-scores are reported.")
     ap.add_argument("--ablation-seed", type=int, default=12345)
     ap.add_argument("--ablation-limit", type=int, default=0,
                     help="run the ablation arms on only N item pairs (0 = all). The intact "
@@ -156,6 +165,8 @@ def main() -> int:
                          "the ablation arms feed a flip rate, which is precise long before "
                          "the full set is used.")
     args = ap.parse_args()
+    baseline = (NEUTRAL_BASELINE[:args.baseline_limit]
+                if args.baseline_limit else NEUTRAL_BASELINE)
 
     V = np.load(args.vecs, allow_pickle=True)
     val = json.loads(args.val_report.read_text(encoding="utf-8"))
@@ -221,7 +232,7 @@ def main() -> int:
             tag = f"{role}/{arm}"
             # 1) baseline projections under this condition
             base_raw = {c: [] for c in concepts}
-            for txt in NEUTRAL_BASELINE:
+            for txt in baseline:
                 system, user = build_decision_messages(txt, role=role, personas=PERSONAS)
                 with (_ablation_ctx(rt, ablate_vecs, layer_of, arm, args.ablation_seed)
                       if ablated else nullcontext()):

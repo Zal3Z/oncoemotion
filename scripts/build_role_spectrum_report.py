@@ -337,7 +337,7 @@ def main() -> int:
     html = TEMPLATE.replace("/*__DATA__*/", json.dumps(data, ensure_ascii=False))
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(html, encoding="utf-8")
-    print(f"Wrote {args.out} ({len(html)//1024} KB) — {len(data['models'])} model(s)")
+    print(f"Wrote {args.out} ({len(html)//1024} KB) - {len(data['models'])} model(s)")
     return 0
 
 

@@ -129,7 +129,7 @@ def main() -> int:
     all_Z = []
     payload_sentences = []
     for label, text in sentences:
-        print(f"Capturing: {label!r} — {text!r}", flush=True)
+        print(f"Capturing: {label!r} - {text!r}", flush=True)
         P, toks = project_all_tokens(build_decision_prompt(text))
         Z = {c: (P[c] - bmean[c][:, None]) / bstd[c][:, None] for c in concepts}
         all_Z.append(Z)

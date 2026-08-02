@@ -54,6 +54,9 @@ def main() -> int:
     ap.add_argument("--stage", nargs="+", default=list(STAGES), choices=STAGES,
                     help="run only these stages (default: all)")
     ap.add_argument("--pairs", type=int, default=6, help="item pairs for the role experiment")
+    ap.add_argument("--baseline", type=int, default=8,
+                    help="neutral baseline sentences per cell (full run uses all 53; "
+                         "the baseline is re-measured per cell so it dominates a tiny run)")
     ap.add_argument("--stimuli", type=int, default=4, help="clinical stimuli for the spectrum")
     args = ap.parse_args()
 
@@ -86,6 +89,7 @@ def main() -> int:
                     "--limit", str(args.pairs),
                     "--arms", "intact", "emotion", "random",
                     "--ablation-limit", str(max(2, args.pairs // 2)),
+                    "--baseline-limit", str(args.baseline),
                     "--vecs", vecs, "--val-report", valrep, "--out", role_dir],
                    "ruolo x emotivita (tre bracci)")
         rows = role_dir / f"{_slug(args.model)}__rows.jsonl"
@@ -99,6 +103,7 @@ def main() -> int:
     if "spectrum" in args.stage and ok:
         ok &= _run([PY, "scripts/run_role_spectrum.py", *common,
                     "--limit", str(args.stimuli), "--null-draws", "200",
+                    "--baseline-limit", str(args.baseline),
                     "--vecs", vecs, "--val-report", valrep, "--out", spec_dir],
                    "spettro di ruoli (con null casuale)")
         if any(spec_dir.glob("*__spectrum.json")):

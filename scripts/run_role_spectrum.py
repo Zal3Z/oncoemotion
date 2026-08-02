@@ -48,10 +48,15 @@ from oncoemotion.clinical.prompt import (  # noqa: E402
 from oncoemotion.clinical.measure import point_e_hidden, project_scores, zscore  # noqa: E402
 from oncoemotion.emotion_vectors.vectors import random_vector  # noqa: E402
 from oncoemotion.clinical.baseline import NEUTRAL_BASELINE  # noqa: E402
+from oncoemotion.emotion_vectors.seeds import LEXICAL_CONTROLS  # noqa: E402
 
 # Confounders (everything else in the vector set is treated as an emotion).
+# Concepts excluded from the emotion set. The five original confounders, plus the
+# two lexical controls: those exist to be measured AGAINST the emotion axes, so
+# leaving them in would put them in the C2 ranking and the C5 heatmap as if they
+# were emotions.
 CONFOUNDERS = ["uncertainty", "urgency", "clinical_severity", "safety_policy",
-               "general_negative_valence"]
+               "general_negative_valence", *LEXICAL_CONTROLS]
 NEG_AFFECT = ["afraid_alarmed", "anxious_nervous", "sad"]
 
 # persona -> group (order defines the spectrum layout)
@@ -107,10 +112,16 @@ def main() -> int:
     ap.add_argument("--vecs", type=Path, default=_ROOT / "outputs/checkpoints/emotion_vectors.npz")
     ap.add_argument("--val-report", type=Path, default=_ROOT / "outputs/reports/vector_validation.json")
     ap.add_argument("--out", type=Path, default=_ROOT / "outputs/role_spectrum")
+    ap.add_argument("--baseline-limit", type=int, default=0,
+                    help="use only the first N neutral baseline sentences (0 = all). The "
+                         "baseline is re-measured per cell, so on a tiny run it dominates the "
+                         "cost; keep it full for anything whose z-scores are reported.")
     ap.add_argument("--null-draws", type=int, default=2000,
                     help="random directions used to build the null for each cosine")
     ap.add_argument("--null-seed", type=int, default=12345)
     args = ap.parse_args()
+    baseline = (NEUTRAL_BASELINE[:args.baseline_limit]
+                if args.baseline_limit else NEUTRAL_BASELINE)
 
     V = np.load(args.vecs, allow_pickle=True)
     val = json.loads(args.val_report.read_text(encoding="utf-8"))
@@ -127,7 +138,7 @@ def main() -> int:
     stim = [it["text"] for it in items if it.get("gold_class") == "term"]
     if args.limit:
         stim = stim[:args.limit]
-    print(f"{len(SPECTRUM)} personas × {len(stim)} clinical stimuli | concepts={concepts}")
+    print(f"{len(SPECTRUM)} personas x {len(stim)} clinical stimuli | concepts={concepts}")
 
     cfg = ModelConfig(dtype=args.dtype, device_map=args.device)
     adapter = load_adapter(args.model, cfg)
@@ -145,7 +156,7 @@ def main() -> int:
 
     # fixed reference baseline: neutral texts, NO role
     ref_proj_acc = {c: [] for c in concepts}
-    for t in NEUTRAL_BASELINE:
+    for t in baseline:
         system, user = build_decision_messages(t, role="none", personas=PERSONAS)
         ids = adapter.build_prompt_ids(user, system, assistant_prefix=TEACHER_PREFIX)
         sc = project_scores(point_e_hidden(adapter, ids), vectors, layer_of)
@@ -158,7 +169,7 @@ def main() -> int:
     hidden_clinical = {}   # role -> {concept: [H]}
     for role, group in SPECTRUM:
         cli_proj, cli_hid = _measure(adapter, role, stim, vectors, layer_of, emo_concepts, PERSONAS)
-        base_proj, _ = _measure(adapter, role, NEUTRAL_BASELINE, vectors, layer_of, emo_concepts, PERSONAS)
+        base_proj, _ = _measure(adapter, role, baseline, vectors, layer_of, emo_concepts, PERSONAS)
         zc = zscore(cli_proj, bmean, bstd)
         zb = zscore(base_proj, bmean, bstd)
         rows[role] = {
@@ -302,9 +313,9 @@ def main() -> int:
         print(f"  {r:16} [{rows[r]['group']:9}] clinical={rows[r]['emo_clinical']:+.2f}  "
               f"persona-alone={rows[r]['emo_baseline']:+.2f}  reaction={rows[r]['emo_clinical']-rows[r]['emo_baseline']:+.2f}")
     af = direction.get("afraid_alarmed", {})
-    print(f"\nDirezione (asse paura): profani−medici cos={af.get('profani_minus_medici_cos')}  "
-          f"tecnici−medici cos={af.get('tecnici_minus_medici_cos')}  "
-          f"profani−tecnici cos={af.get('profani_minus_tecnici_cos')}")
+    print(f"\nDirezione (asse paura): profani-medici cos={af.get('profani_minus_medici_cos')}  "
+          f"tecnici-medici cos={af.get('tecnici_minus_medici_cos')}  "
+          f"profani-tecnici cos={af.get('profani_minus_tecnici_cos')}")
     print(f"\nWrote -> {args.out / f'{slug}__spectrum.json'}")
     return 0
 
