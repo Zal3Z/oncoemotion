@@ -70,11 +70,20 @@ riciclata non costa niente se non il tempo già speso. Ordine delle celle: 2 (cl
 3 (install), 4 (login HF), **5 (terminologia)**, 15 (preflight accessi), 19 (run),
 20 (salvataggio).
 
-**La cella 5 ora fallisce** se non trova le etichette italiane ufficiali. Non è un
-inconveniente: senza quelle il mapper vale 0,329 invece di 0,614 sullo stesso set,
-e tutti i confronti «il modello batte il mapper» pubblicati finora usano il numero
-degradato. Metti `pro_ctcae_italian_labels.json` in
-`Drive/MyDrive/oncoemotion/` e la cella lo copia da sola.
+**La cella 5 ora si ferma** se non trova le etichette italiane ufficiali. Non è un
+inconveniente: quel file su Colab non è mai arrivato, e il suo silenzio è l'origine
+del riferimento mapper degradato usato in tutti i confronti pubblicati.
+
+Serve **un solo file**: `terminology/official/pro_ctcae_italian_labels.json`, 20 KB.
+Non serve `ctcae_v6.json` — verificato, i numeri sono identici con e senza — né
+`pro_ctcae_terms.json`, che è generato da `build_terminology.py`.
+
+Tre vie, in ordine di robustezza. Un **repo privato su Hugging Face** scaricato col
+token con cui la cella 4 fa già login: nessuna interazione col browser, funziona
+dall'estensione VS Code e headless. Oppure **Drive**, ma solo se è già montato — la
+cella non prova più a montarlo, perché fuori dal browser il mount resta appeso invece
+di fallire. Oppure il **file picker**, dietro `ALLOW_PICKER = True`, e solo dal
+browser.
 
 ### Leve di carico, nella cella 19
 
@@ -182,9 +191,13 @@ un layer condiviso, la media è 0,620 con 15 concetti su 30 sotto 0,60. `afraid_
 regge a 0,733 [0,62–0,84]. I modelli dello studio sono più grandi e potrebbero
 cavarsela meglio: la macchinaria per scoprirlo adesso c'è.
 
-**Il riferimento del mapper sale a 0,614 e nessun modello lo batte** (il migliore è
-Gemma-3-27B a 0,500). Non affonda niente — la tesi non è «il modello codifica
-meglio» — ma va detto per primi.
+**Il riferimento del mapper cambia, e nessun modello lo batte.** Sul set di item
+nuovo il mapper vale **0,531** con le etichette ufficiali e **0,214** senza: venti
+punti di differenza, più dei dodici del set vecchio (0,614 contro 0,329), perché i
+nuovi item usano anche il registro tecnico — disfagia, disgeusia, pirosi, epistassi —
+che solo i sinonimi derivati dalle etichette ufficiali intercettano. Il modello
+migliore si ferma a 0,500. Non affonda niente, la tesi non è «il modello codifica
+meglio», ma va detto per primi.
 
 **L'effetto framing si ridimensionerà.** Sul set vecchio il polo emotivo era 2,5
 volte più lungo del neutro, quindi parte del calo era lunghezza e non affetto. Sul

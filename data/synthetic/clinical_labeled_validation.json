@@ -4,7 +4,7 @@
     "n_term": 224,
     "n_abstain": 128,
     "n_urgent": 20,
-    "mapper_term_accuracy": 0.491,
+    "mapper_term_accuracy": 0.531,
     "mapper_abstain_rate": 0.875,
     "mapper_urgent_recall": 1.0
   },
@@ -1187,10 +1187,10 @@
       "gold_pro_id": "PRO_025",
       "urgent": false,
       "text": "Secchezza della pelle marcata su mani e gambe, con desquamazione.",
-      "mapper_status": "EXACT_PRO_MATCH",
-      "mapper_pro_id": "PRO_025",
+      "mapper_status": "MULTIPLE_POSSIBLE_PRO_MATCHES",
+      "mapper_pro_id": "PRO_022",
       "mapper_urgent": false,
-      "match": true
+      "match": false
     },
     {
       "record_id": "lab_046_emo",
@@ -1200,10 +1200,10 @@
       "gold_pro_id": "PRO_025",
       "urgent": false,
       "text": "Secchezza della pelle fastidiosissima su mani e gambe, con desquamazione.",
-      "mapper_status": "EXACT_PRO_MATCH",
-      "mapper_pro_id": "PRO_025",
+      "mapper_status": "MULTIPLE_POSSIBLE_PRO_MATCHES",
+      "mapper_pro_id": "PRO_022",
       "mapper_urgent": false,
-      "match": true
+      "match": false
     },
     {
       "record_id": "lab_047_neu",
@@ -1421,10 +1421,10 @@
       "gold_pro_id": "PRO_031",
       "urgent": false,
       "text": "Perdita di due unghie delle mani in modo progressivo.",
-      "mapper_status": "NO_DIRECT_PRO_MATCH",
-      "mapper_pro_id": null,
+      "mapper_status": "PRO_MATCH_WITH_AMBIGUITY",
+      "mapper_pro_id": "PRO_031",
       "mapper_urgent": false,
-      "match": false
+      "match": true
     },
     {
       "record_id": "lab_055_emo",
@@ -1434,10 +1434,10 @@
       "gold_pro_id": "PRO_031",
       "urgent": false,
       "text": "Perdita di due unghie delle mani in modo traumatico.",
-      "mapper_status": "NO_DIRECT_PRO_MATCH",
-      "mapper_pro_id": null,
+      "mapper_status": "PRO_MATCH_WITH_AMBIGUITY",
+      "mapper_pro_id": "PRO_031",
       "mapper_urgent": false,
-      "match": false
+      "match": true
     },
     {
       "record_id": "lab_056_neu",
@@ -1447,10 +1447,10 @@
       "gold_pro_id": "PRO_032",
       "urgent": false,
       "text": "Solchi evidenti sulle unghie delle mani e dei piedi.",
-      "mapper_status": "NO_DIRECT_PRO_MATCH",
-      "mapper_pro_id": null,
+      "mapper_status": "MULTIPLE_POSSIBLE_PRO_MATCHES",
+      "mapper_pro_id": "PRO_032",
       "mapper_urgent": false,
-      "match": false
+      "match": true
     },
     {
       "record_id": "lab_056_emo",
@@ -1460,8 +1460,8 @@
       "gold_pro_id": "PRO_032",
       "urgent": false,
       "text": "Solchi impressionanti sulle unghie delle mani e dei piedi.",
-      "mapper_status": "NO_DIRECT_PRO_MATCH",
-      "mapper_pro_id": null,
+      "mapper_status": "MULTIPLE_POSSIBLE_PRO_MATCHES",
+      "mapper_pro_id": "PRO_030",
       "mapper_urgent": false,
       "match": false
     },
@@ -1473,10 +1473,10 @@
       "gold_pro_id": "PRO_033",
       "urgent": false,
       "text": "Variazione di colore delle unghie diffusa su entrambe le mani.",
-      "mapper_status": "NO_DIRECT_PRO_MATCH",
-      "mapper_pro_id": null,
+      "mapper_status": "MULTIPLE_POSSIBLE_PRO_MATCHES",
+      "mapper_pro_id": "PRO_033",
       "mapper_urgent": false,
-      "match": false
+      "match": true
     },
     {
       "record_id": "lab_057_emo",
@@ -1486,10 +1486,10 @@
       "gold_pro_id": "PRO_033",
       "urgent": false,
       "text": "Variazione di colore delle unghie inquietante su entrambe le mani.",
-      "mapper_status": "NO_DIRECT_PRO_MATCH",
-      "mapper_pro_id": null,
+      "mapper_status": "MULTIPLE_POSSIBLE_PRO_MATCHES",
+      "mapper_pro_id": "PRO_033",
       "mapper_urgent": false,
-      "match": false
+      "match": true
     },
     {
       "record_id": "lab_058_neu",
@@ -1551,10 +1551,10 @@
       "gold_pro_id": "PRO_037",
       "urgent": false,
       "text": "Inscurimento della pelle evidente sul dorso delle mani.",
-      "mapper_status": "NO_DIRECT_PRO_MATCH",
-      "mapper_pro_id": null,
+      "mapper_status": "PRO_MATCH_WITH_AMBIGUITY",
+      "mapper_pro_id": "PRO_037",
       "mapper_urgent": false,
-      "match": false
+      "match": true
     },
     {
       "record_id": "lab_060_emo",
@@ -1564,10 +1564,10 @@
       "gold_pro_id": "PRO_037",
       "urgent": false,
       "text": "Inscurimento della pelle avvilente sul dorso delle mani.",
-      "mapper_status": "NO_DIRECT_PRO_MATCH",
-      "mapper_pro_id": null,
+      "mapper_status": "PRO_MATCH_WITH_AMBIGUITY",
+      "mapper_pro_id": "PRO_037",
       "mapper_urgent": false,
-      "match": false
+      "match": true
     },
     {
       "record_id": "lab_061_neu",
@@ -1759,7 +1759,7 @@
       "gold_pro_id": "PRO_043",
       "urgent": false,
       "text": "Mosche volanti davanti agli occhi in modo costante, a destra.",
-      "mapper_status": "EXACT_PRO_MATCH",
+      "mapper_status": "MULTIPLE_POSSIBLE_PRO_MATCHES",
       "mapper_pro_id": "PRO_043",
       "mapper_urgent": false,
       "match": true
@@ -1772,7 +1772,7 @@
       "gold_pro_id": "PRO_043",
       "urgent": false,
       "text": "Mosche volanti davanti agli occhi in modo inquietante, a destra.",
-      "mapper_status": "EXACT_PRO_MATCH",
+      "mapper_status": "MULTIPLE_POSSIBLE_PRO_MATCHES",
       "mapper_pro_id": "PRO_043",
       "mapper_urgent": false,
       "match": true
@@ -1785,10 +1785,10 @@
       "gold_pro_id": "PRO_044",
       "urgent": false,
       "text": "Lacrimazione eccessiva da entrambi gli occhi, senza arrossamento.",
-      "mapper_status": "NO_DIRECT_PRO_MATCH",
-      "mapper_pro_id": null,
+      "mapper_status": "EXACT_PRO_MATCH",
+      "mapper_pro_id": "PRO_044",
       "mapper_urgent": false,
-      "match": false
+      "match": true
     },
     {
       "record_id": "lab_069_emo",
@@ -2539,10 +2539,10 @@
       "gold_pro_id": "PRO_061",
       "urgent": false,
       "text": "Bruciore nell'urinare marcato a ogni minzione della giornata.",
-      "mapper_status": "NO_DIRECT_PRO_MATCH",
-      "mapper_pro_id": null,
+      "mapper_status": "PRO_MATCH_WITH_AMBIGUITY",
+      "mapper_pro_id": "PRO_061",
       "mapper_urgent": false,
-      "match": false
+      "match": true
     },
     {
       "record_id": "lab_098_emo",
@@ -2552,10 +2552,10 @@
       "gold_pro_id": "PRO_061",
       "urgent": false,
       "text": "Bruciore nell'urinare atroce a ogni minzione della giornata.",
-      "mapper_status": "NO_DIRECT_PRO_MATCH",
-      "mapper_pro_id": null,
+      "mapper_status": "PRO_MATCH_WITH_AMBIGUITY",
+      "mapper_pro_id": "PRO_061",
       "mapper_urgent": false,
-      "match": false
+      "match": true
     },
     {
       "record_id": "lab_099_neu",
@@ -2565,10 +2565,10 @@
       "gold_pro_id": "PRO_062",
       "urgent": false,
       "text": "Bisogno urgente di urinare frequente con difficolta a trattenere.",
-      "mapper_status": "EXACT_PRO_MATCH",
-      "mapper_pro_id": "PRO_062",
+      "mapper_status": "MULTIPLE_POSSIBLE_PRO_MATCHES",
+      "mapper_pro_id": "PRO_063",
       "mapper_urgent": false,
-      "match": true
+      "match": false
     },
     {
       "record_id": "lab_099_emo",
@@ -2591,10 +2591,10 @@
       "gold_pro_id": "PRO_063",
       "urgent": false,
       "text": "Bisogno di urinare frequente, circa 12 volte in 24 ore.",
-      "mapper_status": "NO_DIRECT_PRO_MATCH",
-      "mapper_pro_id": null,
+      "mapper_status": "MULTIPLE_POSSIBLE_PRO_MATCHES",
+      "mapper_pro_id": "PRO_063",
       "mapper_urgent": false,
-      "match": false
+      "match": true
     },
     {
       "record_id": "lab_100_emo",
@@ -2604,10 +2604,10 @@
       "gold_pro_id": "PRO_063",
       "urgent": false,
       "text": "Bisogno di urinare esasperante, circa 12 volte in 24 ore.",
-      "mapper_status": "NO_DIRECT_PRO_MATCH",
-      "mapper_pro_id": null,
+      "mapper_status": "MULTIPLE_POSSIBLE_PRO_MATCHES",
+      "mapper_pro_id": "PRO_063",
       "mapper_urgent": false,
-      "match": false
+      "match": true
     },
     {
       "record_id": "lab_101_neu",
@@ -5232,6 +5232,32 @@
       "match": false
     },
     {
+      "record_id": "lab_046_neu",
+      "framing": "neutral",
+      "category": "EXACT_PRO_MATCH",
+      "gold_class": "term",
+      "gold_pro_id": "PRO_025",
+      "urgent": false,
+      "text": "Secchezza della pelle marcata su mani e gambe, con desquamazione.",
+      "mapper_status": "MULTIPLE_POSSIBLE_PRO_MATCHES",
+      "mapper_pro_id": "PRO_022",
+      "mapper_urgent": false,
+      "match": false
+    },
+    {
+      "record_id": "lab_046_emo",
+      "framing": "emotional",
+      "category": "EXACT_PRO_MATCH",
+      "gold_class": "term",
+      "gold_pro_id": "PRO_025",
+      "urgent": false,
+      "text": "Secchezza della pelle fastidiosissima su mani e gambe, con desquamazione.",
+      "mapper_status": "MULTIPLE_POSSIBLE_PRO_MATCHES",
+      "mapper_pro_id": "PRO_022",
+      "mapper_urgent": false,
+      "match": false
+    },
+    {
       "record_id": "lab_047_neu",
       "framing": "neutral",
       "category": "EXACT_PRO_MATCH",
@@ -5284,45 +5310,6 @@
       "match": false
     },
     {
-      "record_id": "lab_055_neu",
-      "framing": "neutral",
-      "category": "EXACT_PRO_MATCH",
-      "gold_class": "term",
-      "gold_pro_id": "PRO_031",
-      "urgent": false,
-      "text": "Perdita di due unghie delle mani in modo progressivo.",
-      "mapper_status": "NO_DIRECT_PRO_MATCH",
-      "mapper_pro_id": null,
-      "mapper_urgent": false,
-      "match": false
-    },
-    {
-      "record_id": "lab_055_emo",
-      "framing": "emotional",
-      "category": "EXACT_PRO_MATCH",
-      "gold_class": "term",
-      "gold_pro_id": "PRO_031",
-      "urgent": false,
-      "text": "Perdita di due unghie delle mani in modo traumatico.",
-      "mapper_status": "NO_DIRECT_PRO_MATCH",
-      "mapper_pro_id": null,
-      "mapper_urgent": false,
-      "match": false
-    },
-    {
-      "record_id": "lab_056_neu",
-      "framing": "neutral",
-      "category": "EXACT_PRO_MATCH",
-      "gold_class": "term",
-      "gold_pro_id": "PRO_032",
-      "urgent": false,
-      "text": "Solchi evidenti sulle unghie delle mani e dei piedi.",
-      "mapper_status": "NO_DIRECT_PRO_MATCH",
-      "mapper_pro_id": null,
-      "mapper_urgent": false,
-      "match": false
-    },
-    {
       "record_id": "lab_056_emo",
       "framing": "emotional",
       "category": "EXACT_PRO_MATCH",
@@ -5330,34 +5317,8 @@
       "gold_pro_id": "PRO_032",
       "urgent": false,
       "text": "Solchi impressionanti sulle unghie delle mani e dei piedi.",
-      "mapper_status": "NO_DIRECT_PRO_MATCH",
-      "mapper_pro_id": null,
-      "mapper_urgent": false,
-      "match": false
-    },
-    {
-      "record_id": "lab_057_neu",
-      "framing": "neutral",
-      "category": "EXACT_PRO_MATCH",
-      "gold_class": "term",
-      "gold_pro_id": "PRO_033",
-      "urgent": false,
-      "text": "Variazione di colore delle unghie diffusa su entrambe le mani.",
-      "mapper_status": "NO_DIRECT_PRO_MATCH",
-      "mapper_pro_id": null,
-      "mapper_urgent": false,
-      "match": false
-    },
-    {
-      "record_id": "lab_057_emo",
-      "framing": "emotional",
-      "category": "EXACT_PRO_MATCH",
-      "gold_class": "term",
-      "gold_pro_id": "PRO_033",
-      "urgent": false,
-      "text": "Variazione di colore delle unghie inquietante su entrambe le mani.",
-      "mapper_status": "NO_DIRECT_PRO_MATCH",
-      "mapper_pro_id": null,
+      "mapper_status": "MULTIPLE_POSSIBLE_PRO_MATCHES",
+      "mapper_pro_id": "PRO_030",
       "mapper_urgent": false,
       "match": false
     },
@@ -5408,32 +5369,6 @@
       "gold_pro_id": "PRO_036",
       "urgent": false,
       "text": "Bruciature della pelle atroci nella zona irradiata del torace.",
-      "mapper_status": "NO_DIRECT_PRO_MATCH",
-      "mapper_pro_id": null,
-      "mapper_urgent": false,
-      "match": false
-    },
-    {
-      "record_id": "lab_060_neu",
-      "framing": "neutral",
-      "category": "EXACT_PRO_MATCH",
-      "gold_class": "term",
-      "gold_pro_id": "PRO_037",
-      "urgent": false,
-      "text": "Inscurimento della pelle evidente sul dorso delle mani.",
-      "mapper_status": "NO_DIRECT_PRO_MATCH",
-      "mapper_pro_id": null,
-      "mapper_urgent": false,
-      "match": false
-    },
-    {
-      "record_id": "lab_060_emo",
-      "framing": "emotional",
-      "category": "EXACT_PRO_MATCH",
-      "gold_class": "term",
-      "gold_pro_id": "PRO_037",
-      "urgent": false,
-      "text": "Inscurimento della pelle avvilente sul dorso delle mani.",
       "mapper_status": "NO_DIRECT_PRO_MATCH",
       "mapper_pro_id": null,
       "mapper_urgent": false,
@@ -5512,19 +5447,6 @@
       "gold_pro_id": "PRO_040",
       "urgent": false,
       "text": "Vertigini terrificanti con instabilita nella marcia.",
-      "mapper_status": "NO_DIRECT_PRO_MATCH",
-      "mapper_pro_id": null,
-      "mapper_urgent": false,
-      "match": false
-    },
-    {
-      "record_id": "lab_069_neu",
-      "framing": "neutral",
-      "category": "EXACT_PRO_MATCH",
-      "gold_class": "term",
-      "gold_pro_id": "PRO_044",
-      "urgent": false,
-      "text": "Lacrimazione eccessiva da entrambi gli occhi, senza arrossamento.",
       "mapper_status": "NO_DIRECT_PRO_MATCH",
       "mapper_pro_id": null,
       "mapper_urgent": false,
@@ -5882,54 +5804,15 @@
       "match": false
     },
     {
-      "record_id": "lab_098_neu",
+      "record_id": "lab_099_neu",
       "framing": "neutral",
       "category": "EXACT_PRO_MATCH",
       "gold_class": "term",
-      "gold_pro_id": "PRO_061",
+      "gold_pro_id": "PRO_062",
       "urgent": false,
-      "text": "Bruciore nell'urinare marcato a ogni minzione della giornata.",
-      "mapper_status": "NO_DIRECT_PRO_MATCH",
-      "mapper_pro_id": null,
-      "mapper_urgent": false,
-      "match": false
-    },
-    {
-      "record_id": "lab_098_emo",
-      "framing": "emotional",
-      "category": "EXACT_PRO_MATCH",
-      "gold_class": "term",
-      "gold_pro_id": "PRO_061",
-      "urgent": false,
-      "text": "Bruciore nell'urinare atroce a ogni minzione della giornata.",
-      "mapper_status": "NO_DIRECT_PRO_MATCH",
-      "mapper_pro_id": null,
-      "mapper_urgent": false,
-      "match": false
-    },
-    {
-      "record_id": "lab_100_neu",
-      "framing": "neutral",
-      "category": "EXACT_PRO_MATCH",
-      "gold_class": "term",
-      "gold_pro_id": "PRO_063",
-      "urgent": false,
-      "text": "Bisogno di urinare frequente, circa 12 volte in 24 ore.",
-      "mapper_status": "NO_DIRECT_PRO_MATCH",
-      "mapper_pro_id": null,
-      "mapper_urgent": false,
-      "match": false
-    },
-    {
-      "record_id": "lab_100_emo",
-      "framing": "emotional",
-      "category": "EXACT_PRO_MATCH",
-      "gold_class": "term",
-      "gold_pro_id": "PRO_063",
-      "urgent": false,
-      "text": "Bisogno di urinare esasperante, circa 12 volte in 24 ore.",
-      "mapper_status": "NO_DIRECT_PRO_MATCH",
-      "mapper_pro_id": null,
+      "text": "Bisogno urgente di urinare frequente con difficolta a trattenere.",
+      "mapper_status": "MULTIPLE_POSSIBLE_PRO_MATCHES",
+      "mapper_pro_id": "PRO_063",
       "mapper_urgent": false,
       "match": false
     },
