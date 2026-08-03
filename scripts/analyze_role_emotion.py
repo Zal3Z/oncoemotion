@@ -245,6 +245,50 @@ def main() -> int:
         "resolution_floor": round(1.0 / n_pairs_ref, 4) if n_pairs_ref else None,
     }
 
+    # ---- H. ROLE-INDUCED LABEL INSTABILITY ----
+    # The abstract's opening number. Hold the item fixed, change only the persona in
+    # the system prompt, and count how often the assigned PRO-CTCAE code changes. It
+    # needs no emotion vector and no ablation: it is what a clinical reader can check.
+    # Reported next to how far accuracy and the false-positive rate move over the same
+    # roles, because the point is the gap between them -- a quarter of the codes can
+    # change while both of those metrics sit still, which is what makes the variance
+    # invisible to the way such systems are normally validated.
+    by_rec = {}
+    for r in rows:
+        if r.get("arm", "emotion" if r["ablated"] else "intact") == "intact":
+            by_rec.setdefault(r["record_id"], {})[r["role"]] = r["model_top1_id"]
+    full = [d for d in by_rec.values() if len(d) == len(roles)]
+    pairwise = {}
+    for i, a in enumerate(roles):
+        for b in roles[i + 1:]:
+            both = [d for d in by_rec.values() if a in d and b in d]
+            if both:
+                pairwise[f"{a} vs {b}"] = {
+                    "changed": round(sum(1 for d in both if d[a] != d[b]) / len(both), 4),
+                    "n": len(both)}
+    any_change = (round(sum(1 for d in full if len(set(d.values())) > 1) / len(full), 4)
+                  if full else None)
+
+    acc_by_role = [B[r]["intact|all"]["acc"] for r in roles
+                   if B[r]["intact|all"]["acc"] is not None]
+    fp_by_role = [C[r]["intact|all"]["fp_rate"] for r in roles
+                  if C[r]["intact|all"]["fp_rate"] is not None]
+    acc_spread = round(max(acc_by_role) - min(acc_by_role), 4) if len(acc_by_role) > 1 else None
+    fp_spread = round(max(fp_by_role) - min(fp_by_role), 4) if len(fp_by_role) > 1 else None
+    H = {
+        "label_changed_any_role": any_change,
+        "pairwise": pairwise,
+        "n_records_all_roles": len(full),
+        "accuracy_spread_across_roles": acc_spread,
+        "false_positive_spread_across_roles": fp_spread,
+        # how much bigger the label churn is than the movement in the metrics that
+        # would normally be used to validate the system
+        "instability_over_accuracy_spread": (
+            round(any_change / acc_spread, 1) if any_change and acc_spread else None),
+        "instability_over_fp_spread": (
+            round(any_change / fp_spread, 1) if any_change and fp_spread else None),
+    }
+
     # ---- F. ablation effect, per arm, against the random control ----
     # A flip rate on its own answers "what happens if you disturb the state", not
     # "what happens if you remove fear". The random arm ablates directions of the
@@ -306,6 +350,7 @@ def main() -> int:
         "E_framing_effect": E,
         "F_ablation_effect": F,
         "G_role_by_framing": G,
+        "H_role_label_instability": H,
         "fp_threshold": args.fp_threshold,
     }
     out = args.out or args.rows.with_name(args.rows.name.replace("__rows.jsonl", "__analysis.json"))
@@ -342,6 +387,18 @@ def main() -> int:
     else:
         print(f"   cancello causale emozione vs casuale: differenza {_fmt(g['flip_rate_difference'], '+.4f')}, "
               f"rapporto {g['flip_rate_ratio']} -> {'PASSA' if g['passes'] else 'NON PASSA'}")
+    print("\nH) Instabilita' indotta dal ruolo (il numero di apertura dell'abstract):")
+    print(f"   codice diverso cambiando solo il ruolo: "
+          f"{_fmt(H['label_changed_any_role'], '.1%')}  (n={H['n_records_all_roles']})")
+    for k, v in H["pairwise"].items():
+        print(f"     {k:26s} {v['changed']:.1%}")
+    print(f"   escursione fra i ruoli - accuratezza: "
+          f"{_fmt(H['accuracy_spread_across_roles'], '.3f')}   "
+          f"falsi positivi: {_fmt(H['false_positive_spread_across_roles'], '.3f')}")
+    if H["instability_over_accuracy_spread"]:
+        print(f"   -> le etichette cambiano {H['instability_over_accuracy_spread']}x piu' "
+              f"di quanto si muova l'accuratezza")
+
     print(f"\nG) PRIMARY - role x framing (reference role: {G['reference_role']}, "
           f"resolution floor {G['resolution_floor']}):")
     for role in roles:
