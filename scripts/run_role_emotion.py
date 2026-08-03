@@ -45,7 +45,8 @@ from oncoemotion.clinical.prompt import (  # noqa: E402
 from oncoemotion.clinical.measure import (  # noqa: E402
     decision_summary, hidden_at_positions, project_scores, zscore)
 from oncoemotion.clinical.classify import (  # noqa: E402
-    ABSTAIN_MARKERS, build_term_matcher, predict_generative)
+    ABSTAIN_MARKERS, build_candidates, build_term_matcher, predict_generative,
+    predict_label)
 from oncoemotion.steering.runtime import SteeringRuntime  # noqa: E402
 from oncoemotion.terminology.pro_ctcae import load_pro_ctcae  # noqa: E402
 from oncoemotion.factory import build_default_mapper  # noqa: E402
@@ -167,6 +168,18 @@ def main() -> int:
                     choices=["intact", "emotion", "random"],
                     help="'random' is the norm- and layer-matched control for 'emotion'; "
                          "without it a flip rate measures disturbance, not fear removal")
+    ap.add_argument("--redact-text", action="store_true",
+                    help="write source_id instead of the patient text into rows.jsonl. "
+                         "The rows are zipped and exported by the notebook, so with real "
+                         "free text the raw strings would leave the session and land on "
+                         "disk in the clear. The model still reads the text; only the "
+                         "saved record is redacted.")
+    ap.add_argument("--scorer", default="constrained",
+                    choices=["constrained", "generative", "both"],
+                    help="constrained = score all 80 real PRO terms and take the best, so "
+                         "the model can only pick a real code; generative = free text then "
+                         "fuzzy-match, which discards ~30%% of answers as unmappable even "
+                         "when they are clinically right (Disfagia, Tinnitus, Epistassi)")
     ap.add_argument("--baseline-limit", type=int, default=0,
                     help="use only the first N neutral baseline sentences (0 = all). The "
                          "baseline is re-measured per cell, so on a tiny run it dominates the "
@@ -216,6 +229,15 @@ def main() -> int:
 
     library = load_pro_ctcae()
     matcher = build_term_matcher(library)
+    # Constrained scoring: the model ranks the 80 real terms instead of writing one
+    # and hoping a fuzzy matcher recognises it. Free generation discarded 22-59% of
+    # answers as unmappable (median ~30%), and the discarded ones were mostly
+    # correct clinical Italian the surface list simply did not contain -- so the
+    # accuracy metric was measuring the matcher's vocabulary, not the model.
+    candidates = (build_candidates(adapter, library)
+                  if args.scorer in ('constrained', 'both') else None)
+    if candidates:
+        print(f'punteggio vincolato su {len(candidates)} termini PRO', flush=True)
     print(f"generative classifier: greedy term -> fuzzy-map to {len(library)} PRO terms "
           f"(floor={args.map_floor})")
 
@@ -279,32 +301,59 @@ def main() -> int:
                         adapter, system, user, vectors, layer_of,
                         free_text=it["text"] if args.read_point else None,
                         role=role, personas=PERSONAS)
-                    pred = predict_generative(adapter, ids, matcher,
-                                              max_new_tokens=args.max_new_tokens, floor=args.map_floor)
+                    pred = None
+                    if args.scorer in ("generative", "both"):
+                        pred = predict_generative(
+                            adapter, ids, matcher,
+                            max_new_tokens=args.max_new_tokens, floor=args.map_floor)
+                    lab = predict_label(adapter, ids, candidates) if candidates else None
                     dsum = decision_summary(adapter, ids)
                 z = zscore(raw, bmean, bstd)
                 z_r = (zscore(raw_r, bmean_r, bstd_r)
                        if raw_r is not None and bmean_r is not None else None)
-                correct = (pred.top1_id == it["gold_pro_id"]) if it["gold_class"] == "term" else None
+                # the committed code: the constrained scorer when available, because it
+                # cannot fail to produce a real term
+                top1 = lab.top1_id if lab else pred.top1_id
+                correct = (top1 == it["gold_pro_id"]) if it["gold_class"] == "term" else None
+                # rank of the gold term in the model's own ranking: a near miss and a
+                # wild miss are not the same event, and binary correctness hides that
+                gold_rank = None
+                if lab and it["gold_pro_id"]:
+                    order = sorted(lab.concept_scores, key=lambda k: -lab.concept_scores[k])
+                    gold_rank = (order.index(it["gold_pro_id"]) + 1
+                                 if it["gold_pro_id"] in order else None)
                 # A binary right/wrong throws away most of what the decision carries:
                 # picking the right term with a 0.9 margin and picking it with a 0.02
                 # margin count the same. The margin is continuous, comes free out of
                 # the same forward pass, and gives the role x framing contrast far
                 # more resolution than 112 binary items can.
-                gen = (pred.generated or "").strip()
-                abstained = gen.lower().strip('"\'.,; ') in ABSTAIN_MARKERS
+                gen = ((pred.generated if pred else "") or "").strip()
+                abstained = bool(gen) and gen.lower().strip('"\'.,; ') in ABSTAIN_MARKERS
                 rows.append({
                     "record_id": it["record_id"], "pair_id": it["pair_id"],
-                    "text": it["text"],
+                    "text": (it.get("source_id") or it["record_id"]) if args.redact_text
+                            else it["text"],
+                    "text_redacted": bool(args.redact_text),
+                    "grade": it.get("grade"),
+                    "source_id": it.get("source_id"),
                     "framing": it["framing"], "category": it["category"],
                     "gold_class": it["gold_class"], "gold_pro_id": it["gold_pro_id"],
                     "gold_pro_status": it["gold_pro_status"], "urgent": it["urgent"],
                     "role": role, "ablated": ablated, "arm": arm,
-                    "model_generated": pred.term_str,
-                    "model_top1_id": pred.top1_id, "model_top1_term": pred.top1_term,
-                    "model_map_score": pred.map_score,
-                    "model_logprob": pred.logprob,
-                    "model_matched": pred.matched,
+                    "model_generated": pred.term_str if pred else None,
+                    "model_top1_id": top1,
+                    "model_top1_term": (lab.top1_term if lab else pred.top1_term),
+                    "model_map_score": pred.map_score if pred else None,
+                    "model_logprob": (lab.top1_score if lab else pred.logprob),
+                    "model_matched": pred.matched if pred else True,
+                    "scorer": "constrained" if lab else "generative",
+                    # what free generation WOULD have committed to, kept as a second
+                    # outcome and as the audit trail on the matcher
+                    "generative_top1_id": pred.top1_id if pred else None,
+                    "label_margin": round(lab.margin, 5) if lab else None,
+                    "label_softmax_top1": round(lab.softmax_top1, 5) if lab else None,
+                    "label_entropy": round(lab.entropy, 5) if lab else None,
+                    "gold_rank": gold_rank,
                     "correct": correct,
                     "z": {c: round(z[c], 3) for c in concepts},
                     # R = read point, last token of the patient text; D above is

@@ -73,14 +73,24 @@ def _load(paths) -> list[dict]:
     return rows
 
 
+def _label(r):
+    """The model's committed code, preferring the re-scored one when present.
+
+    rescore_rows.py re-maps the stored answer with the current surface list without
+    touching the model. Ignoring it here would keep every downstream number tied to
+    the matcher's old vocabulary, which cost ~22 accuracy points.
+    """
+    return r["rescored_top1_id"] if "rescored_top1_id" in r else r.get("model_top1_id")
+
+
 def _design(rows, roles):
     """Long-format design for the interaction, one row per (item, role, framing)."""
     keep = [r for r in rows if r["gold_class"] == "term" and r["arm"] == "intact"
-            and r.get("correct") is not None and r["role"] in roles]
+            and (_label(r) == r["gold_pro_id"] if r["gold_class"] == "term" else None) is not None and r["role"] in roles]
     y, emo, strata = [], [], []
     role_d = {ro: [] for ro in roles if ro != REFERENCE_ROLE}
     for r in keep:
-        y.append(int(bool(r["correct"])))
+        y.append(int(bool(_label(r) == r["gold_pro_id"])))
         emo.append(1 if r["framing"] == "emotional" else 0)
         for ro in role_d:
             role_d[ro].append(1 if r["role"] == ro else 0)
@@ -136,13 +146,13 @@ def _per_model_contrasts(rows, roles) -> dict:
     per = {}
     for m in sorted({r["model"] for r in rows}):
         sub = [r for r in rows if r["model"] == m and r["gold_class"] == "term"
-               and r["arm"] == "intact" and r.get("correct") is not None]
+               and r["arm"] == "intact" and (_label(r) == r["gold_pro_id"] if r["gold_class"] == "term" else None) is not None]
         deltas = {}
         for ro in roles:
             pairs = {}
             for r in sub:
                 if r["role"] == ro:
-                    pairs.setdefault(r["pair_id"], {})[r["framing"]] = bool(r["correct"])
+                    pairs.setdefault(r["pair_id"], {})[r["framing"]] = bool(_label(r) == r["gold_pro_id"])
             deltas[ro] = {p: int(d["emotional"]) - int(d["neutral"])
                           for p, d in pairs.items() if len(d) == 2}
         ref = deltas.get(REFERENCE_ROLE, {})
@@ -237,9 +247,9 @@ def _secondaries(rows, roles) -> dict:
         if "intact" not in d:
             continue
         if "emotion" in d:
-            fe.append(int(d["intact"]["model_top1_id"] != d["emotion"]["model_top1_id"]))
+            fe.append(int(_label(d["intact"]) != d["emotion"]["model_top1_id"]))
         if "random" in d:
-            fr.append(int(d["intact"]["model_top1_id"] != d["random"]["model_top1_id"]))
+            fr.append(int(_label(d["intact"]) != d["random"]["model_top1_id"]))
     if fe and fr:
         fe_a, fr_a = np.asarray(fe, float), np.asarray(fr, float)
         rng = np.random.default_rng(12345)

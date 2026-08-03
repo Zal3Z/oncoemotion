@@ -55,6 +55,16 @@ def _point_biserial(binary, cont):
     return float(np.corrcoef(b, c)[0, 1])
 
 
+def _label(r):
+    """The model's committed code, preferring the re-scored one when present.
+
+    rescore_rows.py re-maps the stored answer with the current surface list without
+    touching the model. Ignoring it here would keep every downstream number tied to
+    the matcher's old vocabulary, which cost ~22 accuracy points.
+    """
+    return r["rescored_top1_id"] if "rescored_top1_id" in r else r.get("model_top1_id")
+
+
 def _fmt(x, spec="+.3f"):
     """Empty cells are normal on small runs and on unbalanced role sets; they must
     not take the summary down with them."""
@@ -96,7 +106,7 @@ def main() -> int:
 
     # ---- B. accuracy on term items, per role x framing x ablation ----
     def acc(sub):
-        c = [r["correct"] for r in sub if r["correct"] is not None]
+        c = [(_label(r) == r["gold_pro_id"]) for r in sub if r["gold_class"] == "term"]
         return (round(sum(c) / len(c), 4), len(c)) if c else (None, 0)
 
     # Keyed by ARM, not by the ablated flag. With three arms that flag is true for
@@ -167,9 +177,9 @@ def main() -> int:
     for pid, d in by_pair.items():
         if "neutral" in d and "emotional" in d:
             both += 1
-            neu_acc.append(int(bool(d["neutral"]["correct"])))
-            emo_acc.append(int(bool(d["emotional"]["correct"])))
-            if d["neutral"]["model_top1_id"] != d["emotional"]["model_top1_id"]:
+            neu_acc.append(int(bool(_label(d["neutral"]) == d["neutral"]["gold_pro_id"])))
+            emo_acc.append(int(bool(_label(d["emotional"]) == d["emotional"]["gold_pro_id"])))
+            if _label(d["neutral"]) != _label(d["emotional"]):
                 flips_fr += 1
     E = {
         "neutral_acc": round(_mean(neu_acc), 4) if neu_acc else None,
@@ -196,7 +206,7 @@ def main() -> int:
         for pid, d in pairs.items():
             if "neutral" not in d or "emotional" not in d:
                 continue
-            n_ok, e_ok = bool(d["neutral"]["correct"]), bool(d["emotional"]["correct"])
+            n_ok, e_ok = bool(_label(d["neutral"]) == d["neutral"]["gold_pro_id"]), bool(_label(d["emotional"]) == d["emotional"]["gold_pro_id"])
             neu.append(int(n_ok)); emo.append(int(e_ok))
             b += int(n_ok and not e_ok)
             c += int(e_ok and not n_ok)
@@ -209,7 +219,7 @@ def main() -> int:
             "discordant_emotional_only": c,
             # per-item framing effect, kept so the pooled model and the
             # within-model sign test read the same numbers
-            "item_deltas": {pid: int(bool(d["emotional"]["correct"])) - int(bool(d["neutral"]["correct"]))
+            "item_deltas": {pid: int(bool(_label(d["emotional"]) == d["emotional"]["gold_pro_id"])) - int(bool(_label(d["neutral"]) == d["neutral"]["gold_pro_id"]))
                             for pid, d in pairs.items() if len(d) == 2},
         }
 
@@ -256,7 +266,7 @@ def main() -> int:
     by_rec = {}
     for r in rows:
         if r.get("arm", "emotion" if r["ablated"] else "intact") == "intact":
-            by_rec.setdefault(r["record_id"], {})[r["role"]] = r["model_top1_id"]
+            by_rec.setdefault(r["record_id"], {})[r["role"]] = _label(r)
     full = [d for d in by_rec.values() if len(d) == len(roles)]
     pairwise = {}
     for i, a in enumerate(roles):
@@ -307,11 +317,11 @@ def main() -> int:
             if "intact" not in d or arm not in d:
                 continue
             comp += 1
-            if d["intact"]["model_top1_id"] != d[arm]["model_top1_id"]:
+            if _label(d["intact"]) != _label(d[arm]):
                 flips += 1
             if d["intact"]["gold_class"] == "term":
-                acc_i.append(int(bool(d["intact"]["correct"])))
-                acc_a.append(int(bool(d[arm]["correct"])))
+                acc_i.append(int(bool(_label(d["intact"]) == d["intact"]["gold_pro_id"])))
+                acc_a.append(int(bool(_label(d[arm]) == d[arm]["gold_pro_id"])))
         F[arm] = {
             "label_flips": flips,
             "flip_rate": round(flips / comp, 4) if comp else None,

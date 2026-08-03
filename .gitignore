@@ -48,3 +48,6 @@ outputs/role_spectrum/
 
 # smoke-test artefacts: reproduced by scripts/smoke.py, never reviewed
 outputs/smoke/
+
+# Real clinical free text: never in VCS
+data/real/

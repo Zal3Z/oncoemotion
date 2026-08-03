@@ -38,10 +38,76 @@ class GenPrediction:
 
 
 # Explicit "no PRO term" markers a model emits when it (correctly) abstains.
+# The multi-word Italian forms were missing, so a model declining properly -- "nessun
+# evento avverso correlato al trattamento" -- was counted as a mapping failure. On
+# the real corpus those phrases alone accounted for several hundred rows.
 ABSTAIN_MARKERS = {
     "n/a", "na", "n.a.", "none", "no", "nan", "null", "nulla", "niente", "nessuno",
     "nessun sintomo", "nessun termine", "non applicabile", "no applicabile",
     "non specificato", "non pertinente", "sconosciuto", "unknown", "-", "0", "",
+    "nessun evento avverso", "nessun evento avverso rilevante",
+    "nessun evento avverso correlato al trattamento", "nessun effetto collaterale",
+    "nessuna reazione", "nessun disturbo", "nessun problema", "assente",
+    "non riferito", "non valutabile", "no adverse event", "no symptoms",
+    "not applicable", "not specified", "not reported", "nessuna",
+}
+
+# Clinical and technical surfaces that ARE PRO-CTCAE concepts under another name.
+# Taken from what the models actually emitted and the fuzzy matcher then discarded:
+# it answered "Disfagia", which IS PRO_002 "difficolta a deglutire", and was scored
+# wrong. Across 13 models this silently threw away 22-59% of answers (median ~30%),
+# and the accuracy metric was largely measuring the surface list's vocabulary.
+CLINICAL_SUPPLEMENT = {
+    "PRO_001": ["xerostomia", "secchezza delle fauci", "dry mouth"],
+    "PRO_002": ["disfagia", "dysphagia", "difficolta di deglutizione", "swallowing difficulty"],
+    "PRO_003": ["mucosite", "mucosite orale", "mucositis", "oral mucositis", "stomatite",
+                "afte", "stomatitis"],
+    "PRO_005": ["alterazione della voce", "voice alteration", "disfonia", "dysphonia"],
+    "PRO_006": ["raucedine", "hoarseness"],
+    "PRO_007": ["disgeusia", "dysgeusia", "gusto metallico", "gusto alterato",
+                "alterazione del gusto", "metallic taste", "taste alteration", "ageusia"],
+    "PRO_008": ["anoressia", "anorexia", "appetito ridotto", "inappetenza",
+                "riduzione dell'appetito", "loss of appetite", "decreased appetite"],
+    "PRO_012": ["flatulenza", "meteorismo", "flatulence"],
+    "PRO_013": ["distensione addominale", "gonfiore addominale", "abdominal distension",
+                "meteorismo addominale"],
+    "PRO_016": ["diarrhoea", "diarrea", "alvo diarroico"],
+    "PRO_017": ["dolore addominale", "abdominal pain", "algia addominale"],
+    "PRO_019": ["dispnea", "dyspnoea", "dyspnea", "affanno", "fame d'aria"],
+    "PRO_022": ["edema", "edema periferico", "peripheral edema", "tumefazione",
+                "gonfiore degli arti", "linfedema", "oedema"],
+    "PRO_023": ["tachicardia", "palpitazioni", "cardiopalmo", "tachycardia", "palpitations"],
+    "PRO_024": ["eritema", "erythema", "esantema", "rash cutaneo"],
+    "PRO_025": ["xerosi", "xerosi cutanea", "secchezza cutanea", "dry skin"],
+    "PRO_027": ["alopecia", "alopecia da chemioterapia"],
+    "PRO_028": ["prurito", "pruritus", "itching"],
+    "PRO_030": ["sindrome mano-piede", "hand-foot syndrome", "eritrodisestesia palmo-plantare"],
+    "PRO_039": ["neuropatia periferica", "peripheral neuropathy", "parestesie",
+                "paresthesia", "neuropatia sensitiva", "formicolio"],
+    "PRO_040": ["vertigini", "vertigine", "capogiri", "dizziness", "instabilita posturale"],
+    "PRO_041": ["visione offuscata", "offuscamento visivo", "visual disturbance",
+                "visual disturbances", "blurred vision", "annebbiamento visivo"],
+    "PRO_044": ["epifora", "lacrimazione", "watery eyes"],
+    "PRO_045": ["tinnito", "tinnitus", "acufene", "acufeni", "ronzio auricolare"],
+    "PRO_046": ["deficit di concentrazione", "cognitive impairment", "difficolta di concentrazione"],
+    "PRO_047": ["deficit mnesico", "memory impairment", "amnesia"],
+    "PRO_048": ["dolore", "pain", "algia", "dolore generalizzato"],
+    "PRO_049": ["cefalea", "headache", "emicrania", "migraine"],
+    "PRO_050": ["mialgia", "mialgie", "myalgia", "dolore muscolare"],
+    "PRO_051": ["artralgia", "artralgie", "arthralgia", "dolore articolare"],
+    "PRO_052": ["insonnia", "insomnia", "disturbi del sonno"],
+    "PRO_053": ["astenia", "asthenia", "fatigue", "affaticamento", "spossatezza"],
+    "PRO_054": ["ansia", "stato ansioso", "anxiety"],
+    "PRO_056": ["depressione", "umore depresso", "depression"],
+    "PRO_061": ["disuria", "dysuria", "stranguria"],
+    "PRO_062": ["urgenza minzionale", "urinary urgency"],
+    "PRO_063": ["pollachiuria", "urinary frequency"],
+    "PRO_065": ["incontinenza urinaria", "urinary incontinence"],
+    "PRO_073": ["ecchimosi", "ematoma", "bruising", "lividi"],
+    "PRO_074": ["brividi", "chills"],
+    "PRO_075": ["iperidrosi", "hyperhidrosis", "sudorazione profusa", "sudorazione notturna"],
+    "PRO_077": ["vampate", "vampate di calore", "hot flushes", "hot flashes"],
+    "PRO_078": ["epistassi", "epistaxis", "sanguinamento nasale"],
 }
 
 
@@ -85,6 +151,7 @@ def build_term_matcher(library):
         if t.official_italian_labels:
             surf += _italian_surfaces(t.official_italian_labels[0])
         surf += EN_SUPPLEMENT.get(t.canonical_id, [])
+        surf += CLINICAL_SUPPLEMENT.get(t.canonical_id, [])
         surf = [s.strip() for s in dict.fromkeys(surf) if s and s.strip()]
         per_term.append((t.canonical_id, t.canonical_english, surf))
 
@@ -194,6 +261,88 @@ def build_candidates(adapter, library, forms=("it", "en", "phrase")) -> list[Can
     return cands
 
 
+def _score_surface_ids_cached(adapter, prefix_ids, flat_ids: list[list[int]],
+                              chunk: int) -> list[float] | None:
+    """Same scores as :func:`_score_surface_ids`, with the prompt computed once.
+
+    Every candidate is scored after the *identical* prefix, so recomputing it for
+    each one is the whole cost: 163 surfaces after a 93-token prompt is 15k tokens
+    of forward pass per item instead of 93 + 163*3. Measured at 164s per item on a
+    small GPU, which makes constrained scoring unusable on a real corpus.
+
+    Returns None if the model's cache does not expand cleanly, so the caller can
+    fall back to the slow path rather than risk different numbers.
+    """
+    import torch
+
+    model = adapter.model
+    dev = adapter.device
+    tok = adapter.tokenizer
+    pad_id = tok.pad_token_id
+    if pad_id is None:
+        pad_id = tok.eos_token_id or 0
+    prefix = prefix_ids[0]
+    T = int(prefix.shape[0])
+
+    try:
+        with torch.no_grad():
+            base = model(input_ids=prefix.unsqueeze(0),
+                         attention_mask=torch.ones(1, T, device=dev),
+                         use_cache=True)
+        past = base.past_key_values
+        last_logits = base.logits[:, -1, :].float()          # predicts the 1st cand token
+    except Exception:
+        return None
+
+    def _expand(pkv, b):
+        """Repeat a batch-1 cache to batch b, across the cache APIs in the wild."""
+        try:
+            import copy
+            c = copy.deepcopy(pkv)
+            if hasattr(c, "batch_repeat_interleave"):
+                c.batch_repeat_interleave(b)
+                return c
+            if hasattr(c, "key_cache"):
+                c.key_cache = [k.expand(b, *k.shape[1:]).contiguous() for k in c.key_cache]
+                c.value_cache = [v.expand(b, *v.shape[1:]).contiguous() for v in c.value_cache]
+                return c
+            return tuple(tuple(t.expand(b, *t.shape[1:]).contiguous() for t in layer)
+                         for layer in pkv)
+        except Exception:
+            return None
+
+    out: list[float] = []
+    for i in range(0, len(flat_ids), chunk):
+        batch = [list(c) if c else [pad_id] for c in flat_ids[i:i + chunk]]
+        clens = [len(c) for c in batch]
+        maxc, B = max(clens), len(batch)
+        cand = torch.tensor([c + [pad_id] * (maxc - len(c)) for c in batch],
+                            device=dev, dtype=prefix.dtype)
+        pkv = _expand(past, B)
+        if pkv is None:
+            return None
+        attn = torch.cat([torch.ones(B, T, device=dev),
+                          (torch.arange(maxc, device=dev).unsqueeze(0)
+                           < torch.tensor(clens, device=dev).unsqueeze(1)).float()], dim=1)
+        try:
+            with torch.no_grad():
+                res = model(input_ids=cand, attention_mask=attn,
+                            past_key_values=pkv, use_cache=False)
+        except Exception:
+            return None
+        # logit for candidate token j comes from the prefix (j=0) or from position j-1
+        logits = torch.cat([last_logits.unsqueeze(1).expand(B, 1, -1),
+                            res.logits[:, :maxc - 1, :].float()], dim=1) if maxc > 1 \
+            else last_logits.unsqueeze(1).expand(B, 1, -1)
+        logp = torch.log_softmax(logits, dim=-1)
+        tok_lp = logp.gather(-1, cand.unsqueeze(-1)).squeeze(-1)
+        mask = (torch.arange(maxc, device=dev).unsqueeze(0)
+                < torch.tensor(clens, device=dev).unsqueeze(1)).float()
+        clen_t = torch.tensor(clens, device=dev, dtype=torch.float32)
+        out.extend(((tok_lp * mask).sum(1) / clen_t).detach().cpu().tolist())
+    return out
+
+
 def _score_surface_ids(adapter, prefix_ids, flat_ids: list[list[int]], chunk: int) -> list[float]:
     """Mean per-token continuation log-prob for each id-list after ``prefix_ids``."""
     import torch
@@ -245,7 +394,10 @@ def predict_label(adapter, prefix_ids, candidates: list[Candidate],
     for ci, cand in enumerate(candidates):
         for sid in cand.surface_ids:
             flat_ids.append(sid); owner.append(ci)
-    surf_scores = _score_surface_ids(adapter, prefix_ids, flat_ids, chunk)
+    # cached prefix first; the slow path stays as the reference and the fallback
+    surf_scores = _score_surface_ids_cached(adapter, prefix_ids, flat_ids, chunk)
+    if surf_scores is None:
+        surf_scores = _score_surface_ids(adapter, prefix_ids, flat_ids, chunk)
 
     concept_best = [-1e30] * len(candidates)
     for s, ci in zip(surf_scores, owner):
