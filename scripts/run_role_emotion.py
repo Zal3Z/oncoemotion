@@ -154,7 +154,12 @@ def main() -> int:
     ap.add_argument("--device", default="cuda")
     ap.add_argument("--method", default="diff_of_means")
     ap.add_argument("--variant", default="resid", choices=["resid", "raw"])
-    ap.add_argument("--roles", nargs="+", default=["oncologo", "generico", "none"])
+    ap.add_argument("--roles", nargs="+",
+                    default=["oncologo", "generico", "none_task", "none_filler"],
+                    help="none_filler is the control: length-matched padding, no identity, "
+                         "no task. none_task names the task without an identity -- what the "
+                         "old 'none' accidentally was, which made 'role vs no role' read as "
+                         "'identity vs task'. 'none' is literally no system block.")
     ap.add_argument("--max-new-tokens", type=int, default=10)
     ap.add_argument("--map-floor", type=float, default=0.72,
                     help="fuzzy score floor to accept the generated term as a PRO code")

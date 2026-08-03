@@ -54,7 +54,7 @@ sys.path.insert(0, str(_ROOT / "src"))
 from oncoemotion.statistics import (  # noqa: E402
     benjamini_hochberg, bh_adjusted_pvalues, bootstrap_ci)
 
-REFERENCE_ROLE = "none"
+REFERENCE_ROLE = "none_filler"
 SECONDARY_FAMILY = ("framing_main_effect", "ablation_emotion_vs_random",
                     "framing_effect_on_mapper", "role_by_framing_on_margin")
 
@@ -307,7 +307,8 @@ def main() -> int:
     ap.add_argument("--rows-glob", default=str(_ROOT / "outputs/role_emotion/*__rows.jsonl"))
     ap.add_argument("--out", type=Path,
                     default=_ROOT / "outputs/reports/primary_analysis.json")
-    ap.add_argument("--roles", nargs="+", default=["oncologo", "generico", "none"])
+    ap.add_argument("--roles", nargs="+",
+                    default=["oncologo", "generico", "none_task", "none_filler"])
     args = ap.parse_args()
 
     paths = sorted(glob.glob(args.rows_glob))

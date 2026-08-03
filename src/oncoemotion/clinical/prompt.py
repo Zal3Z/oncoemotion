@@ -25,6 +25,10 @@ TASK_INSTRUCTION = (
     "Leggi il testo del paziente e indica il termine PRO-CTCAE più appropriato."
 )
 
+# Controls, defined before the persona table that uses them.
+NO_ROLE_STUB = ""
+TASK_FRAME_STUB = "Questa e' una sessione di codifica."
+
 # System personas for the role experiment. ``None`` = no system message (baseline:
 # the coding task alone, no persona). Keys are the role identifiers used in scripts.
 ROLE_PERSONAS = {
@@ -62,7 +66,9 @@ ROLE_PERSONAS = {
         "Sei un poeta, una persona molto sensibile ed emotiva, che vive ogni "
         "cosa in modo intenso."
     ),
-    # --- controlli ---
+    # --- controlli: nessuna identita' ---
+    "none_filler": "",          # solo riempitivo: il controllo vero
+    "none_task": TASK_FRAME_STUB,   # nomina il compito, non un'identita'
     "generico": (
         "Sei un assistente generico, senza alcuna competenza medica specifica."
     ),
@@ -95,24 +101,34 @@ NEUTRAL_FILLER = (
 # pad would equalize one model and skew the rest. The clauses are procedural, carry
 # no identity, no affect and no clinical content, and go after the persona so that
 # the end of the system block -- and hence every later position -- lands identically.
-# Graded in length so a greedy fill lands on the target with real sentences instead
-# of a repeated stub.
+# Padding must be inert. The first version said things like "la sessione segue la
+# procedura ordinaria" and the no-role stub said "questa e' una sessione di
+# codifica" -- both point at the task. That turned the control into a task
+# instruction, so "role vs no role" was really "identity framing vs task framing",
+# and the control won. These are discourse markers: grammatical, natural in a system
+# message, and about neither the task nor any identity.
 ROLE_PAD_CLAUSES = [
-    "La sessione segue la procedura ordinaria prevista dal servizio.",
-    "Il formato della risposta e' quello consueto.",
-    "Le voci restano in ordine standard.",
-    "La registrazione avviene come sempre.",
-    "I passaggi sono quelli abituali.",
-    "Il riferimento resta invariato.",
-    "L'ordine non cambia.",
-    "Come di consueto.",
-    "Come sempre.",
-    "Si procede.",
+    "Va bene cosi', senza altre indicazioni particolari da aggiungere.",
+    "D'accordo, nulla di piu' da precisare.",
+    "Certamente, niente altro da aggiungere.",
+    "Va bene, tutto chiaro.",
+    "D'accordo, si intende.",
+    "Certamente, senz'altro.",
+    "Va bene cosi'.",
+    "D'accordo.",
+    "Certamente.",
+    "Bene.",
 ]
 
-# Semantically empty stand-in for "no role": present in structure, absent in
-# identity, so it can be padded to the same length as every persona.
-NO_ROLE_STUB = "Questa e' una sessione di codifica."
+# Three distinct controls instead of one, because the first version silently mixed
+# them. They decompose what a system message can contribute:
+#   none_empty  -- no system block at all: what you get by writing no system prompt,
+#                  but structurally a different prompt, so not a clean contrast;
+#   none_filler -- padding only: length-matched, no identity, no task. THE control;
+#   none_task   -- names the task without naming an identity. This is what the old
+#                  "none" accidentally was, and it is worth keeping as its own arm:
+#                  identity-vs-task is a real question, it just is not the one the
+#                  label "no role" claims to answer.
 
 
 def build_padded_personas(tokenizer, target: int | None = None,
@@ -124,7 +140,13 @@ def build_padded_personas(tokenizer, target: int | None = None,
     mismatch is impossible.
     """
     src = dict(personas or ROLE_PERSONAS)
-    src = {k: (v if v else NO_ROLE_STUB) for k, v in src.items()}
+    # "none" stays a genuinely empty block; the padded controls are separate
+    # entries so that "no role" and "task named, no role" never collapse again.
+    # A None persona means literally no system block, and stays None: that is a
+    # structurally different prompt, kept as a separate arm rather than quietly
+    # padded into something that only looks like a control.
+    keep_none = {k for k, v in src.items() if v is None}
+    src = {k: (v or "") for k, v in src.items()}
 
     def n_tok(s: str) -> int:
         return len(tokenizer(s, add_special_tokens=False).input_ids)
@@ -149,13 +171,16 @@ def build_padded_personas(tokenizer, target: int | None = None,
                     used.add(i)
                     progress = True
                     break
-        out[k], counts[k] = text, cur
+        out[k], counts[k] = text.strip(), cur
 
-    spread = max(counts.values()) - min(counts.values())
+    for k in keep_none:
+        out[k], counts[k] = None, 0
+    padded = {k: v for k, v in counts.items() if k not in keep_none}
+    spread = max(padded.values()) - min(padded.values())
     if spread > 2:
         raise ValueError(
             f"role spans still differ by {spread} tokens after padding "
-            f"({counts}); add shorter entries to ROLE_PAD_CLAUSES")
+            f"({padded}); add shorter entries to ROLE_PAD_CLAUSES")
     return out, counts
 
 

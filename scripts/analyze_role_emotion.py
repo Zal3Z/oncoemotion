@@ -77,7 +77,7 @@ def main() -> int:
     ap.add_argument("--out", type=Path, default=None)
     ap.add_argument("--fp-threshold", type=float, default=0.5,
                     help="softmax_top1 above which a forced code counts as a false-positive")
-    ap.add_argument("--reference-role", default="none",
+    ap.add_argument("--reference-role", default="none_filler",
                     help="baseline role the primary contrast is taken against "
                          "(the no-role control, so a positive contrast means the role protects)")
     args = ap.parse_args()

@@ -56,24 +56,36 @@ class _FakeTok:
 
 
 def test_padded_role_spans_are_token_matched():
-    from oncoemotion.clinical.prompt import ROLE_PERSONAS, build_padded_personas
+    """Every span that HAS a system block must be the same length: what follows it
+    then sits at the same absolute position in every condition."""
+    from oncoemotion.clinical.prompt import build_padded_personas
 
     personas, counts = build_padded_personas(_FakeTok())
-    assert set(personas) == set(ROLE_PERSONAS)
-    # the whole point: everything after the system block must land at the same
-    # absolute position in every condition
-    assert max(counts.values()) - min(counts.values()) <= 2
+    padded = [n for k, n in counts.items() if personas[k] is not None]
+    assert max(padded) - min(padded) <= 2
 
 
-def test_no_role_control_has_a_system_block():
-    """'none' used to be the absence of a system message, which is a structurally
-    different prompt rather than a control."""
-    from oncoemotion.clinical.prompt import ROLE_PERSONAS, build_padded_personas
+def test_the_three_controls_are_distinct():
+    """The first version had one control that silently named the task, so
+    'role vs no role' actually measured 'identity framing vs task framing' -- and
+    the control won. They are separate arms now and must stay separate."""
+    from oncoemotion.clinical.prompt import build_padded_personas
 
-    assert ROLE_PERSONAS["none"] is None
-    personas, counts = build_padded_personas(_FakeTok())
-    assert personas["none"]
-    assert counts["none"] >= max(counts.values()) - 2
+    p, _ = build_padded_personas(_FakeTok())
+    assert p["none"] is None                     # literally no system block
+    assert p["none_filler"]                      # padded, no identity, no task
+    assert p["none_task"]                        # padded, names the task
+    assert p["none_filler"] != p["none_task"]
+
+
+def test_the_filler_control_names_neither_task_nor_identity():
+    from oncoemotion.clinical.prompt import build_padded_personas
+
+    p, _ = build_padded_personas(_FakeTok())
+    low = p["none_filler"].lower()
+    for banned in ("codifica", "pro-ctcae", "paziente", "sintomo", "termine", "sei un"):
+        assert banned not in low, f"il controllo nomina {banned!r}: non e' inerte"
+    assert "codifica" in p["none_task"].lower()   # questo invece il compito lo nomina
 
 
 def test_padded_personas_keep_their_identity():
@@ -81,14 +93,14 @@ def test_padded_personas_keep_their_identity():
 
     personas, _ = build_padded_personas(_FakeTok())
     assert personas["oncologo"].startswith("Sei un oncologo")
-    assert "oncologo" not in personas["none"]
+    assert "oncologo" not in personas["none_filler"]
 
 
 def test_build_decision_messages_uses_the_padded_table():
     from oncoemotion.clinical.prompt import build_decision_messages, build_padded_personas
 
     personas, _ = build_padded_personas(_FakeTok())
-    sys_none, _ = build_decision_messages("ho nausea", role="none", personas=personas)
-    assert sys_none is not None
+    sys_ctrl, _ = build_decision_messages("ho nausea", role="none_filler", personas=personas)
+    assert sys_ctrl is not None
     sys_default, _ = build_decision_messages("ho nausea", role="none")
     assert sys_default is None      # unpadded default keeps the old behaviour
