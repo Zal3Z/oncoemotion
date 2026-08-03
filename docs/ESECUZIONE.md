@@ -142,6 +142,40 @@ tutto il resto di questo lavoro serve a evitare.
 Il preflight (cella 15) controlla **tutti** i tier anche se non attivi, così scopri
 subito se un modello è gated o assente invece che a metà run.
 
+## Cosa si porta a ESMO
+
+**Titolo:** *An emotion accuracy cannot see: role-induced affective shift in
+LLM-based PRO-CTCAE coding*
+
+**La claim, in una frase:** il ruolo assegnato — una riga di prompt che nessuno
+documenta ne' riporta — cambia un codice PRO-CTCAE su quattro, e ne' l'accuratezza
+ne' i falsi positivi se ne accorgono; la dimensione lungo cui la decisione si muove
+e' lo stato affettivo con cui il modello legge il paziente, che il ruolo ricompone.
+
+I due pezzi si reggono a vicenda e da soli non bastano. L'instabilita' del 23% senza
+la geometria e' prompt sensitivity, che e' gia' letteratura. La geometria senza
+l'instabilita' e' un fatto curioso sull'interno di un modello. Insieme rispondono a
+«lungo quale dimensione si muove il codice, e perche' nessuna metrica la vede».
+
+### I tre gradini, e dove sta ciascuno
+
+1. **Il modello rappresenta affetto, non parole.** Passato: coseno massimo 0,143 con
+   gli assi lessicali, mentre l'asse «la parola compare nel testo» e' il concetto piu'
+   decodificabile di tutti (AUROC 0,750). Va detto ristretto: sotto cross-validation
+   onesta sopravvive il grappolo paura/ansia/preoccupazione, non 25 emozioni.
+2. **Il ruolo lo ricompone.** E' questo abstract. Misura interna (C5, C2 per rango) e
+   conseguenza comportamentale (sezione H), che si spiegano a vicenda.
+3. **E' uno stato, non una rappresentazione.** NON in questo abstract: serve
+   l'esperimento trans-situazionale. Da cui la parola da evitare nel titolo e nel
+   testo: **feels**. «Emotion» e «affective» come dimensione misurata sono
+   difendibili con i dati; «prova» manderebbe il revisore a cercare una prova che non
+   c'e'.
+
+### Numeri da non mettere nel titolo
+
+Il 23,4% viene dal set di item vecchio. Dopo il re-run con 112 coppie e la pipeline
+corretta si sposta, quindi nel titolo ci va il fenomeno, non la magnitudine.
+
 ## I due cancelli
 
 Vanno guardati appena il primo blocco di modelli è finito. Se falliscono, l'abstract
