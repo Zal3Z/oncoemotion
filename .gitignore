@@ -45,3 +45,6 @@ terminology/pro_ctcae_terms.json
 oncoemotion_result*/
 outputs/role_emotion/
 outputs/role_spectrum/
+
+# smoke-test artefacts: reproduced by scripts/smoke.py, never reviewed
+outputs/smoke/
