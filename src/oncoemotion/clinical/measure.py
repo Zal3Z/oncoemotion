@@ -16,6 +16,33 @@ def point_e_hidden(adapter, prompt: str) -> np.ndarray:
     return np.stack([h[0, -1].float().cpu().numpy() for h in hs], axis=0)
 
 
+def hidden_at_positions(adapter, prompt, positions: dict[str, int]) -> dict[str, np.ndarray]:
+    """Hidden states at several token positions from ONE forward pass.
+
+    Reading two points costs nothing extra as long as they come out of the same
+    pass; running the model twice would double the most expensive part of the study.
+
+    Positions are token indices into the prompt, negative allowed. ``{"D": -1}``
+    reproduces :func:`point_e_hidden`. An out-of-range index yields None for that
+    key rather than raising, so a prompt whose read point could not be located does
+    not take the run down.
+    """
+    cap = adapter.forward_capture(prompt)
+    hs = cap["hidden_states"]
+    seq = hs[0].shape[1]
+    out: dict[str, np.ndarray | None] = {}
+    for name, idx in positions.items():
+        if idx is None:
+            out[name] = None
+            continue
+        i = idx if idx >= 0 else seq + idx
+        if not (0 <= i < seq):
+            out[name] = None
+            continue
+        out[name] = np.stack([h[0, i].float().cpu().numpy() for h in hs], axis=0)
+    return out
+
+
 def token_by_token_hidden(adapter, prompt: str, layer: int) -> np.ndarray:
     """Hidden states at every token for one layer. Returns [seq, H]."""
     cap = adapter.forward_capture(prompt)

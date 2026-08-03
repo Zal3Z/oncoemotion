@@ -179,6 +179,67 @@ def build_decision_ids(adapter, free_text: str, role: str = "none",
     return adapter.build_prompt_ids(user, system, assistant_prefix=TEACHER_PREFIX)
 
 
+def read_point_index(adapter, free_text: str, ids, role: str = "none",
+                     neutral_filler: str | None = None,
+                     personas: dict | None = None) -> int | None:
+    """Token index of the LAST token of the patient text -- the read point, R.
+
+    The cheap half of the R/D split. The thesis distinguishes the state the patient's
+    text leaves the reader in (R) from the state it decides in (D, the existing point
+    E), but separating them properly means moving the coding instruction after the
+    patient text, which restructures the prompt and breaks comparability with every
+    published number. This locates R inside the prompt as it already stands: not a
+    clean pre-instruction read point, but enough to answer whether the two positions
+    behave differently at all -- and therefore whether the full rewrite is worth
+    paying for later.
+
+    Returns None when the position cannot be located exactly, which is the honest
+    outcome for a tokenizer whose template output does not round-trip. Callers should
+    treat None as "no R for this item" rather than as an error.
+    """
+    system, user = build_decision_messages(free_text, role=role,
+                                           neutral_filler=neutral_filler,
+                                           personas=personas)
+    tok = adapter.tokenizer
+    msgs = ([{"role": "system", "content": system}] if system else []) + \
+           [{"role": "user", "content": user}]
+    try:
+        rendered = tok.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True)
+    except Exception:
+        return None
+    full = rendered + TEACHER_PREFIX
+
+    marker = f'"{free_text}"'
+    pos = full.rfind(marker)
+    if pos < 0:
+        return None
+    char_end = pos + len(marker)
+
+    try:
+        enc = tok(full, add_special_tokens=False, return_offsets_mapping=True)
+    except Exception:
+        return None            # slow tokenizer: no offsets, no exact index
+    offsets = enc["offset_mapping"]
+
+    # the ids we computed here must be the ids the model actually sees, otherwise the
+    # index points into a different sequence
+    have = ids[0].tolist() if hasattr(ids, "shape") else list(ids)
+    got = list(enc["input_ids"])
+    if got != have:
+        if len(have) >= len(got) and have[-len(got):] == got:
+            got = have          # template added leading specials: shift the offsets
+            offsets = [(-1, -1)] * (len(have) - len(offsets)) + list(offsets)
+        else:
+            return None
+
+    for i, (a, b) in enumerate(offsets):
+        if a < 0:
+            continue
+        if b >= char_end:
+            return i
+    return None
+
+
 def build_decision_prompt(free_text: str, neutral_filler: str | None = None) -> str:
     """Return the full raw prompt whose LAST token is measurement point E.
 

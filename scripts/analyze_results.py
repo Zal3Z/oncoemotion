@@ -56,7 +56,7 @@ from oncoemotion.statistics import (  # noqa: E402
 
 REFERENCE_ROLE = "none"
 SECONDARY_FAMILY = ("framing_main_effect", "ablation_emotion_vs_random",
-                    "framing_effect_on_mapper")
+                    "framing_effect_on_mapper", "role_by_framing_on_margin")
 
 
 def _load(paths) -> list[dict]:
@@ -165,6 +165,56 @@ def _per_model_contrasts(rows, roles) -> dict:
     return per
 
 
+def _continuous_endpoint(rows, roles, field="decision_margin") -> dict:
+    """The same role x framing contrast on a CONTINUOUS decision outcome.
+
+    Binary correct/incorrect discards most of what the decision carries: choosing
+    the right term with a 0.9 top1-top2 margin and choosing it with a 0.02 margin
+    score identically, and a near-miss scores like a wild one. The margin comes free
+    out of the same forward pass and has far more resolution than 112 binary items.
+
+    Structure matches the primary exactly -- within item, within role, contrasted
+    against the no-role control -- so the two answer the same question on two scales.
+    Read as support for the primary, not as a second primary: it is pre-declared
+    secondary and shares its family's correction.
+    """
+    have = [r for r in rows if r.get(field) is not None and r["arm"] == "intact"
+            and r["gold_class"] == "term"]
+    if not have:
+        return {"available": False,
+                "note": f"'{field}' absent from these rows: rerun run_role_emotion.py, "
+                        "which now logs the decision profile"}
+    per_item = {}
+    for r in have:
+        per_item.setdefault((r["model"], r["pair_id"], r["role"]), {})[r["framing"]] = r[field]
+    deltas = {}
+    for (m, pid, role), d in per_item.items():
+        if "neutral" in d and "emotional" in d:
+            deltas[(m, pid, role)] = d["emotional"] - d["neutral"]
+    out = {"available": True, "field": field, "n_items": len(deltas), "by_role": {}, "contrasts": {}}
+    for role in roles:
+        v = [x for (m, p, ro), x in deltas.items() if ro == role]
+        if v:
+            out["by_role"][role] = {"mean_delta": round(float(np.mean(v)), 5), "n": len(v)}
+    ref_map = {(m, p): x for (m, p, ro), x in deltas.items() if ro == REFERENCE_ROLE}
+    for role in roles:
+        if role == REFERENCE_ROLE:
+            continue
+        pairs = [(x - ref_map[(m, p)]) for (m, p, ro), x in deltas.items()
+                 if ro == role and (m, p) in ref_map]
+        if len(pairs) < 3:
+            continue
+        arr = np.asarray(pairs, float)
+        _, lo, hi = bootstrap_ci(arr, statistic=np.mean, n_boot=2000, seed=12345)
+        out["contrasts"][f"{role} vs {REFERENCE_ROLE}"] = {
+            "mean_difference": round(float(arr.mean()), 5),
+            "ci95": [round(float(lo), 5), round(float(hi), 5)],
+            "n_items": len(arr),
+            "excludes_zero": bool(lo > 0 or hi < 0),
+        }
+    return out
+
+
 def _secondaries(rows, roles) -> dict:
     """Pre-declared secondary family, corrected together with Benjamini-Hochberg."""
     from statsmodels.discrete.conditional_models import ConditionalLogit
@@ -261,10 +311,12 @@ def main() -> int:
     primary = _fit_primary(rows, args.roles)
     per_model = _per_model_contrasts(rows, args.roles)
     secondary = _secondaries(rows, args.roles)
+    continuous = _continuous_endpoint(rows, args.roles)
 
     report = {"models": models, "n_rows": len(rows),
               "primary": primary, "per_model": per_model,
-              "secondary": secondary, "secondary_family": list(SECONDARY_FAMILY)}
+              "secondary": secondary, "secondary_family": list(SECONDARY_FAMILY),
+              "continuous_endpoint": continuous}
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
 
@@ -284,6 +336,17 @@ def main() -> int:
                 else "  [sotto la risoluzione]"
             print(f"  {m:26s} {k:22s} {v['mean_difference']:+.4f} "
                   f"[{v['ci95'][0]:+.4f}, {v['ci95'][1]:+.4f}] n={v['n_items']}{flag}")
+
+    print("\n=== endpoint continuo (margine decisionale, stessa struttura del primario) ===")
+    if not continuous.get("available"):
+        print(f"  {continuous.get('note')}")
+    else:
+        for role, v in continuous["by_role"].items():
+            print(f"  delta medio {role:10s} {v['mean_delta']:+.5f}  (n={v['n']})")
+        for k, v in continuous["contrasts"].items():
+            mark = "  <- esclude lo zero" if v["excludes_zero"] else ""
+            print(f"  contrasto {k:22s} {v['mean_difference']:+.5f} "
+                  f"[{v['ci95'][0]:+.5f}, {v['ci95'][1]:+.5f}] n={v['n_items']}{mark}")
 
     print("\n=== secondari (Benjamini-Hochberg sulla famiglia dichiarata) ===")
     shown = ("odds_ratio", "difference", "flip_rate_emotion", "flip_rate_random",

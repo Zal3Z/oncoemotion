@@ -41,9 +41,11 @@ sys.path.insert(0, str(_ROOT / "src"))
 from oncoemotion.config import ModelConfig  # noqa: E402
 from oncoemotion.models.base import load_adapter  # noqa: E402
 from oncoemotion.clinical.prompt import (  # noqa: E402
-    build_decision_messages, build_padded_personas, TEACHER_PREFIX)
-from oncoemotion.clinical.measure import point_e_hidden, project_scores, zscore, decision_summary  # noqa: E402
-from oncoemotion.clinical.classify import build_term_matcher, predict_generative  # noqa: E402
+    build_decision_messages, build_padded_personas, read_point_index, TEACHER_PREFIX)
+from oncoemotion.clinical.measure import (  # noqa: E402
+    decision_summary, hidden_at_positions, project_scores, zscore)
+from oncoemotion.clinical.classify import (  # noqa: E402
+    ABSTAIN_MARKERS, build_term_matcher, predict_generative)
 from oncoemotion.steering.runtime import SteeringRuntime  # noqa: E402
 from oncoemotion.terminology.pro_ctcae import load_pro_ctcae  # noqa: E402
 from oncoemotion.factory import build_default_mapper  # noqa: E402
@@ -127,10 +129,21 @@ def _subsample_pairs(items, n_pairs, seed):
     return [it for it in items if it["pair_id"] in keep], len(keep)
 
 
-def _raw_scores(adapter, system, user, vectors, layer_of):
+def _raw_scores(adapter, system, user, vectors, layer_of, free_text=None,
+                role=None, personas=None):
+    """Projections at the decision point D, and at the read point R when asked.
+
+    Both come out of ONE forward pass: reading two positions is free, running the
+    model twice would double the most expensive part of the study.
+    """
     ids = adapter.build_prompt_ids(user, system, assistant_prefix=TEACHER_PREFIX)
-    h = point_e_hidden(adapter, ids)
-    return ids, project_scores(h, vectors, layer_of)
+    r_idx = None
+    if free_text is not None:
+        r_idx = read_point_index(adapter, free_text, ids, role=role, personas=personas)
+    hs = hidden_at_positions(adapter, ids, {"D": -1, "R": r_idx})
+    sc_d = project_scores(hs["D"], vectors, layer_of)
+    sc_r = project_scores(hs["R"], vectors, layer_of) if hs["R"] is not None else None
+    return ids, sc_d, sc_r
 
 
 def main() -> int:
@@ -158,6 +171,10 @@ def main() -> int:
                     help="use only the first N neutral baseline sentences (0 = all). The "
                          "baseline is re-measured per cell, so on a tiny run it dominates the "
                          "cost; keep it full for anything whose z-scores are reported.")
+    ap.add_argument("--read-point", action="store_true", default=True,
+                    help="also read the state at the last token of the patient text "
+                         "(R), from the same forward pass as the decision point")
+    ap.add_argument("--no-read-point", dest="read_point", action="store_false")
     ap.add_argument("--ablation-seed", type=int, default=12345)
     ap.add_argument("--ablation-limit", type=int, default=0,
                     help="run the ablation arms on only N item pairs (0 = all). The intact "
@@ -232,27 +249,50 @@ def main() -> int:
             tag = f"{role}/{arm}"
             # 1) baseline projections under this condition
             base_raw = {c: [] for c in concepts}
+            base_raw_r = {c: [] for c in concepts}
             for txt in baseline:
                 system, user = build_decision_messages(txt, role=role, personas=PERSONAS)
                 with (_ablation_ctx(rt, ablate_vecs, layer_of, arm, args.ablation_seed)
                       if ablated else nullcontext()):
-                    _, sc = _raw_scores(adapter, system, user, vectors, layer_of)
+                    _, sc, sc_r = _raw_scores(
+                        adapter, system, user, vectors, layer_of,
+                        free_text=txt if args.read_point else None,
+                        role=role, personas=PERSONAS)
                 for c in concepts:
                     base_raw[c].append(sc[c])
+                    if sc_r is not None:
+                        base_raw_r[c].append(sc_r[c])
             bmean = {c: float(np.mean(base_raw[c])) for c in concepts}
             bstd = {c: float(np.std(base_raw[c]) + 1e-9) for c in concepts}
+            # R needs its own reference: it sits at a different position, so its
+            # projections have a different scale and cannot share D's baseline
+            have_r = all(base_raw_r[c] for c in concepts)
+            bmean_r = {c: float(np.mean(base_raw_r[c])) for c in concepts} if have_r else None
+            bstd_r = {c: float(np.std(base_raw_r[c]) + 1e-9) for c in concepts} if have_r else None
 
             # 2) items
             for it in arm_items:
                 system, user = build_decision_messages(it["text"], role=role, personas=PERSONAS)
                 with (_ablation_ctx(rt, ablate_vecs, layer_of, arm, args.ablation_seed)
                       if ablated else nullcontext()):
-                    ids, raw = _raw_scores(adapter, system, user, vectors, layer_of)
+                    ids, raw, raw_r = _raw_scores(
+                        adapter, system, user, vectors, layer_of,
+                        free_text=it["text"] if args.read_point else None,
+                        role=role, personas=PERSONAS)
                     pred = predict_generative(adapter, ids, matcher,
                                               max_new_tokens=args.max_new_tokens, floor=args.map_floor)
                     dsum = decision_summary(adapter, ids)
                 z = zscore(raw, bmean, bstd)
+                z_r = (zscore(raw_r, bmean_r, bstd_r)
+                       if raw_r is not None and bmean_r is not None else None)
                 correct = (pred.top1_id == it["gold_pro_id"]) if it["gold_class"] == "term" else None
+                # A binary right/wrong throws away most of what the decision carries:
+                # picking the right term with a 0.9 margin and picking it with a 0.02
+                # margin count the same. The margin is continuous, comes free out of
+                # the same forward pass, and gives the role x framing contrast far
+                # more resolution than 112 binary items can.
+                gen = (pred.generated or "").strip()
+                abstained = gen.lower().strip('"\'.,; ') in ABSTAIN_MARKERS
                 rows.append({
                     "record_id": it["record_id"], "pair_id": it["pair_id"],
                     "text": it["text"],
@@ -267,7 +307,21 @@ def main() -> int:
                     "model_matched": pred.matched,
                     "correct": correct,
                     "z": {c: round(z[c], 3) for c in concepts},
+                    # R = read point, last token of the patient text; D above is
+                    # the decision point. Same forward pass, different position.
+                    "z_read": ({c: round(z_r[c], 3) for c in concepts}
+                               if z_r is not None else None),
+                    # --- decision profile, all free from the same forward pass ---
                     "decision_entropy": round(dsum["entropy"], 3),
+                    "decision_margin": round(dsum["top1_top2_margin"], 5),
+                    "decision_top1_prob": round(dsum["top1_prob"], 5),
+                    "decision_top_token_ids": dsum["top_token_ids"],
+                    # abstaining on purpose and emitting something unmappable both
+                    # end with top1_id None, but they are different behaviours: only
+                    # the first is the model declining to code
+                    "abstained": bool(abstained),
+                    "unmappable": bool(not abstained and pred.top1_id is None),
+                    "n_generated_tokens": len(gen.split()),
                     **mapper_ref[it["record_id"]],
                 })
             done = sum(1 for r in rows if r["role"] == role and r["arm"] == arm)
