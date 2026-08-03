@@ -89,13 +89,49 @@ centinaio di confronti, quindi girano su un sottocampione stratificato per
 categoria. Con questi valori il costo per modello è ~1400 righe contro le 924 del
 run vecchio, invece delle 3168 di un fattoriale pieno.
 
-### Ordine dei modelli
+### Selezione dei modelli, a tier
 
-Sedici modelli, ordinati per priorità: se la sessione muore a metà, quello che è
-finito è quello che serve di più. Le coppie base ↔ MeditronFO stanno adiacenti
-perché una coppia a metà non serve a niente, e vanno dal più economico al più caro.
-Minerva e Velvet sono in fondo ed **esplorativi**: due modelli non separano
-«italiano nativo» da «questi due modelli», quindi è n=2 e va etichettato così.
+Il criterio del taglio: **si tiene quello che risponde a una domanda che stai
+facendo.** L'endpoint primario è ruolo × framing, non il contrasto base ↔
+medicalizzato — le coppie MeditronFO sono la storia secondaria. Spendere il 40% del
+tempo GPU su due coppie nuove da 22B e 32B mentre l'endpoint che porta l'abstract
+gira su modelli già disponibili è il modo classico di arrivare al 1 settembre con
+metà dei run fatti e nessun risultato completo.
+
+| tier | modelli | costo | cosa aggiunge |
+|---|---|---|---|
+| **1 — attivo** | 9 | 43% | esattamente i nove già pubblicati, 3 coppie incluse |
+| 2 | +2 | +16% | coppia EuroLLM-22B |
+| 3 | +2 | +24% | coppia OLMo-2-32B |
+| 4 | +3 | +18% | MedGemma, Minerva, Velvet |
+
+**Tier 1 è la storia più pulita possibile**: stessi modelli di prima, pipeline
+corretta, ogni numero direttamente confrontabile con quello pubblicato. Contiene già
+tre coppie base ↔ MeditronFO, che bastano per la sezione M, e sette dei nove modelli
+non sono al pavimento, quindi possono esprimere l'effetto ruolo.
+
+Si riattiva un tier scommentando una riga `MODELS +=` nella cella 19. L'ordine non è
+arbitrario:
+
+- **EuroLLM-22B prima di OLMo** perché costa meno e, insieme alla coppia 9B, risponde
+  a una domanda vera: l'effetto della medicalizzazione scala con la taglia, dentro la
+  stessa famiglia e con la stessa ricetta? Nessun'altra coppia offre questo contrasto.
+- **OLMo-2-32B** porta la serie a cinque coppie ed è l'unico modello aperto anche nei
+  dati di pretraining. Ma la domanda che quell'apertura sblocca — da dove viene questa
+  direzione — non la risolvi entro settembre: per ora vale la riga nei limiti più del
+  tempo GPU.
+- **Tier 4 non risponde a niente che questo studio chieda.** MedGemma è la
+  medicalizzazione di Google, ricetta diversa da EPFL, quindi fuori dalla serie
+  controllata. Minerva e Velvet aprono l'asse italiano nativo, ma differiscono per
+  pretraining, tokenizer, dati, taglia e data: n=2, osservazione descrittiva.
+
+Nessun modello va escluso perché va male. Apertus-8B è al pavimento e Gemma-4-12B è
+quello in cui la direzione casuale batte quella emotiva di quattordici volte: sono
+reperti, non motivi di esclusione. Toglierli sarebbe esattamente la selezione che
+tutto il resto di questo lavoro serve a evitare.
+
+Il preflight (cella 15) controlla **tutti** i tier anche se non attivi, così scopri
+subito se un modello è gated o assente invece che a metà run.
 
 ## I due cancelli
 
