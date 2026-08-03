@@ -99,15 +99,25 @@ def main() -> int:
         c = [r["correct"] for r in sub if r["correct"] is not None]
         return (round(sum(c) / len(c), 4), len(c)) if c else (None, 0)
 
+    # Keyed by ARM, not by the ablated flag. With three arms that flag is true for
+    # both the emotion and the random ablation, so an "ablated" cell would silently
+    # average the intervention with its own control -- and the report reads that cell.
+    arms_all = sorted({r.get("arm", "emotion" if r["ablated"] else "intact") for r in rows})
     B = {}
     for role in roles:
         B[role] = {}
-        for abl in (False, True):
+        for arm in arms_all:
             for fr in ("neutral", "emotional", "all"):
-                sub = [r for r in term if r["role"] == role and r["ablated"] == abl
+                sub = [r for r in term if r["role"] == role
+                       and r.get("arm", "emotion" if r["ablated"] else "intact") == arm
                        and (fr == "all" or r["framing"] == fr)]
                 a, n = acc(sub)
-                B[role][f"{'ablated' if abl else 'intact'}|{fr}"] = {"acc": a, "n": n}
+                B[role][f"{arm}|{fr}"] = {"acc": a, "n": n}
+        # back-compatible alias: "ablated" means the emotion arm, never the pooled two
+        for fr in ("neutral", "emotional", "all"):
+            src = B[role].get(f"emotion|{fr}")
+            if src is not None:
+                B[role][f"ablated|{fr}"] = src
     # mapper reference accuracy (condition-independent; use intact/oncologo rows once per record)
     seen, mp_correct = set(), []
     for r in term:
