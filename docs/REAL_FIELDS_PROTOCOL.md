@@ -96,16 +96,29 @@ Primary Colab/H100 run:
 ```bash
 python scripts/run_real_study.py \
   --xlsx /content/private/sinomi_campi_aperti.xlsx \
-  --dtype bfloat16 --device auto --cohort primary
+  --dtype bfloat16 --device auto --cohort primary \
+  --ephemeral-model-cache-root /content/oncoemotion_hf_model_cache \
+  --min-free-disk-gb 100
 ```
+
+The low-disk mode processes one model end to end, then deletes only that model's
+isolated local Hub/Xet cache. It prevents several 8B/27B weight caches from
+accumulating on the Colab VM. Valid vectors and redacted real-field artifacts are
+retained and still resume through their content fingerprints.
 
 Secondary replication:
 
 ```bash
 python scripts/run_real_study.py \
   --xlsx /content/private/sinomi_campi_aperti.xlsx \
-  --dtype bfloat16 --device auto --cohort all
+  --dtype bfloat16 --device auto --cohort all \
+  --ephemeral-model-cache-root /content/oncoemotion_hf_model_cache \
+  --min-free-disk-gb 100
 ```
+
+The secondary run requires gated access to both Google MedGemma repositories on
+the same Hugging Face account used for the Colab token. A `403` is an account-access
+failure, not a study-data or ingestion failure.
 
 Package only redacted outputs:
 

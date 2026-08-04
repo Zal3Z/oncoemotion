@@ -26,6 +26,7 @@ import argparse
 import hashlib
 import json
 import re
+import shutil
 import subprocess
 import sys
 import time
@@ -35,9 +36,9 @@ _ROOT = Path(__file__).resolve().parents[1]
 PY = sys.executable
 
 DEFAULT_TRIO = [
-    "Qwen/Qwen3-8B",                          # China — Alibaba, open
-    "mistralai/Ministral-8B-Instruct-2410",   # Europe — Mistral (FR); plain-text decoder
-    "google/gemma-3-4b-it",                   # USA — Google, instruction-tuned
+    "Qwen/Qwen3-8B",  # China — Alibaba, open
+    "mistralai/Ministral-8B-Instruct-2410",  # Europe — Mistral (FR); plain-text decoder
+    "google/gemma-3-4b-it",  # USA — Google, instruction-tuned
 ]
 # Note: Ministral-3-8B-Instruct-2512 is a MULTIMODAL (Mistral3) model that
 # AutoModelForCausalLM can't load; Ministral-8B-Instruct-2410 is the clean text one.
@@ -112,9 +113,12 @@ def _complete_manifest(path: Path, model_id: str, fingerprint: str, stages) -> b
     except (OSError, ValueError):
         return False
     completed = set(data.get("stages") or [])
-    return bool(data.get("complete") and data.get("model_id") == model_id
-                and data.get("pipeline_fingerprint") == fingerprint
-                and set(stages).issubset(completed))
+    return bool(
+        data.get("complete")
+        and data.get("model_id") == model_id
+        and data.get("pipeline_fingerprint") == fingerprint
+        and set(stages).issubset(completed)
+    )
 
 
 def main() -> int:
@@ -126,12 +130,25 @@ def main() -> int:
     # so pca/logistic/lda are fast even at large hidden sizes.
     ap.add_argument("--methods", nargs="+", default=["diff_of_means", "pca", "logistic", "lda"])
     ap.add_argument("--outroot", type=Path, default=_ROOT / "outputs/models")
-    ap.add_argument("--study-config", type=Path,
-                    default=_ROOT / "configs/study_esmo_2026.yaml")
-    ap.add_argument("--stages", nargs="+", choices=ALL_STAGES, default=ALL_STAGES,
-                    help="run only the requested stages; ESMO role study needs vectors")
-    ap.add_argument("--skip-existing", action="store_true",
-                    help="skip a model if its clinical_probing.json already exists")
+    ap.add_argument("--study-config", type=Path, default=_ROOT / "configs/study_esmo_2026.yaml")
+    ap.add_argument(
+        "--stages",
+        nargs="+",
+        choices=ALL_STAGES,
+        default=ALL_STAGES,
+        help="run only the requested stages; ESMO role study needs vectors",
+    )
+    ap.add_argument(
+        "--skip-existing",
+        action="store_true",
+        help="skip a model if its clinical_probing.json already exists",
+    )
+    ap.add_argument(
+        "--min-free-disk-gb",
+        type=float,
+        default=0.0,
+        help="stop before downloading a model when less disk space is available",
+    )
     args = ap.parse_args()
 
     # shared, model-agnostic dataset
@@ -150,13 +167,19 @@ def main() -> int:
         d.mkdir(parents=True, exist_ok=True)
         rep = d / "clinical_probing.json"
         manifest = d / "pipeline_manifest.json"
-        if args.skip_existing and _complete_manifest(
-                manifest, model_id, fingerprint, stages):
+        if args.skip_existing and _complete_manifest(manifest, model_id, fingerprint, stages):
             print(f"[skip] {model_id} (complete manifest matches current pipeline)")
             summary.append((model_id, "skipped"))
             continue
         if args.skip_existing and rep.exists():
             print(f"[rerun] {model_id}: outputs exist but manifest is absent or stale")
+        if args.min_free_disk_gb:
+            free_gb = shutil.disk_usage(args.outroot).free / 1_000_000_000
+            if free_gb < args.min_free_disk_gb:
+                status = f"FAILED: only {free_gb:.1f} GB free; need {args.min_free_disk_gb:.1f} GB"
+                print(f"[FAIL] {model_id}: {status}", flush=True)
+                summary.append((model_id, status))
+                break
         # A failed rerun must never leave an older "complete" marker behind.
         manifest.unlink(missing_ok=True)
 
@@ -166,27 +189,81 @@ def main() -> int:
         common = ["--model", model_id, "--dtype", args.dtype, "--device", args.device]
         steps = []
         if "vectors" in stages:
-            steps.extend([
-                [PY, str(_ROOT / "scripts/build_vectors.py"), *common,
-                 "--methods", *args.methods, "--acts-out", str(acts), "--vec-out", str(vecs)],
-                [PY, str(_ROOT / "scripts/validate_vectors.py"),
-                 "--acts", str(acts), "--vecs", str(vecs), "--report", str(val),
-                 "--figure", str(d / "layer_sweep_auroc.png"),
-                 "--study-config", str(args.study_config)],
-            ])
+            steps.extend(
+                [
+                    [
+                        PY,
+                        str(_ROOT / "scripts/build_vectors.py"),
+                        *common,
+                        "--methods",
+                        *args.methods,
+                        "--acts-out",
+                        str(acts),
+                        "--vec-out",
+                        str(vecs),
+                    ],
+                    [
+                        PY,
+                        str(_ROOT / "scripts/validate_vectors.py"),
+                        "--acts",
+                        str(acts),
+                        "--vecs",
+                        str(vecs),
+                        "--report",
+                        str(val),
+                        "--figure",
+                        str(d / "layer_sweep_auroc.png"),
+                        "--study-config",
+                        str(args.study_config),
+                    ],
+                ]
+            )
         if "probing" in stages:
-            steps.append([PY, str(_ROOT / "scripts/run_probing.py"), *common,
-                          "--vecs", str(vecs), "--val-report", str(val),
-                          "--report", str(rep), "--figure", str(d / "clinical_gradients.png")])
+            steps.append(
+                [
+                    PY,
+                    str(_ROOT / "scripts/run_probing.py"),
+                    *common,
+                    "--vecs",
+                    str(vecs),
+                    "--val-report",
+                    str(val),
+                    "--report",
+                    str(rep),
+                    "--figure",
+                    str(d / "clinical_gradients.png"),
+                ]
+            )
         if "steering" in stages:
-            steps.append([PY, str(_ROOT / "scripts/run_steering.py"), *common,
-                          "--vecs", str(vecs), "--val-report", str(val),
-                          "--report", str(d / "steering_effects.json"),
-                          "--figure", str(d / "steering_effects.png")])
+            steps.append(
+                [
+                    PY,
+                    str(_ROOT / "scripts/run_steering.py"),
+                    *common,
+                    "--vecs",
+                    str(vecs),
+                    "--val-report",
+                    str(val),
+                    "--report",
+                    str(d / "steering_effects.json"),
+                    "--figure",
+                    str(d / "steering_effects.png"),
+                ]
+            )
         if "patching" in stages:
-            steps.append([PY, str(_ROOT / "scripts/run_patching.py"), *common,
-                          "--vecs", str(vecs), "--val-report", str(val),
-                          "--report", str(d / "patching_effects.json")])
+            steps.append(
+                [
+                    PY,
+                    str(_ROOT / "scripts/run_patching.py"),
+                    *common,
+                    "--vecs",
+                    str(vecs),
+                    "--val-report",
+                    str(val),
+                    "--report",
+                    str(d / "patching_effects.json"),
+                ]
+            )
         ok = True
         for step in steps:
             if run(step) != 0:
@@ -197,22 +274,29 @@ def main() -> int:
         if ok:
             try:
                 git_commit = subprocess.check_output(
-                    ["git", "rev-parse", "HEAD"], cwd=_ROOT, text=True).strip()
+                    ["git", "rev-parse", "HEAD"], cwd=_ROOT, text=True
+                ).strip()
             except Exception:
                 git_commit = None
-            manifest.write_text(json.dumps({
-                "complete": True,
-                "model_id": model_id,
-                "git_commit": git_commit,
-                "pipeline_fingerprint": fingerprint,
-                "pipeline_inputs": _inputs_for(stages, args.study_config),
-                "study_config": str(args.study_config),
-                "stages": stages,
-                "dtype": args.dtype,
-                "device": args.device,
-                "methods": args.methods,
-            }, indent=2), encoding="utf-8")
-        summary.append((model_id, f"{'ok' if ok else 'FAILED'} in {dt/60:.1f} min"))
+            manifest.write_text(
+                json.dumps(
+                    {
+                        "complete": True,
+                        "model_id": model_id,
+                        "git_commit": git_commit,
+                        "pipeline_fingerprint": fingerprint,
+                        "pipeline_inputs": _inputs_for(stages, args.study_config),
+                        "study_config": str(args.study_config),
+                        "stages": stages,
+                        "dtype": args.dtype,
+                        "device": args.device,
+                        "methods": args.methods,
+                    },
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+        summary.append((model_id, f"{'ok' if ok else 'FAILED'} in {dt / 60:.1f} min"))
 
     print("\n=== multi-model run summary ===")
     for m, st in summary:

@@ -12,7 +12,9 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -31,11 +33,69 @@ def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def _run(command: list[str]) -> None:
+def _run(command: list[str], *, env: dict[str, str] | None = None) -> None:
     print("\n$ " + " ".join(command), flush=True)
-    completed = subprocess.run(command)
+    completed = subprocess.run(command, env=env)
     if completed.returncode:
         raise SystemExit(completed.returncode)
+
+
+def _safe_remove_model_cache(cache_dir: Path, cache_root: Path) -> None:
+    """Remove one disposable model cache, never its root or an outside path."""
+    root = cache_root.resolve()
+    target = cache_dir.resolve()
+    if target == root or root not in target.parents:
+        raise ValueError(f"unsafe model-cache target: {target}")
+    if target.exists():
+        shutil.rmtree(target)
+
+
+def _model_environment(cache_root: Path, model_id: str) -> tuple[Path, dict[str, str]]:
+    """Build a child environment whose Hub/Xet cache contains one model only."""
+    root = cache_root.resolve()
+    root.mkdir(parents=True, exist_ok=True)
+    cache_dir = (root / _slug(model_id)).resolve()
+    _safe_remove_model_cache(cache_dir, root)
+    cache_dir.mkdir(parents=True)
+
+    env = os.environ.copy()
+    if not env.get("HF_TOKEN"):
+        try:
+            from huggingface_hub import get_token
+
+            token = get_token()
+        except (ImportError, OSError):
+            token = None
+        if token:
+            env["HF_TOKEN"] = token
+    env.update(
+        {
+            "HF_HOME": str(cache_dir),
+            "HF_HUB_CACHE": str(cache_dir / "hub"),
+            "HF_XET_CACHE": str(cache_dir / "xet"),
+            # The study never reuses byte ranges across different repositories.
+            "HF_XET_CHUNK_CACHE_SIZE_BYTES": "0",
+            "HF_XET_SHARD_CACHE_SIZE_LIMIT": "1000000000",
+        }
+    )
+    return cache_dir, env
+
+
+def _require_free_disk(path: Path, minimum_gb: float) -> None:
+    if not minimum_gb:
+        return
+    path.mkdir(parents=True, exist_ok=True)
+    free_gb = shutil.disk_usage(path).free / 1_000_000_000
+    if free_gb < minimum_gb:
+        raise SystemExit(
+            f"Insufficient disk: {free_gb:.1f} GB free, {minimum_gb:.1f} GB required. "
+            "In Colab restart the runtime to discard legacy model caches, then resume."
+        )
+
+
+def _cache_is_empty(cache_dir: Path) -> bool:
+    hub = cache_dir / "hub"
+    return not hub.exists() or not any(hub.iterdir())
 
 
 def _role_artifact_current(
@@ -50,27 +110,30 @@ def _role_artifact_current(
     roles: list[str],
     expected_items: int,
 ) -> bool:
-    if not rows_path.exists() or not meta_path.exists():
+    required = [rows_path, meta_path, study_path, dataset_path, vectors_path, validation_path]
+    if not all(path.exists() for path in required):
         return False
     try:
         meta = json.loads(meta_path.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return False
-    return all([
-        meta.get("model_id") == model_id,
-        meta.get("study_config_sha256") == _sha256(study_path),
-        meta.get("dataset_sha256") == _sha256(dataset_path),
-        meta.get("vectors_sha256") == _sha256(vectors_path),
-        meta.get("validation_sha256") == _sha256(validation_path),
-        meta.get("roles") == roles,
-        meta.get("n_items") == expected_items,
-        meta.get("n_rows") == expected_items * len(roles),
-        meta.get("arms") == ["intact"],
-        meta.get("arms_requested") == ["intact"],
-        meta.get("scorer") == "adaptive",
-        meta.get("text_redacted") is True,
-        meta.get("rows_sha256") == _sha256(rows_path),
-    ])
+    return all(
+        [
+            meta.get("model_id") == model_id,
+            meta.get("study_config_sha256") == _sha256(study_path),
+            meta.get("dataset_sha256") == _sha256(dataset_path),
+            meta.get("vectors_sha256") == _sha256(vectors_path),
+            meta.get("validation_sha256") == _sha256(validation_path),
+            meta.get("roles") == roles,
+            meta.get("n_items") == expected_items,
+            meta.get("n_rows") == expected_items * len(roles),
+            meta.get("arms") == ["intact"],
+            meta.get("arms_requested") == ["intact"],
+            meta.get("scorer") == "adaptive",
+            meta.get("text_redacted") is True,
+            meta.get("rows_sha256") == _sha256(rows_path),
+        ]
+    )
 
 
 def main() -> int:
@@ -88,6 +151,20 @@ def main() -> int:
     ap.add_argument("--limit", type=int, default=0, help="pilot records per model; 0 = full source")
     ap.add_argument("--baseline-limit", type=int, default=0)
     ap.add_argument("--skip-existing", action=argparse.BooleanOptionalAction, default=True)
+    ap.add_argument(
+        "--ephemeral-model-cache-root",
+        type=Path,
+        help=(
+            "isolate each model in a disposable Hugging Face cache and delete it "
+            "only after vectors and real-field measurements finish"
+        ),
+    )
+    ap.add_argument(
+        "--min-free-disk-gb",
+        type=float,
+        default=0.0,
+        help="minimum free disk required before a model download",
+    )
     ap.add_argument(
         "--dataset",
         type=Path,
@@ -125,28 +202,6 @@ def main() -> int:
     ]
     _run(ingest)
 
-    vector_command = [
-        PY,
-        str(_ROOT / "scripts/run_all_models.py"),
-        "--models",
-        *models,
-        "--dtype",
-        args.dtype,
-        "--device",
-        args.device,
-        "--outroot",
-        str(args.model_outroot),
-        "--stages",
-        "vectors",
-        "--methods",
-        "diff_of_means",
-        "--study-config",
-        str(args.study_config),
-    ]
-    if args.skip_existing:
-        vector_command.append("--skip-existing")
-    _run(vector_command)
-
     args.outroot.mkdir(parents=True, exist_ok=True)
     completed_rows = []
     for model_id in models:
@@ -156,53 +211,103 @@ def main() -> int:
         validation = model_dir / "vector_validation.json"
         rows_path = args.outroot / f"{slug}__rows.jsonl"
         meta_path = args.outroot / f"{slug}__meta.json"
-        if args.skip_existing and not args.limit and _role_artifact_current(
-            model_id,
-            rows_path,
-            meta_path,
-            study_path=args.study_config,
-            dataset_path=args.dataset,
-            vectors_path=vectors,
-            validation_path=validation,
-            roles=roles,
-            expected_items=expected_records,
-        ):
-            print(f"[skip] {model_id}: current real-field artifact")
+        cache_dir = None
+        child_env = None
+        if args.ephemeral_model_cache_root:
+            cache_dir, child_env = _model_environment(
+                args.ephemeral_model_cache_root,
+                model_id,
+            )
+        try:
+            vector_command = [
+                PY,
+                str(_ROOT / "scripts/run_all_models.py"),
+                "--models",
+                model_id,
+                "--dtype",
+                args.dtype,
+                "--device",
+                args.device,
+                "--outroot",
+                str(args.model_outroot),
+                "--stages",
+                "vectors",
+                "--methods",
+                "diff_of_means",
+                "--study-config",
+                str(args.study_config),
+            ]
+            if args.skip_existing:
+                vector_command.append("--skip-existing")
+            if args.min_free_disk_gb:
+                vector_command.extend(
+                    [
+                        "--min-free-disk-gb",
+                        str(args.min_free_disk_gb),
+                    ]
+                )
+            _run(vector_command, env=child_env)
+
+            if (
+                args.skip_existing
+                and not args.limit
+                and _role_artifact_current(
+                    model_id,
+                    rows_path,
+                    meta_path,
+                    study_path=args.study_config,
+                    dataset_path=args.dataset,
+                    vectors_path=vectors,
+                    validation_path=validation,
+                    roles=roles,
+                    expected_items=expected_records,
+                )
+            ):
+                print(f"[skip] {model_id}: current real-field artifact")
+                completed_rows.append(rows_path)
+                continue
+
+            # If the vector stage was skipped, the isolated cache is still empty
+            # and the role stage will perform the model download itself.
+            if cache_dir is not None and _cache_is_empty(cache_dir):
+                _require_free_disk(args.model_outroot, args.min_free_disk_gb)
+            command = [
+                PY,
+                str(_ROOT / "scripts/run_role_emotion.py"),
+                "--model",
+                model_id,
+                "--dtype",
+                args.dtype,
+                "--device",
+                args.device,
+                "--dataset",
+                str(args.dataset),
+                "--vecs",
+                str(vectors),
+                "--val-report",
+                str(validation),
+                "--out",
+                str(args.outroot),
+                "--roles",
+                *roles,
+                "--arms",
+                "intact",
+                "--scorer",
+                "adaptive",
+                "--study-config",
+                str(args.study_config),
+                "--redact-text",
+            ]
+            if args.limit:
+                command.extend(["--limit", str(args.limit)])
+            if args.baseline_limit:
+                command.extend(["--baseline-limit", str(args.baseline_limit)])
+            _run(command, env=child_env)
             completed_rows.append(rows_path)
-            continue
-        command = [
-            PY,
-            str(_ROOT / "scripts/run_role_emotion.py"),
-            "--model",
-            model_id,
-            "--dtype",
-            args.dtype,
-            "--device",
-            args.device,
-            "--dataset",
-            str(args.dataset),
-            "--vecs",
-            str(vectors),
-            "--val-report",
-            str(validation),
-            "--out",
-            str(args.outroot),
-            "--roles",
-            *roles,
-            "--arms",
-            "intact",
-            "--scorer",
-            "adaptive",
-            "--study-config",
-            str(args.study_config),
-            "--redact-text",
-        ]
-        if args.limit:
-            command.extend(["--limit", str(args.limit)])
-        if args.baseline_limit:
-            command.extend(["--baseline-limit", str(args.baseline_limit)])
-        _run(command)
-        completed_rows.append(rows_path)
+        finally:
+            if cache_dir is not None:
+                _safe_remove_model_cache(cache_dir, args.ephemeral_model_cache_root)
+                print(f"[cache cleared] {model_id}", flush=True)
 
     if args.limit or args.models:
         print("\nPilot/override complete; pooled confirmatory analysis intentionally skipped.")
@@ -220,7 +325,9 @@ def main() -> int:
         str(args.outroot / "real_primary_analysis.json"),
     ]
     _run(analysis_command)
-    print("\nReal-field study complete. Export outputs only; keep the workbook and data/real local.")
+    print(
+        "\nReal-field study complete. Export outputs only; keep the workbook and data/real local."
+    )
     return 0
 
 

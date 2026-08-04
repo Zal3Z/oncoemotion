@@ -25,7 +25,9 @@
 
 1. `ingest_real_fields.py` - preserves every assessment row and creates a redaction key.
 2. `run_real_study.py` - builds expanded independent affect vectors, runs the frozen
-   primary or extended cohort and measures two token-matched roles.
+   primary or extended cohort and measures two token-matched roles. On constrained
+   Colab disks, `--ephemeral-model-cache-root` keeps one model cache at a time and
+   removes it only after that model's vector and real-field stages complete.
 3. `analyze_real_fields.py` - gold-code accuracy, non-PRO abstention, within-item
    affect/value slopes, affect/error association and clustered sensitivity analyses.
 4. `package_real_results.py` - privacy gate and result archive; raw text is rejected.

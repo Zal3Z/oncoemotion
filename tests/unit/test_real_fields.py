@@ -57,13 +57,15 @@ def test_real_ingestion_fails_closed_on_unmapped_pro_label():
     ingest = _script("ingest_real_fields.py")
     with pytest.raises(ValueError, match="unmapped PRO-CTCAE"):
         ingest.convert_rows(
-            [{
-                "campo_aperto": "Sintomo",
-                "valore_associato": 1,
-                "fonte_assoczione": "PRO-CTCAE",
-                "fonte_associazione": "PRO-CTCAE",
-                "item_associato": "Unknown",
-            }],
+            [
+                {
+                    "campo_aperto": "Sintomo",
+                    "valore_associato": 1,
+                    "fonte_assoczione": "PRO-CTCAE",
+                    "fonte_associazione": "PRO-CTCAE",
+                    "item_associato": "Unknown",
+                }
+            ],
             {},
             {},
         )
@@ -73,8 +75,14 @@ def test_augmented_emotion_dataset_has_group_separation_and_depth():
     dataset = build_dataset(seed=12345)
     counts = Counter(example.concept for example in dataset)
     for concept in (
-        "afraid_alarmed", "anxious_nervous", "concerned", "sad",
-        "anger", "calm", "hope", "relief",
+        "afraid_alarmed",
+        "anxious_nervous",
+        "concerned",
+        "sad",
+        "anger",
+        "calm",
+        "hope",
+        "relief",
     ):
         assert counts[concept] >= 70
     family_splits = defaultdict(set)
@@ -88,10 +96,23 @@ def test_augmented_emotion_dataset_has_group_separation_and_depth():
 def test_cross_validation_folds_keep_paraphrase_families_together():
     validate = _script("validate_vectors.py")
     concepts = np.array(["fear"] * 6 + ["calm"] * 6)
-    families = np.array([
-        "fear-a", "fear-a", "fear-b", "fear-b", "fear-c", "fear-c",
-        "calm-a", "calm-a", "calm-b", "calm-b", "calm-c", "calm-c",
-    ], dtype=object)
+    families = np.array(
+        [
+            "fear-a",
+            "fear-a",
+            "fear-b",
+            "fear-b",
+            "fear-c",
+            "fear-c",
+            "calm-a",
+            "calm-a",
+            "calm-b",
+            "calm-b",
+            "calm-c",
+            "calm-c",
+        ],
+        dtype=object,
+    )
     folds = validate._stratified_folds(concepts, 3, seed=7, families=families)
     for family in set(families):
         assert len(set(folds[families == family])) == 1
@@ -102,13 +123,15 @@ def test_real_primary_residual_association_recovers_direction():
     rows = []
     for index in range(80):
         exposure = ((index * 7) % 17) / 17
-        rows.append({
-            "source_item": f"item-{index % 4}",
-            "grade": index % 5,
-            "n_words": 3 + index % 7,
-            "x": exposure,
-            "y": exposure > 0.45,
-        })
+        rows.append(
+            {
+                "source_item": f"item-{index % 4}",
+                "grade": index % 5,
+                "n_words": 3 + index % 7,
+                "x": exposure,
+                "y": exposure > 0.45,
+            }
+        )
     slope = analysis._residual_association(
         rows,
         exposure=lambda row: row["x"],
@@ -136,18 +159,52 @@ def test_real_hierarchical_bootstrap_is_deterministic():
 def test_result_packager_rejects_raw_text(tmp_path):
     package = _script("package_real_results.py")
     path = tmp_path / "model__rows.jsonl"
-    path.write_text(json.dumps({
-        "text": "testo clinico",
-        "source_id": "abc",
-        "text_redacted": False,
-    }) + "\n", encoding="utf-8")
+    path.write_text(
+        json.dumps(
+            {
+                "text": "testo clinico",
+                "source_id": "abc",
+                "text_redacted": False,
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
     with pytest.raises(ValueError, match="raw or unverified"):
         package._assert_redacted(path)
 
-    path.write_text(json.dumps({
-        "text": "abc",
-        "source_id": "abc",
-        "text_redacted": True,
-        "model_generated": None,
-    }) + "\n", encoding="utf-8")
+    path.write_text(
+        json.dumps(
+            {
+                "text": "abc",
+                "source_id": "abc",
+                "text_redacted": True,
+                "model_generated": None,
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
     package._assert_redacted(path)
+
+
+def test_real_runner_confines_and_clears_ephemeral_model_cache(tmp_path, monkeypatch):
+    runner = _script("run_real_study.py")
+    monkeypatch.setenv("HF_TOKEN", "test-token")
+    root = tmp_path / "model-cache"
+
+    cache, env = runner._model_environment(root, "example/Model-8B")
+    assert cache.parent == root.resolve()
+    assert env["HF_HOME"] == str(cache)
+    assert env["HF_HUB_CACHE"] == str(cache / "hub")
+    assert env["HF_XET_CACHE"] == str(cache / "xet")
+    assert env["HF_TOKEN"] == "test-token"
+
+    (cache / "sentinel").write_text("temporary", encoding="utf-8")
+    runner._safe_remove_model_cache(cache, root)
+    assert root.is_dir()
+    assert not cache.exists()
+    with pytest.raises(ValueError, match="unsafe"):
+        runner._safe_remove_model_cache(root, root)
+    with pytest.raises(ValueError, match="unsafe"):
+        runner._safe_remove_model_cache(tmp_path / "outside", root)
