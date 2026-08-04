@@ -9,6 +9,11 @@ torch / transformers are imported lazily inside the concrete adapters so this
 package imports cleanly without the ML stack (Phase 1 baseline needs neither).
 """
 
-from oncoemotion.models.base import ModelAdapter, AdapterCapabilities, register_adapter, load_adapter
+from oncoemotion.models.base import (
+    AdapterCapabilities,
+    ModelAdapter,
+    load_adapter,
+    register_adapter,
+)
 
 __all__ = ["ModelAdapter", "AdapterCapabilities", "register_adapter", "load_adapter"]

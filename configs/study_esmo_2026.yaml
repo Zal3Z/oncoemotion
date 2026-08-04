@@ -1,0 +1,124 @@
+protocol_id: "esmo-ai-2026-v2"
+title: "Affective representations and role-conditioned instability in LLM-based PRO-CTCAE coding"
+
+design:
+  roles: ["oncologo", "generico", "none_task", "none_filler"]
+  arms: ["intact", "emotion", "random"]
+  expected_total_records_per_model: 352
+
+models:
+  analysis_policy: "exact_tier1_only"
+  tier1:
+    - "swiss-ai/Apertus-8B-Instruct-2509"
+    - "EPFLiGHT/Apertus-8B-MeditronFO"
+    - "utter-project/EuroLLM-9B-Instruct"
+    - "EPFLiGHT/EuroLLM-9B-MeditronFO"
+    - "Qwen/Qwen3-8B"
+    - "mistralai/Ministral-8B-Instruct-2410"
+    - "google/gemma-3-27b-it"
+    - "EPFLiGHT/Gemma-3-27B-MeditronFO"
+
+# The primary claim is label instability, not an accuracy interaction.  Every
+# contrast below is declared before the definitive Colab run.
+primary:
+  population: "term"
+  arm: "intact"
+  role: "oncologo"
+  control: "none_filler"
+  outcome: "top1_label_disagreement"
+  expected_term_pairs: 112
+  expected_term_records_per_model: 224
+  bootstrap_draws: 5000
+  seed: 20260901
+
+# Key affective secondary question. The controlled dataset contains two kinds of
+# qualifier manipulation: patient-affective reactions and symptom-intensity
+# language. Only the former supports the patient-emotion claim; the latter is a
+# predeclared specificity control and is never silently pooled with it.
+affective_framing:
+  population: "term"
+  subset_field: "manipulation_type"
+  target_subset: "affective_reaction"
+  specificity_control_subset: "symptom_intensity"
+  expected_target_pairs: 69
+  primary_estimand: "role_disagreement_modification_emotional_minus_neutral"
+  secondary_estimands:
+    - "framing_label_disagreement_within_role"
+    - "accuracy_difference_in_differences"
+    - "label_margin_difference_in_differences"
+
+# "Accuracy cannot see it" is an equivalence claim, not a non-significant
+# superiority test.  The claim is supported only when the complete 95% interval
+# for the paired accuracy difference lies inside this margin.
+accuracy_equivalence:
+  margin: 0.05
+
+mechanistic_gate:
+  target_arm: "emotion"
+  control_arm: "random"
+  target_axes: ["afraid_alarmed", "anxious_nervous", "sad"]
+  # Evidence for an affective mechanism requires targeted ablation to attenuate
+  # the role-induced disagreement more than the matched random ablation.
+  outcome: "role_disagreement_attenuation_advantage"
+
+scoring:
+  # Code selection and abstention are different outcomes.  Constrained scoring
+  # supplies the 80-way code; free generation supplies abstention/non-answer.
+  committed_label: "constrained"
+  abstention_outcome: "generative"
+
+affective_profile:
+  # Pre-declared before looking at the definitive role results.  These axes cover
+  # negative affect and professional composure; each must independently pass the
+  # lexical-control gate in vector validation before it is interpreted.
+  concepts:
+    - afraid_alarmed
+    - anxious_nervous
+    - concerned
+    - sad
+    - anger
+    - calm
+    - hope
+    - relief
+  lexical_cosine_max: 0.50
+  min_cross_validated_auroc: 0.60
+  eligibility_policy: "per_model"
+  population_subset_field: "manipulation_type"
+  population_subset_value: "affective_reaction"
+  readouts: ["z_read", "z"]
+  groups:
+    threat_distress:
+      - afraid_alarmed
+      - anxious_nervous
+      - concerned
+      - sad
+    regulation_reassurance:
+      - calm
+      - hope
+      - relief
+    anger_frustration:
+      - anger
+
+# These are matched architecture/family comparisons, not eight independent
+# observations. The pooled medicalization contrast therefore resamples the three
+# families at the outer level and remains explicitly secondary.
+model_pairs:
+  - family: "Apertus-8B"
+    base: "swiss-ai/Apertus-8B-Instruct-2509"
+    medicalized: "EPFLiGHT/Apertus-8B-MeditronFO"
+  - family: "EuroLLM-9B"
+    base: "utter-project/EuroLLM-9B-Instruct"
+    medicalized: "EPFLiGHT/EuroLLM-9B-MeditronFO"
+  - family: "Gemma-3-27B"
+    base: "google/gemma-3-27b-it"
+    medicalized: "EPFLiGHT/Gemma-3-27B-MeditronFO"
+
+secondary_contrasts:
+  - ["generico", "none_filler"]
+  - ["none_task", "none_filler"]
+  - ["oncologo", "generico"]
+
+reporting:
+  abstract_character_limit_excluding_spaces: 2000
+  preferred_category: "Methodology, regulations and policy"
+  preferred_presentation: "Poster"

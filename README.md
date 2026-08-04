@@ -1,246 +1,139 @@
 # oncoemotion
 
-**PRO-CTCAE / CTCAE symptom mapping + emotion-concept mechanistic
-interpretability for oncology symptom free-text (Italian).**
+Italian PRO-CTCAE/CTCAE symptom mapping and mechanistic evaluation of
+role-conditioned affective representations in open-weight language models.
 
-This project studies whether open-field oncology-symptom inputs induce
-*emotion-like internal representations* in an open-weight language model during
-its association of that text with PRO-CTCAE / CTCAE terminology, replicating and
-extending the emotion-concepts + activation-steering paradigm in the clinical
-domain.
+The repository has two deliberately separated components:
 
-> **Framing.** This repository makes **no claim** that the model possesses
-> consciousness, sentience, or subjective experience. It studies *emotion-like
-> internal representations*, *emotion concepts*, *functional states associated
-> with an emotion*, and *causally relevant signals*. It is a **research and
-> clinician-support tool**; it must not perform autonomous diagnosis nor replace
-> clinical review. Inputs indicating potential immediate risk are routed to an
-> organization-defined human workflow.
+1. a deterministic clinical-support mapper with abstention and independent safety
+   routing;
+2. a research pipeline that measures how system roles change internal affective
+   representations and model-generated PRO-CTCAE codes.
 
----
+It does **not** claim consciousness, sentience or subjective emotion. It is not an
+autonomous diagnostic system and does not replace clinical review.
 
-## Status: Phase 1 complete ✅
+## Current study
 
-| Phase | Scope | State |
-|---|---|---|
-| **1** | Repo, terminology loader (80 PRO-CTCAE terms), baseline mapper, safety routing, API, tests | ✅ done, 82 tests green |
-| **1b** | Official terminology integrated: PRO-CTCAE Italian labels (80) + CTCAE v6.0 (850 terms) + IT→CTCAE bridge | ✅ done |
-| **2** | Activation extraction, emotion-concept dataset, vector construction (4 methods), layer sweep, validation | ✅ ran on the local T1000 (Qwen2.5-3B FP16) |
-| **3** | Controlled clinical dataset, point-E emotion probing, confounder analysis, persistence | ✅ ran — see [phase3_report.md](outputs/reports/phase3_report.md) |
-| **4** | Steering / ablation causal experiment at the decision point | ✅ ran (raw + residualized) |
-| **4b** | Activation patching (source→recipient, emotion-direction only) | ✅ ran |
-| **5** | Docker, Streamlit dashboard, final scientific report | ✅ [docs/REPORT.md](docs/REPORT.md), [Dockerfile](Dockerfile), [dashboard](dashboard/streamlit_app.py) |
+The active target is an abstract/poster for ESMO AI & Digital Oncology 2026. The
+pre-run protocol is [`docs/ESMO_2026_PROTOCOL.md`](docs/ESMO_2026_PROTOCOL.md), the
+machine-readable analysis contract is
+[`configs/study_esmo_2026.yaml`](configs/study_esmo_2026.yaml), and the execution
+guide is [`docs/ESECUZIONE.md`](docs/ESECUZIONE.md). The final human checks are in
+[`docs/ESMO_2026_SUBMISSION_CHECKLIST.md`](docs/ESMO_2026_SUBMISSION_CHECKLIST.md),
+and the result-driven layout is in
+[`docs/ESMO_2026_POSTER_OUTLINE.md`](docs/ESMO_2026_POSTER_OUTLINE.md).
 
-**Final synthesis (residualized run):** emotion concepts are decodable and mutually
-distinct (one-vs-rest held-out AUROC 0.78–1.00, deep layers); residualization
-**removed the fear↔negative-valence confound (r 0.76 → 0.00)**; but once that
-confound is removed the fear↔severity link becomes inconsistent and **causal
-steering/patching do not exceed random-vector controls** (0/7 decision flips). So:
-emotion-like representations exist and persist to the decision, but this experiment
-does **not** establish a fear-specific *causal* driver of the coding decision. Full
-write-up: [docs/REPORT.md](docs/REPORT.md).
+Primary clinical question: holding the item fixed, how often does an oncologist
+persona change the selected PRO-CTCAE code relative to a token-matched,
+identity-free control? The key affective secondary asks whether patient-affective
+wording amplifies or attenuates that role effect. The 69 affective-reaction pairs are
+analysed separately from 43 symptom-intensity controls. A causal affect claim is made
+only if targeted ablation attenuates cross-role disagreement more than matched random
+ablation.
 
-### Phase 3/4 — how to run
+All previously generated HTML reports and `oncoemotion_results*` directories predate
+the frozen protocol. They are exploratory and must not be cited as definitive ESMO
+results.
 
-```bash
-python scripts/run_probing.py    # point-E emotion scores vs severity, confounders, persistence
-python scripts/run_steering.py   # causal steering/ablation effect on the decision
-python scripts/run_patching.py   # activation patching (source→recipient)
-python scripts/visualize_internals.py   # animated token×layer "x-ray" (GIFs + montage + interactive HTML)
-python scripts/run_all_models.py && python scripts/compare_models.py   # multi-model comparison
-```
+## Local verification
 
-**Multi-model comparison (China / Europe / USA).** `run_all_models.py` runs the
-whole pipeline per model into `outputs/models/<slug>/`; `compare_models.py`
-aggregates them. Default trio on a Colab A100: `Qwen/Qwen3-8B` ·
-`mistralai/Ministral-8B-Instruct-2410` · `google/gemma-4-12B` (the last two are
-gated — accept the license + set `HF_TOKEN`). Ready-to-run notebook:
-[notebooks/colab_multimodel.ipynb](notebooks/colab_multimodel.ipynb); full guide:
-[docs/MULTIMODEL.md](docs/MULTIMODEL.md).
+Python 3.10+ is required.
 
-**Internal x-ray:** `scripts/visualize_internals.py` renders a token-by-token,
-layer-by-layer view of the emotion-like directions as the model reads a symptom —
-`outputs/figures/internal_token_trajectory.gif`, `internal_layer_heatmap.gif`,
-`internal_montage.png`, and a self-contained interactive player
-`internal_player.html`. It shows `afraid_alarmed` (L33) staying low during the
-neutral instruction and rising as "dolore lancinante e insopportabile" is read,
-peaking just before the decision point E (no explicit emotion words). A single
-token's readout is exploratory, not a validated per-token measure.
-
-**Phase 3 headline (illustrative, small dataset):** at the pre-decision point E,
-the `afraid_alarmed` / `anxious_nervous` directions rise with symptom severity
-(Pearson +0.7–0.9 across mobility/pain/breath/nausea; +4.2 SD at the severe step),
-the signal **persists** through an inserted neutral sentence, and `safety_policy`
-stays flat (0.0) — but `afraid_alarmed` is **strongly correlated with generic
-negative valence (r≈0.76)**, so an emotion-specific claim is not yet warranted.
-Details + caveats in [phase3_report.md](outputs/reports/phase3_report.md).
-
-**Phase 4 headline:** steering the emotion direction at layer 31 causally shifts
-the decision entropy dose-dependently, **but a random same-norm vector and the
-opposite emotion produce comparable shifts** — so the effect is not
-emotion-specific. The controls correctly prevent over-claiming; top-1 decision
-flips are rare. See [phase4_report.md](outputs/reports/phase4_report.md).
-
-### Phase 2 — how to run (local T1000, FP16)
-
-```bash
-.venv/Scripts/python.exe -m pip install -e ".[ml]"        # torch cu124 + transformers + sklearn
-.venv/Scripts/python.exe scripts/generate_emotion_dataset.py
-.venv/Scripts/python.exe scripts/build_vectors.py --methods diff_of_means pca logistic lda
-.venv/Scripts/python.exe scripts/validate_vectors.py       # -> outputs/reports/vector_validation.json + figure
-```
-
-Builds emotion + control (confounder) direction vectors per layer from Italian,
-non-clinical contrastive text (independent of the clinical fields), then measures
-held-out AUROC per layer with bootstrap CIs and cross-concept collinearity.
-
-> **Dataset-size caveat.** The shipped synthetic emotion dataset is small
-> (~18 examples/concept) for a fast first pass — results are *illustrative*.
-> Scale to the spec's 50–100/condition by extending
-> `src/oncoemotion/emotion_vectors/seeds.py` (and set
-> `extraction.min_examples_per_condition: 50` in `configs/experiment.yaml`)
-> before drawing scientific conclusions.
-
-Phase 1 runs with **zero ML dependencies** (no torch): the mapper is a
-deterministic lexical+fuzzy engine so terminology mapping, safety routing, the
-API and the full test suite work on the local machine and in CI immediately.
-
----
-
-## Key decisions (this machine)
-
-- **GPU:** NVIDIA **T1000 8GB** (Turing, compute 7.5). Turing has no efficient
-  bf16 → local runs use **float16**. On Colab (Ampere+) switch to bfloat16.
-- **Default model (local):** `Qwen/Qwen2.5-3B-Instruct` (strong Italian, fits
-  8GB in FP16, standard `model.model.layers` structure for clean hooks).
-  Configurable in [`configs/model.yaml`](configs/model.yaml) with presets for a
-  1.5B CI model, a 7B Colab model, and an FP32 CPU control.
-- **Official files not yet provided** (PRO-CTCAE Italian PDF, CTCAE v6.0):
-  loaders + interfaces are built; a **clearly-labelled synthetic** CTCAE
-  placeholder and synthetic Italian PRO seeds are used for dev/tests only.
-  `official_italian_labels` stay empty until the real PDF is loaded — nothing is
-  invented.
-
-### Still needed from you
-1. **Official Italian PRO-CTCAE PDF** → to populate `official_italian_labels`.
-2. **Official CTCAE v6.0 file** (JSON in the documented schema) → to replace the
-   synthetic placeholder. Load via `terminology/ctcae_loader.py --path ...`.
-3. Optionally, a custom term list (defaults to the 80 official PRO-CTCAE terms).
-
----
-
-## Install & run
-
-```bash
-# 1) create venv + core (no ML stack needed for Phase 1)
+```powershell
 python -m venv .venv
-.venv/Scripts/python.exe -m pip install -e ".[dev,api]"   # Windows
-# .venv/bin/python -m pip install -e ".[dev,api]"         # Linux/Colab
-
-# 2) build the terminology file (80 PRO-CTCAE terms)
-.venv/Scripts/python.exe scripts/build_terminology.py
-
-# 3) run the baseline mapper on synthetic controls
-.venv/Scripts/python.exe scripts/run_mapping_baseline.py \
-    --input data/synthetic/clinical_controls.jsonl
-
-# 4) tests
-.venv/Scripts/python.exe -m pytest        # 73 passing
-
-# 5) API (mapping endpoint only; steering disabled by default)
-.venv/Scripts/python.exe -m uvicorn oncoemotion.api.app:create_app --factory
+.venv\Scripts\python.exe -m pip install -e ".[dev,api]"
+.venv\Scripts\python.exe -m pytest
+.venv\Scripts\python.exe scripts\generate_labeled_clinical.py --check-only
 ```
 
-Phase 2+ ML stack (installed separately; CUDA-specific):
+The heavy model stack is separate:
 
-```bash
-.venv/Scripts/python.exe -m pip install -e ".[ml,viz]"
-# On the T1000 install a cu121 torch build; keep dtype=float16.
+```powershell
+.venv\Scripts\python.exe -m pip install -e ".[ml,viz]"
 ```
 
----
+The local 8 GB GPU is for smoke testing. Definitive eight-model execution uses
+[`notebooks/colab_multimodel.ipynb`](notebooks/colab_multimodel.ipynb).
 
-## Baseline mapper (Phase 1)
+## Deterministic mapper
 
-Modular pipeline (spec §5): normalize → segment (multi-symptom) →
-assertion/temporality/experiencer (Italian rules) → candidate generation
-(lexical + fuzzy; optional embeddings/reranker) → thresholded decision →
-mandatory abstention → **separate** CTCAE fallback → **independent** safety
-routing → reproducible diagnostics.
+The clinical path is:
 
-PRO status values: `EXACT_PRO_MATCH`, `PRO_MATCH_WITH_AMBIGUITY`,
-`MULTIPLE_POSSIBLE_PRO_MATCHES`, `NO_DIRECT_PRO_MATCH`, `NEGATED_SYMPTOM`,
-`INSUFFICIENT_CONTEXT`, `OUT_OF_SCOPE`; CTCAE: `MATCH|AMBIGUOUS|NO_MATCH|NOT_EVALUATED`.
+```text
+normalize -> segment -> assertion/temporality/experiencer
+          -> lexical/fuzzy PRO retrieval -> threshold/abstention
+          -> separate CTCAE fallback -> independent safety routing
+```
 
-Guarantees enforced by tests (spec §16): exactly 80 terms, unique ids, correct
-attribute mapping, no invented terms, `"non ho nausea"` → negated,
-`"...nausea... ora è passata"` → resolved, `"mi si ingialliscono le unghie"` →
-Nail discoloration, `"ho messo lo smalto giallo"` → not a clinical event,
-`"ansia"` → Anxious, `"febbre"` → NO_DIRECT_PRO_MATCH + CTCAE Fever,
-`"suicidio"` → NO_DIRECT_PRO_MATCH + urgent human review,
-`"non riesco più a camminare"` → not force-coded (human review), deterministic
-across batch order, hooks removed after exceptions, reproducible random vectors,
-schema always valid, no free text in logs.
+Run the mapper and API:
 
-> **Calibration honesty:** Phase 1 has no logits, so probabilities are labelled
-> `uncalibrated_heuristic` in `analysis_meta`. A calibrated reranker (temperature
-> / isotonic over LLM logits) plugs into `oncoemotion.mapping.calibration` in a
-> later phase — probabilities are never obtained by just asking the model.
+```powershell
+.venv\Scripts\python.exe scripts\build_terminology.py
+.venv\Scripts\python.exe scripts\run_mapping_baseline.py --input data\synthetic\clinical_controls.jsonl
+.venv\Scripts\python.exe -m uvicorn oncoemotion.api.app:create_app --factory
+```
 
----
+The `/map` endpoint never performs steering. Research activation and intervention
+code is executed offline and is not part of the production mapping path.
+
+## ESMO research pipeline
+
+The definitive path is:
+
+```text
+emotion/control seeds
+  -> per-model activations and directions
+  -> cross-validated shared-layer + lexical gate
+  -> preclassified affective-reaction / symptom-intensity clinical pairs
+  -> token-matched role prompts in a paired 2x2 design
+  -> constrained 80-way code + separate free-generation abstention
+  -> intact / targeted-ablation / matched-random arms
+  -> hierarchical paired analysis + matched base/medicalized contrasts
+  -> regulation-checked abstract draft
+```
+
+Core commands after GPU artefacts exist:
+
+```powershell
+.venv\Scripts\python.exe scripts\analyze_results.py
+.venv\Scripts\python.exe scripts\build_esmo_abstract.py
+.venv\Scripts\python.exe scripts\build_esmo_poster_figures.py
+```
+
+Every definitive artefact records protocol ID, content hashes and the git commit.
+Resume logic uses manifests rather than the mere existence of an output file.
+
+## Data and terminology
+
+- The experimental clinical dataset is synthetic and manually authored; clinician
+  review must be documented before submission if it has not already occurred.
+- Real clinical free text is excluded from version control and must be redacted in
+  exported result rows.
+- Official PRO-CTCAE/CTCAE sources may be licence-restricted and remain outside Git.
+- The deterministic mapper is a reference, not the source of the authored gold.
+
+The paired stress-test set represents the longer tail of free-text responses; it is
+not intended to estimate population prevalence or production accuracy.
 
 ## Repository layout
 
-```
-configs/        model.yaml, experiment.yaml, terminology.yaml
-terminology/    pro_ctcae_terms.json (80), loaders, synthetic CTCAE placeholder
-src/oncoemotion/
-  preprocessing/  normalize, segment, assertion/temporality/experiencer
-  retrieval/      lexical + fuzzy (difflib fallback), optional embeddings
-  mapping/        pipeline (baseline), calibration
-  safety/         independent risk router
-  models/         adapter interface + HF decoder adapter (lazy torch)   [P2]
-  activations/    framework-agnostic hook manager (tested now)          [P2]
-  emotion_vectors/ vector types + QR-stable orthogonalization (tested)  [P2]
-  probing/ steering/ patching/ evaluation/ statistics/                  [P2-4]
-  api/            FastAPI app
-scripts/        build_terminology, run_mapping_baseline, + phase scaffolds
-tests/          unit / integration / regression  (73 passing)
-data/           templates + synthetic controls (no real patient data)
-outputs/        tables/figures/activations/checkpoints/reports (gitignored)
-notebooks/      analysis notebooks (added with their phases)
+```text
+configs/                 model, terminology and frozen ESMO study contract
+data/                    synthetic generators/records; real data ignored
+docs/                    protocol, runbook and legacy reports
+notebooks/               definitive Colab runner and exploratory notebooks
+scripts/                 data, vector, experiment, analysis and reporting CLIs
+src/oncoemotion/         mapper, safety, model hooks, vectors and interventions
+tests/                   unit, regression and API tests
+terminology/             generated libraries; restricted official files ignored
 ```
 
-> Package uses a standard `src/oncoemotion/<subpkg>` layout; the subpackage names
-> match the spec §14 tree (preprocessing, retrieval, mapping, models, activations,
-> emotion_vectors, probing, steering, patching, evaluation, statistics, safety, api).
+## Governance
 
----
+Do not commit patient text, model weights, raw activations or licence-restricted
+terminology. For human/clinical data, institutional governance, lawful basis, ethics
+requirements, de-identification and author accountability must be resolved outside
+the software before publication or deployment.
 
-## Research questions → where they are addressed
-
-- **RQ1–RQ4** (do clinical inputs activate emotion vectors; pre-decision; general-
-  ization; separable from confounders): emotion-vector construction (§7), QR-stable
-  confounder orthogonalization (`emotion_vectors.orthogonalize`, §8), measurement
-  points A–G with primary point **E** pre-decision (§10), probing (§11) — Phases 2–3.
-- **RQ5** (causal effects of adding/removing/transferring an emotion component):
-  steering/ablation/patching (§12), vector ops `steer_add`/`ablate_projection`
-  ready and tested — Phase 4.
-- **RQ6** (persistence after the stimulus, during the decision): persistence
-  analysis with an inserted neutral sequence (§11) — Phase 3.
-
----
-
-## Privacy & governance (§17)
-
-No real/identifiable patient data. Pseudonymous record IDs; PII-safe logging
-(free text never logged); data / activations / results kept separate; the
-`/run-steering` endpoint is research-only and **disabled by default** (never in
-production) with an audit log of model/layer/vector/alpha. Grading is a separate
-module that abstains when required information is absent (never auto-derived from
-PRO attributes).
-
-## License
-
-MIT (code). Official terminology sources are **not** included and may be
-license-restricted; load them locally (kept out of version control).
+Code licence: MIT. Terminology and source clinical data may have separate terms.

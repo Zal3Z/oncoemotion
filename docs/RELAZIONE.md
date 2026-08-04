@@ -1,5 +1,8 @@
 # oncoemotion — Relazione: rappresentazioni emotion-like in tre modelli (Cina / Europa / USA)
 
+> **Relazione esplorativa superata.** I numeri precedono il protocollo
+> `esmo-ai-2026-v2` e non sono risultati definitivi per ESMO 2026.
+
 *Studio di interpretabilità meccanicistica sul task PRO-CTCAE in italiano.*
 
 > **Premessa (importante).** Non si afferma che i modelli abbiano coscienza, sentienza

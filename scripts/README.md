@@ -1,22 +1,40 @@
-# scripts/
+# Command-line pipeline
 
-| Script | Phase | Status |
-|---|---|---|
-| build_terminology.py | 1 | ✅ builds `terminology/pro_ctcae_terms.json` (80 terms) |
-| run_mapping_baseline.py | 1 | ✅ runs the baseline mapper over a JSONL |
-| generate_clinical_controls.py | 1/3 | ✅ scale rows now; full factorial in Phase 3 |
-| generate_emotion_dataset.py | 2 | scaffold (CLI contract) |
-| extract_activations.py | 2 | scaffold (needs `[ml]`) |
-| build_vectors.py | 2 | scaffold (core math ready) |
-| validate_vectors.py | 2 | scaffold (stats ready) |
-| run_probing.py | 3 | scaffold |
-| run_steering.py | 4 | scaffold (vector ops ready) |
-| run_patching.py | 4 | scaffold |
-| analyze_results.py | 4-5 | scaffold (metrics/stats ready) |
+## Clinical mapper
 
-Run from repo root, e.g.:
+- `build_terminology.py` - build the 80-term PRO library.
+- `run_mapping_baseline.py` - deterministic PRO/CTCAE mapper.
+- `ingest_real_fields.py` - governed local ingestion; output remains ignored.
 
-```bash
-.venv/Scripts/python.exe scripts/build_terminology.py
-.venv/Scripts/python.exe scripts/run_mapping_baseline.py --input data/synthetic/clinical_controls.jsonl
+## ESMO 2026 study
+
+1. `generate_emotion_dataset.py`
+2. `build_vectors.py`
+3. `validate_vectors.py` - cross-validation, shared layer, lexical and protocol gate.
+4. `generate_labeled_clinical.py` - paired clinical stress-test items with a frozen
+   affective-reaction versus symptom-intensity partition.
+5. `run_role_emotion.py` - four prompt conditions and three intervention arms.
+6. `analyze_role_emotion.py` - descriptive per-model audit.
+7. `analyze_results.py` - preregistered pooled endpoint, affective 2x2 interaction,
+   matched base/medicalized contrasts and causal gate.
+8. `build_esmo_abstract.py` - structured draft and ESMO character validation.
+9. `build_esmo_poster_figures.py` - result-driven PNG/SVG poster panels.
+
+The authoritative parameters live in `configs/study_esmo_2026.yaml`. Existing
+artefacts are reusable only when their manifest/fingerprint matches the current
+pipeline.
+
+`run_all_models.py --stages vectors` builds only the artefacts needed by the role
+study; historical probing, steering and patching can be selected explicitly but are
+not part of the definitive poster run.
+
+## Local checks
+
+```powershell
+.venv\Scripts\python.exe -m pytest
+.venv\Scripts\python.exe scripts\generate_labeled_clinical.py --check-only
+.venv\Scripts\python.exe scripts\smoke.py --stage data
 ```
+
+Run commands from the repository root. GPU scripts require the `ml` optional
+dependencies; the deterministic mapper and tests do not.

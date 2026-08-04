@@ -299,7 +299,7 @@ def build_decision_messages(
     so point E remains the identical final token across roles.
 
     Pass ``personas`` from :func:`build_padded_personas` to get token-matched spans,
-    including a real length-matched control for ``role="none"``. Without it the
+    including a real length-matched control for ``role="none_filler"``. Without it the
     unpadded ``ROLE_PERSONAS`` are used and everything after the system block sits
     at a role-dependent position.
     """

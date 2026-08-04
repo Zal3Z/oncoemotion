@@ -1,5 +1,8 @@
 # Spettro dei ruoli — perché il ruolo cambia l'emotività (25 emozioni)
 
+> **Analisi esplorativa.** Lo spettro a 11 personae non è un endpoint del protocollo
+> ESMO 2026 e non deve guidare la selezione post-hoc degli assi affettivi.
+
 *Estensione oncoemotion. Interpretabilità meccanicistica sul task PRO-CTCAE.*
 
 🎭 **Report interattivo (Artifact):** <https://claude.ai/code/artifact/0a49b392-4006-43b0-bc18-8ae9c0b48f22>

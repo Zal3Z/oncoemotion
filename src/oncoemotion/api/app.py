@@ -15,7 +15,6 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Optional
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel

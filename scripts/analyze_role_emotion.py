@@ -10,14 +10,15 @@ Reads ``outputs/role_emotion/<slug>__rows.jsonl`` and computes:
   D. emotion-vs-error link (emotion z on correct vs wrong; point-biserial r);
   E. framing effect (emotional vs neutral, paired);
   F. ablation effect (label flips intact->ablated; accuracy delta);
-  G. PRIMARY ENDPOINT — role x framing interaction.
+  G. secondary role x framing interaction;
+  H. PRIMARY ENDPOINT — oncologist-vs-filler label disagreement.
 
 E and G are not the same question. E pools the roles and therefore measures a
 property of the patient's text: emotional phrasing is harder to code. G asks
 whether the *assigned role* changes how much that phrasing costs, which is the
-claim the study actually makes. Everything in G is paired within item and within
-role. The per-model contrast is descriptive; the single inferential test lives in
-``analyze_results.py``, which pools every model.
+    historical framing question. The ESMO primary is H: hold the clinical item fixed,
+    change only oncologist vs identity-free filler, and count code disagreement. The
+    pooled confidence interval lives in ``analyze_results.py``.
 
 Writes ``<slug>__analysis.json`` and prints a summary.
 
@@ -63,6 +64,25 @@ def _label(r):
     the matcher's old vocabulary, which cost ~22 accuracy points.
     """
     return r["rescored_top1_id"] if "rescored_top1_id" in r else r.get("model_top1_id")
+
+
+def _generative_kind(r):
+    """Free-generation outcome; constrained scoring cannot measure abstention."""
+    if r.get("generative_kind") is not None:
+        return r["generative_kind"]
+    if r.get("scorer") == "constrained":
+        return None
+    if r.get("rescored_kind") is not None:
+        return r["rescored_kind"]
+    if r.get("abstained") is True:
+        return "abstained"
+    if r.get("non_answer") is True:
+        return "non_answer"
+    if r.get("unmappable") is True:
+        return "unmapped"
+    if r.get("model_matched") is True:
+        return "mapped"
+    return None
 
 
 def _fmt(x, spec="+.3f"):
@@ -145,25 +165,30 @@ def main() -> int:
             for fr in ("neutral", "emotional", "all"):
                 sub = [r for r in abst if r["role"] == role and r["ablated"] == abl
                        and (fr == "all" or r["framing"] == fr)]
-                conf = [r.get("model_map_score", 0.0) for r in sub]
-                # false-positive coding = the model mapped a PRO term to an item
-                # that should abstain
-                fp = [1 if r.get("model_matched") else 0 for r in sub]
+                observed = [(r, _generative_kind(r)) for r in sub]
+                observed = [(r, k) for r, k in observed if k is not None]
+                conf = [r.get("generative_map_score", r.get("model_map_score"))
+                        for r, _k in observed]
+                conf = [x for x in conf if x is not None]
+                # Only free generation can decline to code. A constrained 80-way
+                # scorer is forced to choose and is therefore excluded here.
+                fp = [1 if k == "mapped" else 0 for _r, k in observed]
                 C[role][f"{'ablated' if abl else 'intact'}|{fr}"] = {
                     "mean_conf": _mean(conf),
                     "fp_rate": round(sum(fp) / len(fp), 4) if fp else None,
-                    "n": len(sub),
+                    "n": len(observed),
+                    "available": bool(observed),
                 }
 
     # ---- D. emotion vs error (term items, intact) ----
     intact_term = [r for r in term if not r["ablated"]]
-    wrong = [r for r in intact_term if r["correct"] is False]
-    right = [r for r in intact_term if r["correct"] is True]
+    wrong = [r for r in intact_term if _label(r) != r["gold_pro_id"]]
+    right = [r for r in intact_term if _label(r) == r["gold_pro_id"]]
     D = {
         "emo_z_on_wrong": _mean([r["emo"] for r in wrong]),
         "emo_z_on_correct": _mean([r["emo"] for r in right]),
         "point_biserial_error_vs_emo": _point_biserial(
-            [0 if r["correct"] else 1 for r in intact_term],
+            [0 if _label(r) == r["gold_pro_id"] else 1 for r in intact_term],
             [r["emo"] for r in intact_term]),
         "n_wrong": len(wrong), "n_correct": len(right),
     }
@@ -171,7 +196,7 @@ def main() -> int:
     # ---- E. framing effect (paired by pair_id, intact, term) ----
     by_pair = {}
     for r in intact_term:
-        by_pair.setdefault(r["pair_id"], {})[r["framing"]] = r
+        by_pair.setdefault((r["role"], r["pair_id"]), {})[r["framing"]] = r
     flips_fr, both = 0, 0
     neu_acc, emo_acc = [], []
     for pid, d in by_pair.items():
@@ -188,7 +213,7 @@ def main() -> int:
         "n_pairs": both,
     }
 
-    # ---- G. PRIMARY ENDPOINT: role x framing interaction ----
+    # ---- G. SECONDARY: role x framing interaction ----
     # E above pools the roles, so it answers "does emotional phrasing hurt?" -- a
     # property of the patient's text. The study's claim is about the role, so the
     # quantifier has to be the role: does the assigned role modulate how much the
@@ -247,7 +272,7 @@ def main() -> int:
     # 1/n, so an effect below that is not measurable however it is tested
     n_pairs_ref = per_role.get(ref, {}).get("n_pairs") or 0
     G = {
-        "primary_endpoint": "role x framing interaction on term-item accuracy",
+        "secondary_endpoint": "role x framing interaction on term-item accuracy",
         "reference_role": ref,
         "by_role": {k: {kk: vv for kk, vv in v.items() if kk != "item_deltas"}
                     for k, v in per_role.items()},
@@ -285,7 +310,24 @@ def main() -> int:
                   if C[r]["intact|all"]["fp_rate"] is not None]
     acc_spread = round(max(acc_by_role) - min(acc_by_role), 4) if len(acc_by_role) > 1 else None
     fp_spread = round(max(fp_by_role) - min(fp_by_role), 4) if len(fp_by_role) > 1 else None
+    primary_role = "oncologo" if "oncologo" in roles else roles[0]
+    primary_control = "none_filler" if "none_filler" in roles else ref
+    primary_both = [d for d in by_rec.values()
+                    if primary_role in d and primary_control in d]
+    primary_term_ids = {r["record_id"] for r in rows
+                        if r.get("gold_class") == "term"}
+    primary_term = [d for rid, d in by_rec.items() if rid in primary_term_ids
+                    and primary_role in d and primary_control in d]
     H = {
+        "primary_endpoint": "within-item top1 disagreement on term items",
+        "primary_contrast": f"{primary_role} vs {primary_control}",
+        "primary_label_disagreement": (
+            round(sum(d[primary_role] != d[primary_control] for d in primary_term)
+                  / len(primary_term), 4) if primary_term else None),
+        "n_primary_records": len(primary_term),
+        "all_item_pairwise_disagreement": (
+            round(sum(d[primary_role] != d[primary_control] for d in primary_both)
+                  / len(primary_both), 4) if primary_both else None),
         "label_changed_any_role": any_change,
         "pairwise": pairwise,
         "n_records_all_roles": len(full),
@@ -299,12 +341,12 @@ def main() -> int:
             round(any_change / fp_spread, 1) if any_change and fp_spread else None),
     }
 
-    # ---- F. ablation effect, per arm, against the random control ----
+    # ---- F. exploratory ablation sensitivity, per arm ----
     # A flip rate on its own answers "what happens if you disturb the state", not
     # "what happens if you remove fear". The random arm ablates directions of the
-    # same norm at the same layers, so the difference between the two flip rates is
-    # the only part attributable to the emotion direction. This is the mechanistic
-    # gate: if it does not clear the control, the causal leg comes out of the paper.
+    # same norm at the same layers. This generic flip-rate comparison is retained
+    # for diagnostics only. The ESMO mechanistic gate is the paired attenuation of
+    # the cross-role disagreement in analyze_results.py.
     idx = {}
     for r in rows:
         idx.setdefault((r["record_id"], r["role"]), {})[r.get("arm", "emotion" if r["ablated"] else "intact")] = r
@@ -359,6 +401,7 @@ def main() -> int:
         "D_emotion_vs_error": D,
         "E_framing_effect": E,
         "F_ablation_effect": F,
+        "G_role_by_framing_secondary": G,
         "G_role_by_framing": G,
         "H_role_label_instability": H,
         "fp_threshold": args.fp_threshold,
@@ -393,12 +436,15 @@ def main() -> int:
               f"term acc {f['term_acc_intact']} -> {f['term_acc_ablated']}")
     g = F["gate_emotion_vs_random"]
     if g.get("passes") is None:
-        print(f"   cancello causale: {g.get('note')}")
+        print(f"   diagnostica esplorativa: {g.get('note')}")
     else:
-        print(f"   cancello causale emozione vs casuale: differenza {_fmt(g['flip_rate_difference'], '+.4f')}, "
+        print(f"   diagnostica esplorativa emozione vs casuale: differenza {_fmt(g['flip_rate_difference'], '+.4f')}, "
               f"rapporto {g['flip_rate_ratio']} -> {'PASSA' if g['passes'] else 'NON PASSA'}")
-    print("\nH) Instabilita' indotta dal ruolo (il numero di apertura dell'abstract):")
-    print(f"   codice diverso cambiando solo il ruolo: "
+    print("\nH) PRIMARY - instabilita' indotta dal ruolo:")
+    print(f"   {H['primary_contrast']}: "
+          f"{_fmt(H['primary_label_disagreement'], '.1%')}  "
+          f"(term items n={H['n_primary_records']})")
+    print(f"   esplorativo, qualunque ruolo: "
           f"{_fmt(H['label_changed_any_role'], '.1%')}  (n={H['n_records_all_roles']})")
     for k, v in H["pairwise"].items():
         print(f"     {k:26s} {v['changed']:.1%}")
@@ -409,7 +455,7 @@ def main() -> int:
         print(f"   -> le etichette cambiano {H['instability_over_accuracy_spread']}x piu' "
               f"di quanto si muova l'accuratezza")
 
-    print(f"\nG) PRIMARY - role x framing (reference role: {G['reference_role']}, "
+    print(f"\nG) SECONDARY - role x framing (reference role: {G['reference_role']}, "
           f"resolution floor {G['resolution_floor']}):")
     for role in roles:
         g = G["by_role"][role]

@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import numpy as np
 
-from oncoemotion.clinical.prompt import build_decision_prompt, TEACHER_PREFIX, NEUTRAL_FILLER
 from oncoemotion.clinical.measure import project_scores, zscore
 from oncoemotion.clinical.measure_dataset import build_measure_items
+from oncoemotion.clinical.prompt import NEUTRAL_FILLER, TEACHER_PREFIX, build_decision_prompt
 
 
 def test_prompt_ends_with_teacher_prefix():
@@ -86,6 +86,19 @@ def test_the_filler_control_names_neither_task_nor_identity():
     for banned in ("codifica", "pro-ctcae", "paziente", "sintomo", "termine", "sei un"):
         assert banned not in low, f"il controllo nomina {banned!r}: non e' inerte"
     assert "codifica" in p["none_task"].lower()   # questo invece il compito lo nomina
+
+
+def test_generated_outcomes_keep_abstention_and_failure_separate():
+    from oncoemotion.clinical.classify import classify_generated_term
+
+    def matcher(text):
+        return ("PRO_002", "Difficulty swallowing", 0.99) if text == "Disfagia" \
+            else (None, None, 0.2)
+
+    assert classify_generated_term("Disfagia", matcher) == ("PRO_002", "mapped", 0.99)
+    assert classify_generated_term("nessun evento avverso", matcher)[1] == "abstained"
+    assert classify_generated_term("CTCAE_5.0_Grade_", matcher)[1] == "non_answer"
+    assert classify_generated_term("parola inventata", matcher)[1] == "unmapped"
 
 
 def test_padded_personas_keep_their_identity():

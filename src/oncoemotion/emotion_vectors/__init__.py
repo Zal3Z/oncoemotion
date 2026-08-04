@@ -8,8 +8,8 @@ disentanglement (spec section 8), which is pure-numpy and tested now.
 
 from oncoemotion.emotion_vectors.vectors import (
     EmotionVector,
-    orthogonalize,
     cosine,
+    orthogonalize,
     random_vector,
 )
 

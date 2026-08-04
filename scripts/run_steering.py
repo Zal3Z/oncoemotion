@@ -25,12 +25,11 @@ import numpy as np
 _ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(_ROOT / "src"))
 
+from oncoemotion.clinical.prompt import build_decision_ids, build_padded_personas  # noqa: E402
 from oncoemotion.config import ModelConfig  # noqa: E402
+from oncoemotion.emotion_vectors.vectors import random_vector  # noqa: E402
 from oncoemotion.models.base import load_adapter  # noqa: E402
 from oncoemotion.steering.runtime import SteeringRuntime  # noqa: E402
-from oncoemotion.clinical.prompt import (  # noqa: E402
-    build_decision_ids, build_padded_personas)
-from oncoemotion.emotion_vectors.vectors import random_vector  # noqa: E402
 
 ALPHA_GRID = [-0.10, -0.05, -0.02, 0.0, 0.02, 0.05, 0.10]
 

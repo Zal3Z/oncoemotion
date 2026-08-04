@@ -1,6 +1,6 @@
 #!/usr/bin/env python
-"""[Role x Emotion study] Does the assigned ROLE change the model's emotionality,
-and does emotionality change how it LABELS PRO-CTCAE (right vs wrong)?
+"""[Role x affect study] Does a system ROLE alter sensitivity to patient-affective
+language and the resulting PRO-CTCAE code?
 
 Factorial per dataset item (each item is already a neutral or emotional framing):
     role     in {oncologo (medical), generico (non-medical), none (baseline)}
@@ -27,8 +27,10 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
+import subprocess
 import sys
 from contextlib import ExitStack, nullcontext
 from pathlib import Path
@@ -38,22 +40,33 @@ import numpy as np
 _ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(_ROOT / "src"))
 
-from oncoemotion.config import ModelConfig  # noqa: E402
-from oncoemotion.models.base import load_adapter  # noqa: E402
-from oncoemotion.clinical.prompt import (  # noqa: E402
-    build_decision_messages, build_padded_personas, read_point_index, TEACHER_PREFIX)
-from oncoemotion.clinical.measure import (  # noqa: E402
-    decision_summary, hidden_at_positions, project_scores, zscore)
-from oncoemotion.clinical.classify import (  # noqa: E402
-    ABSTAIN_MARKERS, build_candidates, build_term_matcher, predict_generative,
-    predict_label)
-from oncoemotion.steering.runtime import SteeringRuntime  # noqa: E402
-from oncoemotion.terminology.pro_ctcae import load_pro_ctcae  # noqa: E402
-from oncoemotion.factory import build_default_mapper  # noqa: E402
-from oncoemotion.schemas import MapRequest  # noqa: E402
 from oncoemotion.clinical.baseline import NEUTRAL_BASELINE  # noqa: E402
+from oncoemotion.clinical.classify import (  # noqa: E402
+    build_candidates,
+    build_term_matcher,
+    predict_generative,
+    predict_label,
+)
+from oncoemotion.clinical.measure import (  # noqa: E402
+    decision_summary,
+    hidden_at_positions,
+    project_scores,
+    zscore,
+)
+from oncoemotion.clinical.prompt import (  # noqa: E402
+    TEACHER_PREFIX,
+    build_decision_messages,
+    build_padded_personas,
+    read_point_index,
+)
+from oncoemotion.config import ModelConfig  # noqa: E402
 from oncoemotion.emotion_vectors.seeds import LEXICAL_CONTROLS  # noqa: E402
 from oncoemotion.emotion_vectors.vectors import random_vector  # noqa: E402
+from oncoemotion.factory import build_default_mapper  # noqa: E402
+from oncoemotion.models.base import load_adapter  # noqa: E402
+from oncoemotion.schemas import MapRequest  # noqa: E402
+from oncoemotion.steering.runtime import SteeringRuntime  # noqa: E402
+from oncoemotion.terminology.pro_ctcae import load_pro_ctcae  # noqa: E402
 
 # All concepts that are NOT confounders are treated as emotions (derived from the
 # vector set, so adding emotions to seeds.py flows through automatically).
@@ -65,7 +78,7 @@ CONFOUNDERS = ["uncertainty", "urgency", "clinical_severity", "safety_policy",
                "general_negative_valence", *LEXICAL_CONTROLS]
 # The causal "remove emotionality" ablation targets the clinically-relevant
 # negative-affect core (kept small so the intervention is interpretable).
-ABLATE_CONCEPTS = ["afraid_alarmed", "anxious_nervous", "sad"]
+DEFAULT_ABLATE_CONCEPTS = ["afraid_alarmed", "anxious_nervous", "sad"]
 
 # The z-score baseline is shared with run_role_spectrum.py so that the z-scores of
 # experiments B and C are finally on the same scale (see clinical/baseline.py).
@@ -93,8 +106,8 @@ def _ablation_ctx(rt: SteeringRuntime, ablate_vecs, layer_of, arm: str = "emotio
     flip rate of 11-38% measures "what happens if you disturb the state", not "what
     happens if you remove fear". The steering experiment already suggests the
     control matters: the emotion direction beats a random one of equal norm in
-    about half the models, and in Gemma-4-12B the random direction is roughly
-    fourteen times more effective.
+    about half the tested models, and a random direction can be more disruptive
+    than the emotion direction.
     """
     stack = ExitStack()
     for i, (c, vec_LH) in enumerate(sorted(ablate_vecs.items())):
@@ -179,12 +192,14 @@ def main() -> int:
                          "free text the raw strings would leave the session and land on "
                          "disk in the clear. The model still reads the text; only the "
                          "saved record is redacted.")
-    ap.add_argument("--scorer", default="constrained",
+    ap.add_argument("--scorer", default="both",
                     choices=["constrained", "generative", "both"],
-                    help="constrained = score all 80 real PRO terms and take the best, so "
-                         "the model can only pick a real code; generative = free text then "
-                         "fuzzy-match, which discards ~30%% of answers as unmappable even "
-                         "when they are clinically right (Disfagia, Tinnitus, Epistassi)")
+                    help="both (default) keeps two separate outcomes: constrained 80-way "
+                         "coding for the primary endpoint and free generation for true "
+                         "abstention/non-answer. Never infer abstention from the constrained "
+                         "scorer, which is forced to choose a code.")
+    ap.add_argument("--study-config", type=Path,
+                    default=_ROOT / "configs/study_esmo_2026.yaml")
     ap.add_argument("--baseline-limit", type=int, default=0,
                     help="use only the first N neutral baseline sentences (0 = all). The "
                          "baseline is re-measured per cell, so on a tiny run it dominates the "
@@ -199,20 +214,50 @@ def main() -> int:
                          "arm always sees every item because the primary endpoint needs it; "
                          "the ablation arms feed a flip rate, which is precise long before "
                          "the full set is used.")
+    ap.add_argument("--force-unvalidated-ablation", action="store_true",
+                    help="smoke/debug only: run causal arms even when affect axes fail the "
+                         "pre-declared AUROC/lexical gate")
     args = ap.parse_args()
+    requested_arms = list(args.arms)
+    study = {}
+    if args.study_config.exists():
+        import yaml
+
+        study = yaml.safe_load(args.study_config.read_text(encoding="utf-8")) or {}
+    ablate_concepts = list(
+        study.get("mechanistic_gate", {}).get(
+            "target_axes", DEFAULT_ABLATE_CONCEPTS
+        )
+    )
     baseline = (NEUTRAL_BASELINE[:args.baseline_limit]
                 if args.baseline_limit else NEUTRAL_BASELINE)
 
     V = np.load(args.vecs, allow_pickle=True)
     val = json.loads(args.val_report.read_text(encoding="utf-8"))
+    protocol_gate = val.get("protocol_gate") or {}
+    eligible_axes = set(protocol_gate.get("eligible_axes") or [])
+    required_ablation_axes = set(ablate_concepts)
+    causal_requested = bool({"emotion", "random"} & set(args.arms))
+    causal_axes_valid = required_ablation_axes.issubset(eligible_axes)
+    if causal_requested and not causal_axes_valid and not args.force_unvalidated_ablation:
+        missing = sorted(required_ablation_axes - eligible_axes)
+        print(
+            "[PROTOCOL GATE] causal arms skipped: axes not eligible "
+            f"({', '.join(missing) or 'validation gate unavailable'}). "
+            "The intact behavioral endpoint will still run.",
+            flush=True,
+        )
+        args.arms = [arm for arm in args.arms if arm == "intact"]
     best_layer = {c: val["concepts"][c]["best_layer"] for c in val["concepts"]}
     concepts = [c for c in val["concepts"]
                 if c not in CONFOUNDERS and _key_for(V, c, args.method, args.variant) in V]
     vectors = {c: V[_key_for(V, c, args.method, args.variant)] for c in concepts}
     layer_of = {c: best_layer.get(c, vectors[c].shape[0] // 2) for c in concepts}
-    ablate_vecs = {c: vectors[c] for c in ABLATE_CONCEPTS if c in vectors}
+    ablate_vecs = {c: vectors[c] for c in ablate_concepts if c in vectors}
 
     items = [json.loads(l) for l in args.dataset.read_text(encoding="utf-8").splitlines() if l.strip()]
+    if any(it.get("framing") == "real" for it in items) and not args.redact_text:
+        ap.error("real clinical text requires --redact-text; raw fields must not be exported")
     if args.limit:
         items, _ = _subsample_pairs(items, args.limit, args.ablation_seed)
     print(f"{len(items)} items | roles={args.roles} | arms={args.arms} | concepts={concepts}")
@@ -228,8 +273,14 @@ def main() -> int:
     # block sits at a role-dependent absolute position and the role effect is
     # confounded with position; 'none' had no system block at all.
     PERSONAS, PERSONA_TOKENS = build_padded_personas(adapter.tokenizer)
-    print(f'span di ruolo appaiati: {min(PERSONA_TOKENS.values())}-'
-          f'{max(PERSONA_TOKENS.values())} token su {len(PERSONA_TOKENS)} ruoli', flush=True)
+    unknown_roles = sorted(set(args.roles) - set(PERSONAS))
+    if unknown_roles:
+        raise ValueError(f"unknown role(s): {unknown_roles}")
+    active_counts = {r: PERSONA_TOKENS[r] for r in args.roles if PERSONAS[r] is not None}
+    spread = max(active_counts.values()) - min(active_counts.values())
+    if spread > 2:
+        raise ValueError(f"active role spans are not token-matched: {active_counts}")
+    print(f"span di ruolo appaiati: {active_counts} (spread={spread})", flush=True)
     rt = SteeringRuntime(adapter)
 
     library = load_pro_ctcae()
@@ -333,7 +384,6 @@ def main() -> int:
                 # the same forward pass, and gives the role x framing contrast far
                 # more resolution than 112 binary items can.
                 gen = ((pred.generated if pred else "") or "").strip()
-                abstained = bool(gen) and gen.lower().strip('"\'.,; ') in ABSTAIN_MARKERS
                 rows.append({
                     "record_id": it["record_id"], "pair_id": it["pair_id"],
                     "text": (it.get("source_id") or it["record_id"]) if args.redact_text
@@ -342,6 +392,8 @@ def main() -> int:
                     "grade": it.get("grade"),
                     "source_id": it.get("source_id"),
                     "framing": it["framing"], "category": it["category"],
+                    "manipulation_type": it.get("manipulation_type"),
+                    "affect_family": it.get("affect_family"),
                     "gold_class": it["gold_class"], "gold_pro_id": it["gold_pro_id"],
                     "gold_pro_status": it["gold_pro_status"], "urgent": it["urgent"],
                     "role": role, "ablated": ablated, "arm": arm,
@@ -350,11 +402,14 @@ def main() -> int:
                     "model_top1_term": (lab.top1_term if lab else pred.top1_term),
                     "model_map_score": pred.map_score if pred else None,
                     "model_logprob": (lab.top1_score if lab else pred.logprob),
-                    "model_matched": pred.matched if pred else True,
+                    "model_matched": pred.matched if pred else None,
                     "scorer": "constrained" if lab else "generative",
                     # what free generation WOULD have committed to, kept as a second
                     # outcome and as the audit trail on the matcher
                     "generative_top1_id": pred.top1_id if pred else None,
+                    "generative_kind": pred.kind if pred else None,
+                    "generative_map_score": pred.map_score if pred else None,
+                    "generative_logprob": pred.logprob if pred else None,
                     "label_margin": round(lab.margin, 5) if lab else None,
                     "label_softmax_top1": round(lab.softmax_top1, 5) if lab else None,
                     "label_entropy": round(lab.entropy, 5) if lab else None,
@@ -373,9 +428,10 @@ def main() -> int:
                     # abstaining on purpose and emitting something unmappable both
                     # end with top1_id None, but they are different behaviours: only
                     # the first is the model declining to code
-                    "abstained": bool(abstained),
-                    "unmappable": bool(not abstained and pred.top1_id is None),
-                    "n_generated_tokens": len(gen.split()),
+                    "abstained": (pred.kind == "abstained") if pred else None,
+                    "unmappable": (pred.kind == "unmapped") if pred else None,
+                    "non_answer": (pred.kind == "non_answer") if pred else None,
+                    "n_generated_tokens": len(gen.split()) if pred else None,
                     **mapper_ref[it["record_id"]],
                 })
             done = sum(1 for r in rows if r["role"] == role and r["arm"] == arm)
@@ -384,20 +440,47 @@ def main() -> int:
     args.out.mkdir(parents=True, exist_ok=True)
     slug = re.sub(r"[^a-z0-9]+", "-", adapter.config.model_id.split("/")[-1].lower()).strip("-")
     outp = args.out / f"{slug}__rows.jsonl"
-    with outp.open("w", encoding="utf-8") as f:
+    rows_tmp = outp.with_suffix(outp.suffix + ".tmp")
+    with rows_tmp.open("w", encoding="utf-8") as f:
         for r in rows:
             f.write(json.dumps(r, ensure_ascii=False) + "\n")
+    rows_tmp.replace(outp)
+
+    def _sha256(path: Path) -> str:
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+
+    try:
+        git_commit = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], cwd=_ROOT, text=True).strip()
+    except Exception:
+        git_commit = None
     meta = {
+        "protocol_id": study.get("protocol_id"),
+        "study_config_sha256": _sha256(args.study_config),
+        "git_commit": git_commit,
+        "dataset_sha256": _sha256(args.dataset),
+        "vectors_sha256": _sha256(args.vecs),
+        "validation_sha256": _sha256(args.val_report),
         "model_id": adapter.config.model_id, "method": args.method, "variant": args.variant,
         "roles": args.roles, "concepts": concepts, "layer_of": layer_of,
         "ablate_concepts": list(ablate_vecs.keys()),
+        "ablate_concepts_requested": ablate_concepts,
         "n_items": len(items), "n_rows": len(rows),
         "arms": args.arms, "ablation_seed": args.ablation_seed,
+        "arms_requested": requested_arms,
+        "causal_axes_valid": causal_axes_valid,
+        "eligible_affect_axes": sorted(eligible_axes),
         "ablation_limit": args.ablation_limit or None,
         "n_items_ablation_arms": len(abl_items),
+        "scorer": args.scorer,
+        "role_token_counts": {r: PERSONA_TOKENS[r] for r in args.roles},
+        "text_redacted": bool(args.redact_text),
+        "rows_sha256": _sha256(outp),
     }
-    (args.out / f"{slug}__meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=2),
-                                                 encoding="utf-8")
+    meta_path = args.out / f"{slug}__meta.json"
+    meta_tmp = meta_path.with_suffix(meta_path.suffix + ".tmp")
+    meta_tmp.write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
+    meta_tmp.replace(meta_path)
     print(f"\nWrote {len(rows)} rows -> {outp}")
     return 0
 

@@ -16,7 +16,6 @@ import numpy as np
 
 
 def pooled_hidden_states(adapter, texts, pooling: str = "mean", progress: bool = False) -> np.ndarray:
-    import torch
 
     feats: list[np.ndarray] = []
     n = len(texts)

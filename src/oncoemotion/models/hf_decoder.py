@@ -49,7 +49,12 @@ class HFDecoderAdapter(ModelAdapter):
         # forward_capture runs text-only with output_hidden_states.
         import transformers as _tf
         loaders = [AutoModelForCausalLM]
-        for _name in ("AutoModelForImageTextToText", "AutoModelForVision2Seq", "AutoModel"):
+        for _name in (
+            "AutoModelForMultimodalLM",
+            "AutoModelForImageTextToText",
+            "AutoModelForVision2Seq",
+            "AutoModel",
+        ):
             _cls = getattr(_tf, _name, None)
             if _cls is not None:
                 loaders.append(_cls)

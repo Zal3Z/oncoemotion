@@ -88,6 +88,7 @@ def main() -> int:
         ok &= _run([PY, "scripts/run_role_emotion.py", *common,
                     "--limit", str(args.pairs),
                     "--arms", "intact", "emotion", "random",
+                    "--force-unvalidated-ablation",
                     "--ablation-limit", str(max(2, args.pairs // 2)),
                     "--baseline-limit", str(args.baseline),
                     "--vecs", vecs, "--val-report", valrep, "--out", role_dir],
@@ -95,7 +96,7 @@ def main() -> int:
         rows = role_dir / f"{_slug(args.model)}__rows.jsonl"
         if rows.exists():
             ok &= _run([PY, "scripts/analyze_role_emotion.py", "--rows", rows],
-                       "analisi per modello (sezione G = endpoint primario)")
+                       "analisi per modello (sezione H = endpoint primario)")
         else:
             skipped.append(f"analisi per modello: {rows.name} non prodotto")
 
@@ -112,11 +113,12 @@ def main() -> int:
         else:
             skipped.append("C2 per rango: nessuno spectrum.json prodotto")
 
-    if "analysis" in args.stage and ok and any(role_dir.glob("*__rows.jsonl")):
-        ok &= _run([PY, "scripts/analyze_results.py",
-                    "--rows-glob", str(role_dir / "*__rows.jsonl"),
-                    "--out", out / "primary_analysis.json"],
-                   "analisi primaria aggregata")
+    if "analysis" in args.stage and ok:
+        # The definitive pooled CLI deliberately rejects a one-model/partial Tier 1
+        # smoke run. Exercise its endpoint, quality and abstract contracts through
+        # focused regression tests instead of adding a dangerous bypass flag.
+        ok &= _run([PY, "-m", "pytest", "tests/unit/test_esmo_analysis.py"],
+                   "contratto analisi primaria ESMO")
 
     print(f"\n{'=' * 72}")
     if skipped:

@@ -80,7 +80,6 @@ class SteeringRuntime:
 
     # --- convenience: measure the effect on the point-E decision ---
     def decision_logits(self, prompt: str):
-        import torch
 
         cap = self.adapter.forward_capture(prompt)
         return cap["logits"][0, -1].float()

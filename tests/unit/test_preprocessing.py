@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+from oncoemotion.preprocessing.assertion import detect_assertion_temporality
 from oncoemotion.preprocessing.normalize import Normalizer
 from oncoemotion.preprocessing.segment import segment_text
-from oncoemotion.preprocessing.assertion import detect_assertion_temporality
 
 
 def test_normalizer_display_and_match():

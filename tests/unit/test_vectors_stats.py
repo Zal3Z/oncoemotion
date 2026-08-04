@@ -4,9 +4,13 @@ from __future__ import annotations
 
 import numpy as np
 
-from oncoemotion.emotion_vectors import orthogonalize, cosine, random_vector
-from oncoemotion.steering.spec import steer_add, ablate_projection, norm_scaled_alpha
-from oncoemotion.statistics import bootstrap_ci, benjamini_hochberg
+from oncoemotion.emotion_vectors import cosine, orthogonalize, random_vector
+from oncoemotion.statistics import (
+    benjamini_hochberg,
+    bootstrap_ci,
+    hierarchical_cluster_ci,
+)
+from oncoemotion.steering.spec import ablate_projection, norm_scaled_alpha, steer_add
 
 
 def test_orthogonalize_removes_confounder_component():
@@ -111,3 +115,26 @@ def test_bh_adjusted_agrees_with_rejections():
     rej = benjamini_hochberg(p, alpha=0.05)
     adj = bh_adjusted_pvalues(p)
     assert list(rej) == [a <= 0.05 for a in adj]
+
+
+def test_hierarchical_cluster_ci_keeps_models_equally_weighted():
+    values = {
+        "small": {"p1": [0.0], "p2": [0.0]},
+        "large": {f"p{i}": [1.0, 1.0] for i in range(20)},
+    }
+    point, lo, hi = hierarchical_cluster_ci(values, n_boot=400, seed=11)
+    # Macro-model estimand: 0 and 1 receive equal weight even though the second
+    # model contributed ten times as many clinical pairs and two framings each.
+    assert point == 0.5
+    assert lo <= point <= hi
+
+
+def test_hierarchical_cluster_ci_is_deterministic_and_pair_clustered():
+    values = {
+        "m1": {"p1": [0.0, 1.0], "p2": [1.0, 1.0]},
+        "m2": {"p1": [0.0, 0.0], "p2": [0.0, 1.0]},
+    }
+    a = hierarchical_cluster_ci(values, n_boot=250, seed=19)
+    b = hierarchical_cluster_ci(values, n_boot=250, seed=19)
+    assert a == b
+    assert a[1] <= a[0] <= a[2]

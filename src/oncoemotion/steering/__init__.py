@@ -11,7 +11,7 @@ implemented as transient forward hooks via
 :mod:`oncoemotion.activations.hooks` and removed after each run.
 """
 
-from oncoemotion.steering.spec import SteeringSpec, steer_add, ablate_projection
+from oncoemotion.steering.spec import SteeringSpec, ablate_projection, steer_add
 
 __all__ = ["SteeringSpec", "steer_add", "ablate_projection"]
 

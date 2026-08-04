@@ -51,3 +51,8 @@ outputs/smoke/
 
 # Real clinical free text: never in VCS
 data/real/
+sinomi_campi_aperti.xlsx
+*campi_aperti*.xlsx
+
+# Local regulatory/reference downloads and temporary renders
+tmp/

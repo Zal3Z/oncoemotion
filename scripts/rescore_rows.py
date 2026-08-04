@@ -29,7 +29,6 @@ from __future__ import annotations
 import argparse
 import glob as _glob
 import json
-import re
 import sys
 from collections import Counter
 from pathlib import Path
@@ -37,25 +36,11 @@ from pathlib import Path
 _ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(_ROOT / "src"))
 
-from oncoemotion.clinical.classify import ABSTAIN_MARKERS, build_term_matcher  # noqa: E402
+from oncoemotion.clinical.classify import (  # noqa: E402
+    build_term_matcher,
+    classify_generated_term,
+)
 from oncoemotion.terminology.pro_ctcae import load_pro_ctcae  # noqa: E402
-
-# Codes, identifiers and digit runs: the model failed to answer at all. Counting
-# these as "unmapped" alongside genuine clinical synonyms hid a real failure mode.
-_NONANSWER = re.compile(r"^(?:[\d\s.\-_/]+|[A-Z]\d{2}(?:\.\d+)?|CTCAE[_\s].*|PRO[_\s]?\d+)$", re.I)
-
-
-def _classify(term: str, matcher, floor: float):
-    t = (term or "").strip()
-    low = t.lower().strip('.,;:"\' ')
-    if not t or _NONANSWER.match(t):
-        return None, "non_answer", 0.0
-    if low in ABSTAIN_MARKERS:
-        return None, "abstained", 0.0
-    cid, _en, sc = matcher(t)
-    if cid is not None and sc >= floor:
-        return cid, "mapped", sc
-    return None, "unmapped", sc
 
 
 def main() -> int:
@@ -79,24 +64,30 @@ def main() -> int:
     for p in paths:
         rows = [json.loads(l) for l in Path(p).read_text(encoding="utf-8").splitlines() if l.strip()]
         kinds = Counter()
-        before = after = n = 0
+        before = after = n_term = n_rows = 0
         for r in rows:
-            if r.get("gold_class") != "term" or r.get("arm", "intact") != "intact":
-                continue
-            n += 1
-            before += int(r.get("model_top1_id") == r.get("gold_pro_id"))
-            cid, kind, sc = _classify(r.get("model_generated"), matcher, args.floor)
+            # Legacy rows store the freely generated clinical term in every arm.
+            # Re-score all of them: limiting this to intact term rows made causal
+            # flip analyses compare a new matcher on one side with the old matcher
+            # on the other.
+            n_rows += 1
+            cid, kind, sc = classify_generated_term(
+                r.get("model_generated"), matcher, floor=args.floor)
             kinds[kind] += 1
-            after += int(cid == r.get("gold_pro_id"))
             r["rescored_top1_id"] = cid
             r["rescored_kind"] = kind
             r["rescored_score"] = round(sc, 3)
-        if not n:
+            if r.get("gold_class") == "term":
+                n_term += 1
+                before += int(r.get("model_top1_id") == r.get("gold_pro_id"))
+                after += int(cid == r.get("gold_pro_id"))
+        if not n_term:
             continue
-        b, a = before / n, after / n
+        b, a = before / n_term, after / n_term
         tot_before.append(b); tot_after.append(a)
         print(f"{Path(p).name.split('__')[0]:26s} {b:10.3f} {a:9.3f} {a-b:+7.3f} "
-              f"{kinds['mapped']/n:10.1%} {kinds['abstained']/n:8.1%} {kinds['non_answer']/n:12.1%}")
+              f"{kinds['mapped']/n_rows:10.1%} {kinds['abstained']/n_rows:8.1%} "
+              f"{kinds['non_answer']/n_rows:12.1%}")
         if args.write:
             with Path(p).open("w", encoding="utf-8") as f:
                 for r in rows:

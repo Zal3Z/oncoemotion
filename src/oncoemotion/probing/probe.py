@@ -44,7 +44,6 @@ def cohens_d(scores: np.ndarray, y: np.ndarray) -> float:
 def best_threshold_accuracy(scores: np.ndarray, y: np.ndarray) -> float:
     order = np.argsort(scores)
     s = scores[order]
-    yy = y[order]
     best = 0.0
     for thr in np.concatenate([[s[0] - 1], (s[:-1] + s[1:]) / 2, [s[-1] + 1]]):
         pred = (scores >= thr).astype(int)

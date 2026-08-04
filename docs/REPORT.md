@@ -1,5 +1,10 @@
 # oncoemotion — Scientific report
 
+> **Legacy exploratory report.** This document predates protocol
+> `esmo-ai-2026-v2`, the affect/intensity partition, corrected role control,
+> constrained code scoring and the
+> definitive rerun. Do not cite its numerical results for the ESMO submission.
+
 *Emotion-like internal representations during PRO-CTCAE / CTCAE association in an
 open-weight language model.*
 

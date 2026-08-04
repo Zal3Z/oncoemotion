@@ -31,8 +31,8 @@ presets:
     device_map: "cpu"
 
   # --- Multi-model comparison trio (Colab A100 40GB, bf16). ---
-  # Ministral & Gemma are GATED: accept the license on their HF page and set
-  # HF_TOKEN before running. Qwen3 is open.
+  # Gemma is GATED: accept the license on its HF page and set HF_TOKEN before
+  # running. Qwen3 and Ministral are currently public.
   cn_qwen3_8b:            # China — Alibaba, Apache-2.0, open
     model_id: "Qwen/Qwen3-8B"
     dtype: "bfloat16"
@@ -41,8 +41,8 @@ presets:
     model_id: "mistralai/Ministral-8B-Instruct-2410"
     dtype: "bfloat16"
     device_map: "auto"
-  us_gemma4_12b:         # USA — Google, gated (dense; Gemma has no 8B dense)
-    model_id: "google/gemma-4-12B"
+  us_gemma3_4b:          # USA — Google, gated instruction model
+    model_id: "google/gemma-3-4b-it"
     dtype: "bfloat16"
     device_map: "auto"
 
@@ -50,7 +50,7 @@ presets:
 model_trio:
   - "Qwen/Qwen3-8B"
   - "mistralai/Ministral-8B-Instruct-2410"
-  - "google/gemma-4-12B"
+  - "google/gemma-3-4b-it"
 
 # --- Medical vs base comparison (does medical fine-tuning act like a permanent
 #     "oncologo role"? dampen emotionality? change coding?). MedGemma is Gemma-3

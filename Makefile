@@ -5,10 +5,11 @@ PY ?= .venv/Scripts/python.exe
 
 .PHONY: help venv install install-ml terminology test test-v api mapping lint clean \
         terminology-official vectors validate probing steering patching pipeline \
-        smoke dashboard docker-build docker-up
+        smoke dashboard docker-build docker-up esmo-analysis esmo-abstract esmo-check \
+        esmo-poster
 
 help:
-	@echo "Targets: venv install install-ml terminology test api mapping lint clean"
+	@echo "Targets: test lint smoke esmo-check esmo-analysis esmo-abstract esmo-poster api mapping"
 
 venv:
 	python -m venv .venv
@@ -81,6 +82,7 @@ smoke:
 	    --report $(SMOKE_DIR)/vector_validation.json --figure $(SMOKE_DIR)/layer_sweep.png
 	$(PY) scripts/run_role_emotion.py --model $(SMOKE_MODEL) --dtype float16 --device cuda \
 	    --limit 6 --arms intact emotion random --ablation-limit 4 \
+	    --force-unvalidated-ablation \
 	    --vecs $(SMOKE_DIR)/emotion_vectors.npz --val-report $(SMOKE_DIR)/vector_validation.json \
 	    --out $(SMOKE_DIR)/role_emotion
 	for f in $(SMOKE_DIR)/role_emotion/*__rows.jsonl; do $(PY) scripts/analyze_role_emotion.py --rows "$$f"; done
@@ -89,8 +91,7 @@ smoke:
 	    --vecs $(SMOKE_DIR)/emotion_vectors.npz --val-report $(SMOKE_DIR)/vector_validation.json \
 	    --out $(SMOKE_DIR)/role_spectrum
 	$(PY) scripts/reanalyze_direction.py --dir $(SMOKE_DIR)/role_spectrum
-	$(PY) scripts/analyze_results.py --rows-glob "$(SMOKE_DIR)/role_emotion/*__rows.jsonl" \
-	    --out $(SMOKE_DIR)/primary_analysis.json
+	$(PY) -m pytest tests/unit/test_esmo_analysis.py
 	@echo ""
 	@echo "smoke OK - ogni fase ha prodotto i suoi artefatti in $(SMOKE_DIR)"
 
@@ -100,6 +101,19 @@ models:
 
 compare:
 	$(PY) scripts/compare_models.py
+
+esmo-analysis:
+	$(PY) scripts/analyze_results.py --study-config configs/study_esmo_2026.yaml
+
+esmo-abstract: esmo-analysis
+	$(PY) scripts/build_esmo_abstract.py --study-config configs/study_esmo_2026.yaml
+
+esmo-poster: esmo-abstract
+	$(PY) scripts/build_esmo_poster_figures.py
+
+esmo-check:
+	$(PY) -m pytest
+	$(PY) scripts/generate_labeled_clinical.py --check-only
 
 # --- dashboard / docker ---
 dashboard:
@@ -112,7 +126,7 @@ docker-up:
 	docker compose up --build
 
 lint:
-	$(PY) -m ruff check src tests scripts || true
+	$(PY) -m ruff check src tests scripts
 
 clean:
 	rm -rf .pytest_cache .ruff_cache **/__pycache__ *.egg-info src/*.egg-info

@@ -6,11 +6,11 @@ AUROC, coverage-risk curves and causal-effect metrics arrive with their phases.
 """
 
 from oncoemotion.evaluation.metrics import (
+    abstention_rate,
+    macro_f1,
+    selective_accuracy,
     top1_accuracy,
     topk_recall,
-    macro_f1,
-    abstention_rate,
-    selective_accuracy,
 )
 
 __all__ = [

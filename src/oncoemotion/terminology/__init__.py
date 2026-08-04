@@ -9,12 +9,12 @@ raises a clear error unless an explicitly-labelled synthetic fallback is
 requested.
 """
 
+from oncoemotion.terminology.ctcae import CTCAEDictionary, CTCAETerm, load_ctcae
 from oncoemotion.terminology.pro_ctcae import (
     PROCTCAELibrary,
     PROCTCAETerm,
     load_pro_ctcae,
 )
-from oncoemotion.terminology.ctcae import CTCAEDictionary, CTCAETerm, load_ctcae
 
 __all__ = [
     "PROCTCAELibrary",

@@ -5,8 +5,8 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
+from oncoemotion.emotion_vectors.build import METHODS, build_all_layers, build_layer_vector
 from oncoemotion.emotion_vectors.dataset import build_dataset
-from oncoemotion.emotion_vectors.build import build_layer_vector, build_all_layers, METHODS
 from oncoemotion.emotion_vectors.vectors import cosine
 from oncoemotion.probing.probe import evaluate_direction, projection_scores
 

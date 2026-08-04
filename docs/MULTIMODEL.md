@@ -1,5 +1,8 @@
 # Multi-model comparison (China / Europe / USA)
 
+> **Legacy run guide.** Use `docs/ESECUZIONE.md` and the definitive Colab path for
+> active protocol `esmo-ai-2026-v2`.
+
 Compare how different open-weight models internally react during the PRO-CTCAE
 decision. The pipeline is model-agnostic: only `model_id` changes.
 

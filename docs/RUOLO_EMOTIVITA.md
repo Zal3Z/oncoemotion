@@ -1,5 +1,8 @@
 # Ruolo & emotività — l'assegnazione di un ruolo cambia l'emotività? E l'emotività cambia l'etichettatura?
 
+> **Report esplorativo superato.** Il controllo “nessun ruolo”, il matcher e gli
+> endpoint qui descritti sono stati corretti. Non usare questi numeri nell'abstract.
+
 *Estensione dello studio oncoemotion. Interpretabilità meccanicistica sul task
 PRO-CTCAE in italiano.*
 

@@ -1,4 +1,4 @@
-"""Statistics utilities (spec section 13).
+"""Statistics utilities used by the mapping and ESMO study analyses.
 
 Ships the stratified bootstrap CI now (pure numpy, deterministic via seed) and a
 Benjamini-Hochberg multiple-comparison correction. Effect sizes and permutation
@@ -82,3 +82,55 @@ def bh_adjusted_pvalues(pvalues):
     out = np.empty(m, dtype=np.float64)
     out[order] = np.clip(adj, 0.0, 1.0)
     return out
+
+
+def hierarchical_cluster_ci(
+    values_by_model,
+    *,
+    n_boot: int = 5000,
+    ci: float = 0.95,
+    seed: int = 20260901,
+):
+    """Equal-model, pair-clustered bootstrap confidence interval.
+
+    ``values_by_model`` is ``model -> pair_id -> iterable[float]``.  Repeated
+    observations belonging to the same clinical pair (for example its neutral
+    and emotional formulations) are averaged before resampling.  A bootstrap
+    draw samples models and, within every sampled model, clinical pairs.  This
+    avoids treating two framings or nine evaluations of the same item as fully
+    independent observations.
+
+    The estimand is the macro-average across models, so a larger model family
+    does not receive more weight merely because more rows were produced for it.
+    Returns ``(estimate, lo, hi)``.
+    """
+    prepared = {}
+    for model, pairs in values_by_model.items():
+        vals = []
+        for pair_values in pairs.values():
+            arr = np.asarray(list(pair_values), dtype=np.float64)
+            arr = arr[np.isfinite(arr)]
+            if arr.size:
+                vals.append(float(arr.mean()))
+        if vals:
+            prepared[str(model)] = np.asarray(vals, dtype=np.float64)
+
+    models = sorted(prepared)
+    if not models:
+        return (float("nan"), float("nan"), float("nan"))
+
+    point = float(np.mean([prepared[m].mean() for m in models]))
+    rng = np.random.default_rng(seed)
+    boots = np.empty(n_boot, dtype=np.float64)
+    for b in range(n_boot):
+        sampled_models = rng.choice(models, size=len(models), replace=True)
+        model_means = []
+        for model in sampled_models:
+            vals = prepared[str(model)]
+            sample = rng.choice(vals, size=len(vals), replace=True)
+            model_means.append(float(sample.mean()))
+        boots[b] = float(np.mean(model_means))
+
+    alpha = (1.0 - ci) / 2.0
+    lo, hi = np.quantile(boots, [alpha, 1.0 - alpha])
+    return point, float(lo), float(hi)

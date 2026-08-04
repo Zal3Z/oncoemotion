@@ -70,6 +70,25 @@ def test_enough_paired_term_items_for_the_primary_endpoint(recs):
     assert len(pairs) >= 100
 
 
+def test_affective_subset_is_frozen_and_separate_from_intensity(recs):
+    term_neutral = [
+        r for r in recs if r["gold_class"] == "term" and r["framing"] == "neutral"
+    ]
+    affective = {
+        r["pair_id"] for r in term_neutral
+        if r["manipulation_type"] == "affective_reaction"
+    }
+    intensity = {
+        r["pair_id"] for r in term_neutral
+        if r["manipulation_type"] == "symptom_intensity"
+    }
+    assert len(affective) == 69
+    assert len(intensity) == 43
+    assert affective.isdisjoint(intensity)
+    assert affective | intensity == {r["pair_id"] for r in term_neutral}
+    assert all(r["affect_family"] for r in term_neutral if r["pair_id"] in affective)
+
+
 def test_written_dataset_matches_the_generator(gen, recs):
     """Guards against a stale committed snapshot."""
     if not _DATA.exists():
@@ -77,6 +96,10 @@ def test_written_dataset_matches_the_generator(gen, recs):
     on_disk = [json.loads(line) for line in _DATA.read_text(encoding="utf-8").splitlines()]
     assert len(on_disk) == len(recs)
     assert [r["text"] for r in on_disk] == [r["text"] for r in recs]
+    assert [r["manipulation_type"] for r in on_disk] == [
+        r["manipulation_type"] for r in recs
+    ]
+    assert [r["affect_family"] for r in on_disk] == [r["affect_family"] for r in recs]
 
 
 def test_deduplication_fields_present(recs):

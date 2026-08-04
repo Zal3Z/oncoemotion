@@ -1,5 +1,8 @@
 # Cross-model comparison — emotion-like signals during the PRO-CTCAE decision
 
+> **Legacy exploratory comparison.** It predates the frozen ESMO 2026 protocol and
+> must not be used as the source of abstract results.
+
 **China 🇨🇳 vs Europe 🇪🇺 vs USA 🇺🇸**, on a Colab A100 (bf16). Same task (Italian
 oncology-symptom → PRO-CTCAE coding), same 258 emotion-concept examples. For each
 model the emotion directions are rebuilt **in its own representation space** (spaces

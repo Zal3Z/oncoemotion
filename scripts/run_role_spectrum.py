@@ -41,14 +41,17 @@ import numpy as np
 _ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(_ROOT / "src"))
 
-from oncoemotion.config import ModelConfig  # noqa: E402
-from oncoemotion.models.base import load_adapter  # noqa: E402
-from oncoemotion.clinical.prompt import (  # noqa: E402
-    build_decision_messages, build_padded_personas, TEACHER_PREFIX)
-from oncoemotion.clinical.measure import point_e_hidden, project_scores, zscore  # noqa: E402
-from oncoemotion.emotion_vectors.vectors import random_vector  # noqa: E402
 from oncoemotion.clinical.baseline import NEUTRAL_BASELINE  # noqa: E402
+from oncoemotion.clinical.measure import point_e_hidden, project_scores, zscore  # noqa: E402
+from oncoemotion.clinical.prompt import (  # noqa: E402
+    TEACHER_PREFIX,
+    build_decision_messages,
+    build_padded_personas,
+)
+from oncoemotion.config import ModelConfig  # noqa: E402
 from oncoemotion.emotion_vectors.seeds import LEXICAL_CONTROLS  # noqa: E402
+from oncoemotion.emotion_vectors.vectors import random_vector  # noqa: E402
+from oncoemotion.models.base import load_adapter  # noqa: E402
 
 # Confounders (everything else in the vector set is treated as an emotion).
 # Concepts excluded from the emotion set. The five original confounders, plus the

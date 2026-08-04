@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 from oncoemotion.terminology.canonical import (
-    CANONICAL_TERMS,
     ATTRIBUTE_NAMES,
+    CANONICAL_TERMS,
     attribute_names,
     canonical_id,
 )

@@ -22,12 +22,11 @@ import numpy as np
 _ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(_ROOT / "src"))
 
+from oncoemotion.clinical.prompt import build_decision_ids, build_padded_personas  # noqa: E402
 from oncoemotion.config import ModelConfig  # noqa: E402
+from oncoemotion.emotion_vectors.vectors import random_vector  # noqa: E402
 from oncoemotion.models.base import load_adapter  # noqa: E402
 from oncoemotion.patching.runtime import PatchingRuntime  # noqa: E402
-from oncoemotion.clinical.prompt import (  # noqa: E402
-    build_decision_ids, build_padded_personas)
-from oncoemotion.emotion_vectors.vectors import random_vector  # noqa: E402
 
 # source (high-affect) -> recipient (low-affect) pairs
 PAIRS = [

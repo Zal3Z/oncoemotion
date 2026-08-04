@@ -24,11 +24,14 @@ import numpy as np
 _ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(_ROOT / "src"))
 
-from oncoemotion.probing.probe import evaluate_direction, projection_scores  # noqa: E402
-from oncoemotion.emotion_vectors.vectors import cosine, orthogonalize  # noqa: E402
 from oncoemotion.emotion_vectors.build import build_layer_vector  # noqa: E402
 from oncoemotion.emotion_vectors.seeds import (  # noqa: E402
-    CONTROL_SEEDS, EMOTION_SEEDS, LEXICAL_CONTROLS)
+    CONTROL_SEEDS,
+    EMOTION_SEEDS,
+    LEXICAL_CONTROLS,
+)
+from oncoemotion.emotion_vectors.vectors import cosine, orthogonalize  # noqa: E402
+from oncoemotion.probing.probe import evaluate_direction, projection_scores  # noqa: E402
 
 EMOTIONS = set(EMOTION_SEEDS)
 CONTROLS = set(CONTROL_SEEDS)
@@ -139,13 +142,56 @@ def _print_lexical_gate(g: dict) -> None:
     print(f"  cos con gli assi lessicali: mediana |cos| {g['median_abs_cos']}, "
           f"massimo {g['max_abs_cos']}")
     if g.get("fear"):
-        print(f"  asse paura: " + "  ".join(f"{k}={v:+.3f}" for k, v in g["fear"].items()))
+        print("  asse paura: " + "  ".join(f"{k}={v:+.3f}" for k, v in g["fear"].items()))
     worst = sorted(g["per_emotion"].items(),
                    key=lambda kv: -max(abs(x) for x in kv[1].values()))[:3]
     for name, d in worst:
         print(f"  piu lessicale: {name:20s} " + "  ".join(f"{k}={v:+.3f}" for k, v in d.items()))
     if g["max_abs_cos"] > 0.5:
         print("  [!] un asse supera 0.5 di allineamento col lessico: e un rilevatore di parole.")
+
+
+def _apply_protocol_gate(report: dict, args) -> None:
+    """Attach the pre-declared ESMO eligibility decision for each affect axis."""
+    if not args.study_config.exists():
+        report["protocol_gate"] = {"available": False, "reason": "study config missing"}
+        return
+    import yaml
+
+    cfg = yaml.safe_load(args.study_config.read_text(encoding="utf-8")) or {}
+    profile = cfg.get("affective_profile", {})
+    requested = list(profile.get("concepts", []))
+    min_auroc = float(profile.get("min_cross_validated_auroc", 0.60))
+    max_cos = float(profile.get("lexical_cosine_max", 0.50))
+    lexical = report.get("lexical_gate", {}).get("per_emotion", {})
+    per_axis = {}
+    for concept in requested:
+        metric = report.get("concepts", {}).get(concept)
+        cosines = lexical.get(concept, {})
+        auroc = metric.get("best_auroc") if metric else None
+        max_abs_cos = max((abs(float(v)) for v in cosines.values()), default=None)
+        reasons = []
+        if auroc is None or float(auroc) < min_auroc:
+            reasons.append(f"cross-validated AUROC < {min_auroc:.2f}")
+        if max_abs_cos is None:
+            reasons.append("lexical controls unavailable")
+        elif max_abs_cos > max_cos:
+            reasons.append(f"max |lexical cosine| > {max_cos:.2f}")
+        per_axis[concept] = {
+            "auroc": auroc,
+            "max_abs_lexical_cosine": (
+                round(max_abs_cos, 4) if max_abs_cos is not None else None),
+            "eligible": not reasons,
+            "reasons": reasons,
+        }
+    report["protocol_gate"] = {
+        "available": True,
+        "protocol_id": cfg.get("protocol_id"),
+        "thresholds": {"min_auroc": min_auroc, "max_abs_lexical_cosine": max_cos},
+        "requested_axes": requested,
+        "eligible_axes": [c for c, result in per_axis.items() if result["eligible"]],
+        "per_axis": per_axis,
+    }
 
 
 def _run_cv(args, acts, concepts, all_concepts, band, n_layers, V, report) -> int:
@@ -211,6 +257,7 @@ def _run_cv(args, acts, concepts, all_concepts, band, n_layers, V, report) -> in
         }
 
     report["lexical_gate"] = _lexical_gate(V, args, shared)
+    _apply_protocol_gate(report, args)
 
     args.report.parent.mkdir(parents=True, exist_ok=True)
     args.report.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -254,6 +301,8 @@ def main() -> int:
                     help="k-fold cross-validated evaluation with one shared layer (0 = off, "
                          "use the single-split per-concept path instead)")
     ap.add_argument("--cv-seed", type=int, default=12345)
+    ap.add_argument("--study-config", type=Path,
+                    default=_ROOT / "configs/study_esmo_2026.yaml")
     args = ap.parse_args()
 
     A = np.load(args.acts, allow_pickle=True)

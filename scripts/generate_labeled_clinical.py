@@ -7,7 +7,7 @@ Every seed is a *template* holding one ``{q}`` slot plus two fillers::
 
     template = "Mal di pancia {q} da tre giorni, peggiora dopo i pasti"
     q_neutral   = "costante"
-    q_emotional = "lancinante"
+    q_marked = "lancinante"
 
 The neutral and emotional framings are therefore **identical outside the slot**.
 That is the whole point: in the previous version the two poles were authored
@@ -15,7 +15,12 @@ freehand and the emotional one came out 2.5x longer (median 10 words vs 4) with
 commas in 40% of items vs 1%, so "emotional framing hurts coding accuracy" was
 confounded with "longer text hurts coding accuracy". With a shared stem, length,
 punctuation, body-site mentions, tense, time references and digits are matched by
-construction and only the affective marking varies.
+construction and only the marked qualifier varies.  Version 2 explicitly splits
+the marked qualifiers into patient-affective reactions (threat/distress,
+demoralisation, frustration or social shame) and symptom-intensity language.  The
+first subset carries the preregistered emotion question; the second is retained as
+a specificity control, so a severity effect cannot be relabelled as an affective
+effect after results are seen.
 
 Surface statistics are calibrated on the aggregate profile of a real PRO-CTCAE
 free-text corpus (1194 responses). The experimental items must imitate its
@@ -76,6 +81,31 @@ TAIL_PROFILE = {
 }
 PROFILE_TOL = 0.08
 LEN_BAND = (7, 12)
+
+# Predeclared semantic partition of the marked qualifier.  These terms describe a
+# patient's affective appraisal/reaction rather than the physical magnitude or
+# sensory quality of the symptom.  The complement is labelled symptom_intensity.
+# Exact membership is intentionally auditable instead of being inferred by an LLM.
+AFFECTIVE_QUALIFIER_FAMILIES = {
+    "threat": {
+        "allarmante", "allarmanti", "inquietante", "preoccupante",
+        "spaventosa", "spaventosi", "spaventoso", "terrificante", "terrificanti",
+    },
+    "distress_demoralization": {
+        "angosciante", "opprimente", "disperante", "avvilente", "annientante",
+        "devastante", "devastanti", "traumatico",
+    },
+    "anger_frustration": {"esasperante", "frustranti"},
+    "shame_social": {"imbarazzante", "umiliante", "umilianti"},
+}
+
+
+def _qualifier_class(qualifier: str) -> tuple[str, str | None]:
+    normalized = qualifier.casefold().strip()
+    for family, terms in AFFECTIVE_QUALIFIER_FAMILIES.items():
+        if normalized in terms:
+            return "affective_reaction", family
+    return "symptom_intensity", None
 
 # ---------------------------------------------------------------- TERM seeds --
 # (pro_id, canonical_english, template with {q}, q_neutral, q_emotional)
@@ -388,6 +418,7 @@ def _seeds():
 def _records(seeds):
     recs = []
     for s in seeds:
+        manipulation_type, affect_family = _qualifier_class(s["q_emotional"])
         for framing in ("neutral", "emotional"):
             text = s[framing]
             recs.append({
@@ -406,6 +437,10 @@ def _records(seeds):
                 # provenance of the manipulation, so the pairing is auditable
                 "template": s["template"],
                 "qualifier": s["q_neutral"] if framing == "neutral" else s["q_emotional"],
+                "neutral_qualifier": s["q_neutral"],
+                "marked_qualifier": s["q_emotional"],
+                "manipulation_type": manipulation_type,
+                "affect_family": affect_family,
                 # source_id/assessment_id exist so that real ingested text (25% exact
                 # duplicates in the reference corpus) can be de-duplicated without a
                 # schema migration. Synthetic items are unique by construction.
@@ -472,6 +507,24 @@ def _check(recs) -> list[str]:
     if len(term) // 2 < 100:
         errs.append(f"only {len(term)//2} term pairs, the role x framing endpoint needs >=100")
 
+    # 6b. the emotion-focused subset is fixed before inference and large enough
+    # for a model-clustered secondary estimate. Every term pair must be assigned.
+    term_neutral = [r for r in term if r["framing"] == "neutral"]
+    affective_pairs = {
+        r["pair_id"] for r in term_neutral
+        if r.get("manipulation_type") == "affective_reaction"
+    }
+    if len(affective_pairs) != 69:
+        errs.append(
+            f"affective-reaction subset has {len(affective_pairs)} term pairs, expected 69"
+        )
+    unassigned = [
+        r["record_id"] for r in term
+        if r.get("manipulation_type") not in {"affective_reaction", "symptom_intensity"}
+    ]
+    if unassigned:
+        errs.append(f"{len(unassigned)} term records lack a manipulation class")
+
     # 7. no duplicate surface strings (would break the independence assumption)
     dup = [t for t, c in Counter(r["text"] for r in recs).items() if c > 1]
     if dup:
@@ -501,6 +554,15 @@ def _report(recs) -> str:
     lines.append(f"{'intensif./item':16s} {dn:8.3f} {di:8.3f}   (reale 0.012-0.026)")
     lines.append(f"\ncoppie term: {len(term)}   termini PRO distinti: "
                  f"{len({r['gold_pro_id'] for r in term})}")
+    affective = [r for r in term if r["manipulation_type"] == "affective_reaction"]
+    intensity = [r for r in term if r["manipulation_type"] == "symptom_intensity"]
+    families = Counter(r["affect_family"] for r in affective)
+    lines.append(
+        f"partizione term: {len(affective)} affettive | {len(intensity)} intensita"
+    )
+    lines.append("famiglie affettive: " + ", ".join(
+        f"{name}={count}" for name, count in sorted(families.items())
+    ))
     return "\n".join(lines)
 
 

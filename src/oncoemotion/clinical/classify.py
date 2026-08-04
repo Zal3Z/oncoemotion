@@ -35,6 +35,7 @@ class GenPrediction:
     map_score: float          # fuzzy match score of term_str to the mapped term
     logprob: float            # mean token log-prob of the generated term (confidence)
     matched: bool             # map_score >= floor and a term was mapped
+    kind: str                 # mapped | abstained | non_answer | unmapped
 
 
 # Explicit "no PRO term" markers a model emits when it (correctly) abstains.
@@ -51,6 +52,14 @@ ABSTAIN_MARKERS = {
     "non riferito", "non valutabile", "no adverse event", "no symptoms",
     "not applicable", "not specified", "not reported", "nessuna",
 }
+
+# Codes, identifier fragments and digit runs are not abstentions: the model failed
+# to produce a clinical answer.  Keep this separate from a deliberate refusal to
+# code, otherwise a real failure mode disappears inside the generic "unmapped"
+# bucket.
+NON_ANSWER_PATTERN = re.compile(
+    r"^(?:[\d\s.\-_/]+|[A-Z]\d{2}(?:\.\d+)?|CTCAE[_\s].*|PRO[_\s]?\d+)$", re.I
+)
 
 # Clinical and technical surfaces that ARE PRO-CTCAE concepts under another name.
 # Taken from what the models actually emitted and the fuzzy matcher then discarded:
@@ -169,6 +178,26 @@ def build_term_matcher(library):
     return match
 
 
+def classify_generated_term(term_str: str, matcher, floor: float = 0.72):
+    """Classify a free-generated answer without conflating four outcomes.
+
+    Returns ``(canonical_id, kind, score)`` where ``kind`` is one of ``mapped``,
+    ``abstained``, ``non_answer`` or ``unmapped``.  This function is shared by the
+    GPU run and the offline legacy-row rescoring path, so their semantics cannot
+    drift apart again.
+    """
+    term = (term_str or "").strip()
+    folded = term.lower().strip('.,;:"\' ')
+    if not term or NON_ANSWER_PATTERN.fullmatch(term):
+        return None, "non_answer", 0.0
+    if folded in ABSTAIN_MARKERS:
+        return None, "abstained", 0.0
+    canonical_id, _term_en, score = matcher(term)
+    if canonical_id is not None and score >= floor:
+        return canonical_id, "mapped", float(score)
+    return None, "unmapped", float(score)
+
+
 def predict_generative(adapter, prefix_ids, matcher, max_new_tokens: int = 10,
                        floor: float = 0.72) -> GenPrediction:
     """Greedy-generate the term after point E, then map it to a PRO id.
@@ -198,12 +227,18 @@ def predict_generative(adapter, prefix_ids, matcher, max_new_tokens: int = 10,
         lp = torch.log_softmax(logits[0].float(), dim=-1)
         lps.append(float(lp[gen[i]]))
     mean_lp = float(np.mean(lps)) if lps else 0.0
-    cid, en, ms = matcher(term_str)
-    matched = bool(cid is not None and ms >= floor)
+    cid, kind, ms = classify_generated_term(term_str, matcher, floor=floor)
+    matched = kind == "mapped"
+    en = None
+    if matched:
+        # ``matcher`` also supplies the canonical display term.  Calling it again
+        # is cheap and keeps the public classifier's return value minimal.
+        _cid, en, _score = matcher(term_str)
     return GenPrediction(
         generated=text.strip(), term_str=term_str,
         top1_id=cid if matched else None, top1_term=en if matched else None,
-        map_score=round(ms, 3), logprob=round(mean_lp, 3), matched=matched)
+        map_score=round(ms, 3), logprob=round(mean_lp, 3), matched=matched,
+        kind=kind)
 
 
 @dataclass
