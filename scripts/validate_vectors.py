@@ -47,18 +47,40 @@ def vec_key(V, concept, method, variant):
     return f"{concept}|{method}"
 
 
-def _stratified_folds(concepts_arr: np.ndarray, k: int, seed: int) -> np.ndarray:
-    """Assign each example to one of k folds, balanced within concept."""
+def _stratified_folds(
+    concepts_arr: np.ndarray,
+    k: int,
+    seed: int,
+    families: np.ndarray | None = None,
+) -> np.ndarray:
+    """Assign folds within concept while keeping paraphrase families intact."""
     rng = np.random.default_rng(seed)
     fold = np.zeros(len(concepts_arr), dtype=int)
     for c in sorted(set(concepts_arr.tolist())):
         idx = np.where(concepts_arr == c)[0]
-        rng.shuffle(idx)
-        fold[idx] = np.arange(len(idx)) % k
+        if families is None:
+            rng.shuffle(idx)
+            fold[idx] = np.arange(len(idx)) % k
+            continue
+        concept_families = np.array(sorted(set(families[idx].tolist())), dtype=object)
+        rng.shuffle(concept_families)
+        for rank, family in enumerate(concept_families):
+            family_idx = idx[families[idx] == family]
+            fold[family_idx] = rank % k
     return fold
 
 
-def cross_validated_scores(acts, concepts_arr, all_concepts, band, k, seed, method, variant):
+def cross_validated_scores(
+    acts,
+    concepts_arr,
+    all_concepts,
+    band,
+    k,
+    seed,
+    method,
+    variant,
+    families=None,
+):
     """Out-of-fold projection scores for every concept at every layer in the band.
 
     Rebuilds the directions inside each fold, so no example is ever projected on a
@@ -66,7 +88,7 @@ def cross_validated_scores(acts, concepts_arr, all_concepts, band, k, seed, meth
     fold, which is what lifts the evaluation from 2-3 positives per concept (a
     single 20% test split) to all of them.
     """
-    fold = _stratified_folds(concepts_arr, k, seed)
+    fold = _stratified_folds(concepts_arr, k, seed, families=families)
     n = len(concepts_arr)
     scores = {c: np.full((len(band), n), np.nan) for c in all_concepts}
     for f in range(k):
@@ -162,6 +184,7 @@ def _apply_protocol_gate(report: dict, args) -> None:
     profile = cfg.get("affective_profile", {})
     requested = list(profile.get("concepts", []))
     min_auroc = float(profile.get("min_cross_validated_auroc", 0.60))
+    min_n_pos = int(profile.get("min_cross_validated_positive_examples", 0))
     max_cos = float(profile.get("lexical_cosine_max", 0.50))
     lexical = report.get("lexical_gate", {}).get("per_emotion", {})
     per_axis = {}
@@ -169,16 +192,20 @@ def _apply_protocol_gate(report: dict, args) -> None:
         metric = report.get("concepts", {}).get(concept)
         cosines = lexical.get(concept, {})
         auroc = metric.get("best_auroc") if metric else None
+        n_pos = int(metric.get("n_pos_test", 0)) if metric else 0
         max_abs_cos = max((abs(float(v)) for v in cosines.values()), default=None)
         reasons = []
         if auroc is None or float(auroc) < min_auroc:
             reasons.append(f"cross-validated AUROC < {min_auroc:.2f}")
+        if n_pos < min_n_pos:
+            reasons.append(f"cross-validated positive examples < {min_n_pos}")
         if max_abs_cos is None:
             reasons.append("lexical controls unavailable")
         elif max_abs_cos > max_cos:
             reasons.append(f"max |lexical cosine| > {max_cos:.2f}")
         per_axis[concept] = {
             "auroc": auroc,
+            "n_positive_oof": n_pos,
             "max_abs_lexical_cosine": (
                 round(max_abs_cos, 4) if max_abs_cos is not None else None),
             "eligible": not reasons,
@@ -187,14 +214,30 @@ def _apply_protocol_gate(report: dict, args) -> None:
     report["protocol_gate"] = {
         "available": True,
         "protocol_id": cfg.get("protocol_id"),
-        "thresholds": {"min_auroc": min_auroc, "max_abs_lexical_cosine": max_cos},
+        "thresholds": {
+            "min_auroc": min_auroc,
+            "min_positive_oof": min_n_pos,
+            "max_abs_lexical_cosine": max_cos,
+        },
         "requested_axes": requested,
         "eligible_axes": [c for c, result in per_axis.items() if result["eligible"]],
         "per_axis": per_axis,
     }
 
 
-def _run_cv(args, acts, concepts, all_concepts, band, n_layers, V, report) -> int:
+def _run_cv(
+    args,
+    acts,
+    concepts,
+    all_concepts,
+    band,
+    n_layers,
+    V,
+    report,
+    *,
+    families=None,
+    selection_concepts=None,
+) -> int:
     """Cross-validated evaluation with ONE layer shared by every concept.
 
     Two changes from the per-concept path, both aimed at the same failure. Picking
@@ -206,9 +249,20 @@ def _run_cv(args, acts, concepts, all_concepts, band, n_layers, V, report) -> in
     selections with one, which also makes the resulting z-scores comparable across
     concepts.
     """
-    scores = cross_validated_scores(acts, concepts, all_concepts, band,
-                                    args.cv, args.cv_seed, args.method, args.variant)
-    emo_concepts = [c for c in all_concepts if c in EMOTIONS]
+    scores = cross_validated_scores(
+        acts,
+        concepts,
+        all_concepts,
+        band,
+        args.cv,
+        args.cv_seed,
+        args.method,
+        args.variant,
+        families=families,
+    )
+    emo_concepts = [
+        c for c in (selection_concepts or all_concepts) if c in EMOTIONS
+    ]
 
     # per-layer mean AUROC across the emotion concepts -> the shared layer
     from oncoemotion.probing.probe import _auroc
@@ -234,8 +288,10 @@ def _run_cv(args, acts, concepts, all_concepts, band, n_layers, V, report) -> in
         "shared_layer_depth": round(shared / (n_layers - 1), 3),
         "mean_emotion_auroc_by_layer": {str(l): round(m, 4) for l, m in zip(band, per_layer_mean)},
         "selection": (f"one layer selected over {len(band)} candidates by mean out-of-fold "
-                      f"AUROC across {len(emo_concepts)} emotion concepts; per-concept "
-                      f"AUROC below is out-of-fold at that layer"),
+                       f"AUROC across {len(emo_concepts)} emotion concepts; per-concept "
+                       f"AUROC below is out-of-fold at that layer"),
+        "selection_concepts": emo_concepts,
+        "cv_grouping": "paraphrase_family" if families is not None else "example",
     })
     for c in all_concepts:
         y = (concepts == c).astype(int)
@@ -307,6 +363,7 @@ def main() -> int:
 
     A = np.load(args.acts, allow_pickle=True)
     acts, concepts, splits = A["acts"], A["concepts"], A["splits"]
+    families = A["families"] if "families" in A.files else None
     V = np.load(args.vecs, allow_pickle=True)
     n_layers = acts.shape[1]
     val = splits == "validation"
@@ -333,9 +390,27 @@ def main() -> int:
               "concepts": {}}
     sweep, best_vec = {}, {}
     all_concepts = sorted(set(concepts.tolist()) - {"neutral"})
+    selection_concepts = None
+    if args.study_config.exists():
+        import yaml
+
+        study = yaml.safe_load(args.study_config.read_text(encoding="utf-8")) or {}
+        requested = study.get("affective_profile", {}).get("concepts", [])
+        selection_concepts = [concept for concept in requested if concept in all_concepts]
 
     if args.cv:
-        return _run_cv(args, acts, concepts, all_concepts, band, n_layers, V, report)
+        return _run_cv(
+            args,
+            acts,
+            concepts,
+            all_concepts,
+            band,
+            n_layers,
+            V,
+            report,
+            families=families,
+            selection_concepts=selection_concepts,
+        )
 
     for concept in all_concepts:
         key = vec_key(V, concept, args.method, args.variant)

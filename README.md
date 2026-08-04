@@ -56,6 +56,17 @@ The heavy model stack is separate:
 The local 8 GB GPU is for smoke testing. Definitive eight-model execution uses
 [`notebooks/colab_multimodel.ipynb`](notebooks/colab_multimodel.ipynb).
 
+The clinician-validated real-field protocol has a separate runner and notebook so
+its observational estimands cannot be mixed with the paired synthetic experiment:
+
+```powershell
+.venv\Scripts\python.exe scripts\run_real_study.py `
+  --xlsx sinomi_campi_aperti.xlsx --cohort primary
+```
+
+See [`docs/REAL_FIELDS_PROTOCOL.md`](docs/REAL_FIELDS_PROTOCOL.md) and
+[`notebooks/colab_real_fields.ipynb`](notebooks/colab_real_fields.ipynb).
+
 ## Deterministic mapper
 
 The clinical path is:

@@ -193,11 +193,13 @@ def main() -> int:
                          "disk in the clear. The model still reads the text; only the "
                          "saved record is redacted.")
     ap.add_argument("--scorer", default="both",
-                    choices=["constrained", "generative", "both"],
+                    choices=["constrained", "generative", "both", "adaptive"],
                     help="both (default) keeps two separate outcomes: constrained 80-way "
-                         "coding for the primary endpoint and free generation for true "
-                         "abstention/non-answer. Never infer abstention from the constrained "
-                         "scorer, which is forced to choose a code.")
+                          "coding for the primary endpoint and free generation for true "
+                          "abstention/non-answer. Never infer abstention from the constrained "
+                          "scorer, which is forced to choose a code. adaptive runs constrained "
+                          "only on term golds and generative only on abstention golds; it is "
+                          "the efficient real-field policy.")
     ap.add_argument("--study-config", type=Path,
                     default=_ROOT / "configs/study_esmo_2026.yaml")
     ap.add_argument("--baseline-limit", type=int, default=0,
@@ -251,8 +253,18 @@ def main() -> int:
     best_layer = {c: val["concepts"][c]["best_layer"] for c in val["concepts"]}
     concepts = [c for c in val["concepts"]
                 if c not in CONFOUNDERS and _key_for(V, c, args.method, args.variant) in V]
-    vectors = {c: V[_key_for(V, c, args.method, args.variant)] for c in concepts}
-    layer_of = {c: best_layer.get(c, vectors[c].shape[0] // 2) for c in concepts}
+    requested_controls = list(study.get("affective_profile", {}).get("controls", []))
+    control_concepts = [
+        c for c in requested_controls
+        if c in val["concepts"] and _key_for(V, c, args.method, args.variant) in V
+    ]
+    measured_concepts = list(dict.fromkeys([*concepts, *control_concepts]))
+    vectors = {
+        c: V[_key_for(V, c, args.method, args.variant)] for c in measured_concepts
+    }
+    layer_of = {
+        c: best_layer.get(c, vectors[c].shape[0] // 2) for c in measured_concepts
+    }
     ablate_vecs = {c: vectors[c] for c in ablate_concepts if c in vectors}
 
     items = [json.loads(l) for l in args.dataset.read_text(encoding="utf-8").splitlines() if l.strip()]
@@ -260,7 +272,8 @@ def main() -> int:
         ap.error("real clinical text requires --redact-text; raw fields must not be exported")
     if args.limit:
         items, _ = _subsample_pairs(items, args.limit, args.ablation_seed)
-    print(f"{len(items)} items | roles={args.roles} | arms={args.arms} | concepts={concepts}")
+    print(f"{len(items)} items | roles={args.roles} | arms={args.arms} | "
+          f"emotions={concepts} | controls={control_concepts}")
 
     cfg = ModelConfig(dtype=args.dtype, device_map=args.device)
     adapter = load_adapter(args.model, cfg)
@@ -291,7 +304,7 @@ def main() -> int:
     # correct clinical Italian the surface list simply did not contain -- so the
     # accuracy metric was measuring the matcher's vocabulary, not the model.
     candidates = (build_candidates(adapter, library)
-                  if args.scorer in ('constrained', 'both') else None)
+                  if args.scorer in ('constrained', 'both', 'adaptive') else None)
     if candidates:
         print(f'punteggio vincolato su {len(candidates)} termini PRO', flush=True)
     print(f"generative classifier: greedy term -> fuzzy-map to {len(library)} PRO terms "
@@ -300,14 +313,18 @@ def main() -> int:
     # deterministic mapper reference (depends only on text)
     mapper = build_default_mapper()
     mapper_ref = {}
+    mapper_by_source = {}
     for it in items:
-        r = mapper.map(MapRequest(record_id=it["record_id"], text=it["text"]))
-        mids = [p.canonical_id for p in r.pro_ctcae.predictions]
-        mapper_ref[it["record_id"]] = {
-            "mapper_status": r.pro_ctcae.status,
-            "mapper_pro_id": mids[0] if mids else None,
-            "mapper_urgent": bool(r.safety.urgent_human_review),
-        }
+        source_key = it.get("source_id") or it["record_id"]
+        if source_key not in mapper_by_source:
+            r = mapper.map(MapRequest(record_id=it["record_id"], text=it["text"]))
+            mids = [p.canonical_id for p in r.pro_ctcae.predictions]
+            mapper_by_source[source_key] = {
+                "mapper_status": r.pro_ctcae.status,
+                "mapper_pro_id": mids[0] if mids else None,
+                "mapper_urgent": bool(r.safety.urgent_human_review),
+            }
+        mapper_ref[it["record_id"]] = mapper_by_source[source_key]
 
     # The intact arm needs every item: it carries the primary endpoint. The ablation
     # arms feed a label flip rate, which is already precise on a few hundred
@@ -326,8 +343,8 @@ def main() -> int:
             arm_items = abl_items if ablated else items
             tag = f"{role}/{arm}"
             # 1) baseline projections under this condition
-            base_raw = {c: [] for c in concepts}
-            base_raw_r = {c: [] for c in concepts}
+            base_raw = {c: [] for c in measured_concepts}
+            base_raw_r = {c: [] for c in measured_concepts}
             for txt in baseline:
                 system, user = build_decision_messages(txt, role=role, personas=PERSONAS)
                 with (_ablation_ctx(rt, ablate_vecs, layer_of, arm, args.ablation_seed)
@@ -336,37 +353,60 @@ def main() -> int:
                         adapter, system, user, vectors, layer_of,
                         free_text=txt if args.read_point else None,
                         role=role, personas=PERSONAS)
-                for c in concepts:
+                for c in measured_concepts:
                     base_raw[c].append(sc[c])
                     if sc_r is not None:
                         base_raw_r[c].append(sc_r[c])
-            bmean = {c: float(np.mean(base_raw[c])) for c in concepts}
-            bstd = {c: float(np.std(base_raw[c]) + 1e-9) for c in concepts}
+            bmean = {c: float(np.mean(base_raw[c])) for c in measured_concepts}
+            bstd = {c: float(np.std(base_raw[c]) + 1e-9) for c in measured_concepts}
             # R needs its own reference: it sits at a different position, so its
             # projections have a different scale and cannot share D's baseline
-            have_r = all(base_raw_r[c] for c in concepts)
-            bmean_r = {c: float(np.mean(base_raw_r[c])) for c in concepts} if have_r else None
-            bstd_r = {c: float(np.std(base_raw_r[c]) + 1e-9) for c in concepts} if have_r else None
+            have_r = all(base_raw_r[c] for c in measured_concepts)
+            bmean_r = ({c: float(np.mean(base_raw_r[c])) for c in measured_concepts}
+                       if have_r else None)
+            bstd_r = ({c: float(np.std(base_raw_r[c]) + 1e-9) for c in measured_concepts}
+                      if have_r else None)
 
             # 2) items
+            # Identical real strings may belong to distinct validated assessments.
+            # The model sees the same prompt and therefore needs only one forward
+            # pass; gold-dependent correctness/rank is still computed per source row.
+            measurement_cache = {}
             for it in arm_items:
-                system, user = build_decision_messages(it["text"], role=role, personas=PERSONAS)
-                with (_ablation_ctx(rt, ablate_vecs, layer_of, arm, args.ablation_seed)
-                      if ablated else nullcontext()):
-                    ids, raw, raw_r = _raw_scores(
-                        adapter, system, user, vectors, layer_of,
-                        free_text=it["text"] if args.read_point else None,
-                        role=role, personas=PERSONAS)
-                    pred = None
-                    if args.scorer in ("generative", "both"):
-                        pred = predict_generative(
-                            adapter, ids, matcher,
-                            max_new_tokens=args.max_new_tokens, floor=args.map_floor)
-                    lab = predict_label(adapter, ids, candidates) if candidates else None
-                    dsum = decision_summary(adapter, ids)
-                z = zscore(raw, bmean, bstd)
-                z_r = (zscore(raw_r, bmean_r, bstd_r)
-                       if raw_r is not None and bmean_r is not None else None)
+                source_key = it.get("source_id") or it["record_id"]
+                scoring_population = it["gold_class"] if args.scorer == "adaptive" else "all"
+                cache_key = (source_key, scoring_population)
+                if cache_key not in measurement_cache:
+                    system, user = build_decision_messages(
+                        it["text"], role=role, personas=PERSONAS)
+                    with (_ablation_ctx(rt, ablate_vecs, layer_of, arm, args.ablation_seed)
+                          if ablated else nullcontext()):
+                        ids, raw, raw_r = _raw_scores(
+                            adapter, system, user, vectors, layer_of,
+                            free_text=it["text"] if args.read_point else None,
+                            role=role, personas=PERSONAS)
+                        pred = None
+                        need_generative = (
+                            args.scorer in ("generative", "both")
+                            or (args.scorer == "adaptive" and it["gold_class"] == "abstain")
+                        )
+                        need_constrained = (
+                            args.scorer in ("constrained", "both")
+                            or (args.scorer == "adaptive" and it["gold_class"] == "term")
+                        )
+                        if need_generative:
+                            pred = predict_generative(
+                                adapter, ids, matcher,
+                                max_new_tokens=args.max_new_tokens, floor=args.map_floor)
+                        lab = (predict_label(adapter, ids, candidates)
+                               if candidates and need_constrained else None)
+                        dsum = decision_summary(adapter, ids)
+                    z = zscore(raw, bmean, bstd)
+                    z_r = (zscore(raw_r, bmean_r, bstd_r)
+                           if raw_r is not None and bmean_r is not None else None)
+                    measurement_cache[cache_key] = (pred, lab, dsum, z, z_r)
+                else:
+                    pred, lab, dsum, z, z_r = measurement_cache[cache_key]
                 # the committed code: the constrained scorer when available, because it
                 # cannot fail to produce a real term
                 top1 = lab.top1_id if lab else pred.top1_id
@@ -391,13 +431,21 @@ def main() -> int:
                     "text_redacted": bool(args.redact_text),
                     "grade": it.get("grade"),
                     "source_id": it.get("source_id"),
+                    "source_row": it.get("source_row"),
+                    "source_item": it.get("source_item"),
+                    "annotation_source": it.get("annotation_source"),
+                    "n_words": it.get("n_words"),
+                    "crosswalk_note": it.get("crosswalk_note"),
                     "framing": it["framing"], "category": it["category"],
                     "manipulation_type": it.get("manipulation_type"),
                     "affect_family": it.get("affect_family"),
                     "gold_class": it["gold_class"], "gold_pro_id": it["gold_pro_id"],
                     "gold_pro_status": it["gold_pro_status"], "urgent": it["urgent"],
                     "role": role, "ablated": ablated, "arm": arm,
-                    "model_generated": pred.term_str if pred else None,
+                    "model_generated": (
+                        None if args.redact_text else pred.term_str if pred else None
+                    ),
+                    "model_generated_redacted": bool(args.redact_text),
                     "model_top1_id": top1,
                     "model_top1_term": (lab.top1_term if lab else pred.top1_term),
                     "model_map_score": pred.map_score if pred else None,
@@ -416,10 +464,14 @@ def main() -> int:
                     "gold_rank": gold_rank,
                     "correct": correct,
                     "z": {c: round(z[c], 3) for c in concepts},
+                    "z_controls": {c: round(z[c], 3) for c in control_concepts},
                     # R = read point, last token of the patient text; D above is
                     # the decision point. Same forward pass, different position.
                     "z_read": ({c: round(z_r[c], 3) for c in concepts}
                                if z_r is not None else None),
+                    "z_controls_read": (
+                        {c: round(z_r[c], 3) for c in control_concepts}
+                        if z_r is not None else None),
                     # --- decision profile, all free from the same forward pass ---
                     "decision_entropy": round(dsum["entropy"], 3),
                     "decision_margin": round(dsum["top1_top2_margin"], 5),
@@ -462,10 +514,12 @@ def main() -> int:
         "vectors_sha256": _sha256(args.vecs),
         "validation_sha256": _sha256(args.val_report),
         "model_id": adapter.config.model_id, "method": args.method, "variant": args.variant,
-        "roles": args.roles, "concepts": concepts, "layer_of": layer_of,
+        "roles": args.roles, "concepts": concepts,
+        "control_concepts": control_concepts, "layer_of": layer_of,
         "ablate_concepts": list(ablate_vecs.keys()),
         "ablate_concepts_requested": ablate_concepts,
         "n_items": len(items), "n_rows": len(rows),
+        "n_unique_source_texts": len({it.get("source_id") or it["record_id"] for it in items}),
         "arms": args.arms, "ablation_seed": args.ablation_seed,
         "arms_requested": requested_arms,
         "causal_axes_valid": causal_axes_valid,

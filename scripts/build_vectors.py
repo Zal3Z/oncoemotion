@@ -66,6 +66,10 @@ def main() -> int:
     texts = [e.text for e in ds]
     concepts_arr = np.array([e.concept for e in ds])
     splits = np.array([e.split for e in ds])
+    families = np.array([
+        e.family or f"singleton:{index}" for index, e in enumerate(ds)
+    ], dtype=object)
+    sources = np.array([e.source for e in ds], dtype=object)
     print(f"Dataset: {len(ds)} examples ({int((concepts_arr!='neutral').sum())} concept + "
           f"{int((concepts_arr=='neutral').sum())} neutral), {len(set(EMOTIONS+CONTROLS))} concepts")
 
@@ -80,10 +84,11 @@ def main() -> int:
     acts = pooled_hidden_states(adapter, texts, pooling=args.pooling, progress=True)
     print(f"  activations {acts.shape} in {time.time()-t0:.1f}s")
 
-    np.savez_compressed(args.acts_out, acts=acts.astype(np.float32), concepts=concepts_arr,
-                        splits=splits, texts=np.array(texts, dtype=object),
-                        model_id=adapter.config.model_id, pooling=args.pooling)
     args.acts_out.parent.mkdir(parents=True, exist_ok=True)
+    np.savez_compressed(args.acts_out, acts=acts.astype(np.float32), concepts=concepts_arr,
+                        splits=splits, families=families, sources=sources,
+                        texts=np.array(texts, dtype=object),
+                        model_id=adapter.config.model_id, pooling=args.pooling)
     print(f"Saved activations -> {args.acts_out}")
 
     n_layers = acts.shape[1]

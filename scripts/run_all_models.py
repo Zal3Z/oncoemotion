@@ -55,7 +55,6 @@ def run(cmd: list[str]) -> int:
 
 
 VECTOR_INPUTS = [
-    "configs/study_esmo_2026.yaml",
     "pyproject.toml",
     "src/oncoemotion/config.py",
     "src/oncoemotion/models/base.py",
@@ -63,6 +62,7 @@ VECTOR_INPUTS = [
     "src/oncoemotion/activations/extract.py",
     "src/oncoemotion/emotion_vectors/build.py",
     "src/oncoemotion/emotion_vectors/dataset.py",
+    "src/oncoemotion/emotion_vectors/augment.py",
     "src/oncoemotion/emotion_vectors/seeds.py",
     "src/oncoemotion/emotion_vectors/vectors.py",
     "src/oncoemotion/clinical/baseline.py",
@@ -81,19 +81,26 @@ STAGE_INPUTS = {
 ALL_STAGES = ["vectors", "probing", "steering", "patching"]
 
 
-def _inputs_for(stages) -> list[str]:
+def _inputs_for(stages, study_config: Path | None = None) -> list[str]:
     inputs = []
     for stage in stages:
         inputs.extend(STAGE_INPUTS[stage])
+    if study_config is not None:
+        try:
+            inputs.append(str(study_config.resolve().relative_to(_ROOT)))
+        except ValueError:
+            inputs.append(str(study_config.resolve()))
     return list(dict.fromkeys(inputs))
 
 
-def pipeline_fingerprint(stages=ALL_STAGES) -> str:
+def pipeline_fingerprint(stages=ALL_STAGES, study_config: Path | None = None) -> str:
     """Content hash of source/config files that feed the requested stages."""
-    inputs = _inputs_for(stages)
+    inputs = _inputs_for(stages, study_config)
     digest = hashlib.sha256()
     for rel in inputs:
-        path = _ROOT / rel
+        path = Path(rel)
+        if not path.is_absolute():
+            path = _ROOT / path
         digest.update(rel.encode("utf-8"))
         digest.update(path.read_bytes())
     return digest.hexdigest()
@@ -119,6 +126,8 @@ def main() -> int:
     # so pca/logistic/lda are fast even at large hidden sizes.
     ap.add_argument("--methods", nargs="+", default=["diff_of_means", "pca", "logistic", "lda"])
     ap.add_argument("--outroot", type=Path, default=_ROOT / "outputs/models")
+    ap.add_argument("--study-config", type=Path,
+                    default=_ROOT / "configs/study_esmo_2026.yaml")
     ap.add_argument("--stages", nargs="+", choices=ALL_STAGES, default=ALL_STAGES,
                     help="run only the requested stages; ESMO role study needs vectors")
     ap.add_argument("--skip-existing", action="store_true",
@@ -132,7 +141,7 @@ def main() -> int:
     stages = list(dict.fromkeys(args.stages))
     if any(stage != "vectors" for stage in stages) and "vectors" not in stages:
         ap.error("probing/steering/patching require the vectors stage")
-    fingerprint = pipeline_fingerprint(stages)
+    fingerprint = pipeline_fingerprint(stages, args.study_config)
 
     summary = []
     for model_id in args.models:
@@ -162,7 +171,8 @@ def main() -> int:
                  "--methods", *args.methods, "--acts-out", str(acts), "--vec-out", str(vecs)],
                 [PY, str(_ROOT / "scripts/validate_vectors.py"),
                  "--acts", str(acts), "--vecs", str(vecs), "--report", str(val),
-                 "--figure", str(d / "layer_sweep_auroc.png")],
+                 "--figure", str(d / "layer_sweep_auroc.png"),
+                 "--study-config", str(args.study_config)],
             ])
         if "probing" in stages:
             steps.append([PY, str(_ROOT / "scripts/run_probing.py"), *common,
@@ -195,7 +205,8 @@ def main() -> int:
                 "model_id": model_id,
                 "git_commit": git_commit,
                 "pipeline_fingerprint": fingerprint,
-                "pipeline_inputs": _inputs_for(stages),
+                "pipeline_inputs": _inputs_for(stages, args.study_config),
+                "study_config": str(args.study_config),
                 "stages": stages,
                 "dtype": args.dtype,
                 "device": args.device,

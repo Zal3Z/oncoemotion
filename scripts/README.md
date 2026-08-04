@@ -4,7 +4,8 @@
 
 - `build_terminology.py` - build the 80-term PRO library.
 - `run_mapping_baseline.py` - deterministic PRO/CTCAE mapper.
-- `ingest_real_fields.py` - governed local ingestion; output remains ignored.
+- `ingest_real_fields.py` - governed, fail-closed local ingestion through the explicit
+  crosswalk; output remains ignored.
 
 ## ESMO 2026 study
 
@@ -19,6 +20,18 @@
    matched base/medicalized contrasts and causal gate.
 8. `build_esmo_abstract.py` - structured draft and ESMO character validation.
 9. `build_esmo_poster_figures.py` - result-driven PNG/SVG poster panels.
+
+## Clinician-validated real-field study
+
+1. `ingest_real_fields.py` - preserves every assessment row and creates a redaction key.
+2. `run_real_study.py` - builds expanded independent affect vectors, runs the frozen
+   primary or extended cohort and measures two token-matched roles.
+3. `analyze_real_fields.py` - gold-code accuracy, non-PRO abstention, within-item
+   affect/value slopes, affect/error association and clustered sensitivity analyses.
+4. `package_real_results.py` - privacy gate and result archive; raw text is rejected.
+
+The authoritative parameters are in `configs/study_esmo_2026_real.yaml`; operational
+details and estimands are in `docs/REAL_FIELDS_PROTOCOL.md`.
 
 The authoritative parameters live in `configs/study_esmo_2026.yaml`. Existing
 artefacts are reusable only when their manifest/fingerprint matches the current
