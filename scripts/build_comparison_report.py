@@ -34,6 +34,8 @@ META_RULES = [
     ("gemma-4",            ("🇺🇸", "Gemma-4-12B", "USA · Google", "us")),
     ("eurollm-9b-meditronfo", ("🩺", "EuroLLM-9B-MedFO", "EPFL (medico)", "med")),
     ("eurollm",            ("🇪🇺", "EuroLLM-9B", "Europa · UTTER", "eu")),
+    ("apertus-70b-meditronfo", ("🩺", "Apertus-70B-MedFO", "EPFL (medico)", "med")),
+    ("apertus-70b",           ("🇪🇺", "Apertus-70B", "Europa · Swiss AI", "eu")),
     ("apertus-8b-meditronfo", ("🩺", "Apertus-8B-MedFO", "EPFL (medico)", "med")),
     ("apertus",            ("🇪🇺", "Apertus-8B", "Europa · Swiss AI", "eu")),
     ("meditron",           ("🩺", "Meditron3-8B", "EPFL (medico)", "med")),

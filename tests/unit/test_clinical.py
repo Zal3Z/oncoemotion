@@ -117,3 +117,35 @@ def test_build_decision_messages_uses_the_padded_table():
     assert sys_ctrl is not None
     sys_default, _ = build_decision_messages("ho nausea", role="none")
     assert sys_default is None      # unpadded default keeps the old behaviour
+
+
+def test_joint_prompt_offers_both_ontologies_and_explicit_abstention():
+    from oncoemotion.clinical.prompt import build_decision_messages
+
+    _, user = build_decision_messages(
+        "ho nausea",
+        role="none",
+        decision_space="joint",
+    )
+    assert "PRO-CTCAE | <item>" in user
+    assert "CTCAE | <item>" in user
+    assert "NON_CLASSIFICABILE" in user
+
+
+def test_joint_gold_keeps_ctcae_separate_from_nonclassifiable():
+    from oncoemotion.clinical.joint import gold_joint_choice
+
+    pro = gold_joint_choice(
+        {
+            "annotation_source": "PRO-CTCAE",
+            "gold_pro_id": "PRO_048",
+            "gold_pro_term": "General pain",
+        }
+    )
+    ctcae = gold_joint_choice(
+        {"annotation_source": "CTCAE v5", "gold_ctcae_term": "Fever"}
+    )
+    unknown = gold_joint_choice({"annotation_source": "Non associabile"})
+    assert pro.choice_id == "PRO::PRO_048"
+    assert ctcae.choice_id == "CTCAE::Fever"
+    assert unknown.choice_id == "NON_CLASSIFICABILE"

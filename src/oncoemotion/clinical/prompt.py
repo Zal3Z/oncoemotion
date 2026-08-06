@@ -82,6 +82,25 @@ ROLE_PERSONAS = {
 # Identical teacher-forced output prefix (spec section 10).
 TEACHER_PREFIX = '{"pro_ctcae":{"term":"'
 
+# Separate prefix for the behavioural extension in which PRO-CTCAE, CTCAE and an
+# explicit non-classifiable answer compete in one constrained label space.
+JOINT_TEACHER_PREFIX = '{"classification":{"choice":"'
+
+JOINT_TASK_INSTRUCTION = (
+    "Classifica il testo oncologico scegliendo una sola associazione. "
+    "Le risposte ammesse sono: 'PRO-CTCAE | <item>' per un item PRO-CTCAE, "
+    "'CTCAE | <item>' per un item CTCAE, oppure 'NON_CLASSIFICABILE' quando "
+    "il testo non contiene informazioni sufficienti per una scelta affidabile. "
+    "Non inventare dettagli clinici assenti."
+)
+
+DELIBERATION_INSTRUCTION = (
+    "Prima della classificazione finale, valuta brevemente: sintomo espresso, "
+    "sufficienza dell'evidenza, possibile tassonomia PRO-CTCAE o CTCAE e principali "
+    "ambiguità. Produci una nota tecnica di massimo 60 parole. Non ripetere "
+    "letteralmente il testo e non scrivere ancora la risposta finale."
+)
+
 # Standard neutral sentence for the persistence test (identical for all inputs).
 NEUTRAL_FILLER = (
     "Questa è una procedura di codifica standard, ordinaria e di routine."
@@ -184,8 +203,18 @@ def build_padded_personas(tokenizer, target: int | None = None,
     return out, counts
 
 
+def decision_prefix(decision_space: str = "pro_only") -> str:
+    if decision_space == "pro_only":
+        return TEACHER_PREFIX
+    if decision_space == "joint":
+        return JOINT_TEACHER_PREFIX
+    raise ValueError(f"unknown decision space: {decision_space!r}")
+
+
 def build_decision_ids(adapter, free_text: str, role: str = "none",
-                       neutral_filler: str | None = None, personas: dict | None = None):
+                       neutral_filler: str | None = None, personas: dict | None = None,
+                       *, decision_space: str = "pro_only",
+                       deliberation: str | None = None):
     """Token ids for the decision prompt, whose LAST token is measurement point E.
 
     The single construction path. Before this, the probing / steering / patching
@@ -198,15 +227,26 @@ def build_decision_ids(adapter, free_text: str, role: str = "none",
     ``role`` defaults to the no-role control, which is now a real padded system
     block rather than an absent one.
     """
-    system, user = build_decision_messages(free_text, role=role,
-                                           neutral_filler=neutral_filler,
-                                           personas=personas)
-    return adapter.build_prompt_ids(user, system, assistant_prefix=TEACHER_PREFIX)
+    system, user = build_decision_messages(
+        free_text,
+        role=role,
+        neutral_filler=neutral_filler,
+        personas=personas,
+        decision_space=decision_space,
+        deliberation=deliberation,
+    )
+    return adapter.build_prompt_ids(
+        user,
+        system,
+        assistant_prefix=decision_prefix(decision_space),
+    )
 
 
 def read_point_index(adapter, free_text: str, ids, role: str = "none",
                      neutral_filler: str | None = None,
-                     personas: dict | None = None) -> int | None:
+                     personas: dict | None = None, *,
+                     decision_space: str = "pro_only",
+                     deliberation: str | None = None) -> int | None:
     """Token index of the LAST token of the patient text -- the read point, R.
 
     The cheap half of the R/D split. The thesis distinguishes the state the patient's
@@ -222,9 +262,14 @@ def read_point_index(adapter, free_text: str, ids, role: str = "none",
     outcome for a tokenizer whose template output does not round-trip. Callers should
     treat None as "no R for this item" rather than as an error.
     """
-    system, user = build_decision_messages(free_text, role=role,
-                                           neutral_filler=neutral_filler,
-                                           personas=personas)
+    system, user = build_decision_messages(
+        free_text,
+        role=role,
+        neutral_filler=neutral_filler,
+        personas=personas,
+        decision_space=decision_space,
+        deliberation=deliberation,
+    )
     tok = adapter.tokenizer
     msgs = ([{"role": "system", "content": system}] if system else []) + \
            [{"role": "user", "content": user}]
@@ -232,7 +277,7 @@ def read_point_index(adapter, free_text: str, ids, role: str = "none",
         rendered = tok.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True)
     except Exception:
         return None
-    full = rendered + TEACHER_PREFIX
+    full = rendered + decision_prefix(decision_space)
 
     marker = f'"{free_text}"'
     pos = full.rfind(marker)
@@ -289,7 +334,8 @@ def build_decision_prompt(free_text: str, neutral_filler: str | None = None) -> 
 
 def build_decision_messages(
     free_text: str, role: str | None = None, neutral_filler: str | None = None,
-    personas: dict | None = None
+    personas: dict | None = None, *, decision_space: str = "pro_only",
+    deliberation: str | None = None,
 ) -> tuple[str | None, str]:
     """Return ``(system_text, user_text)`` for the role-conditioned decision.
 
@@ -305,11 +351,28 @@ def build_decision_messages(
     """
     table = personas if personas is not None else ROLE_PERSONAS
     system = table.get(role) if role else None
-    parts = [
-        TASK_INSTRUCTION,
-        f'Testo del paziente: "{free_text}"',
-    ]
+    instruction = TASK_INSTRUCTION if decision_space == "pro_only" else JOINT_TASK_INSTRUCTION
+    parts = [instruction, f'Testo del paziente: "{free_text}"']
     if neutral_filler:
         parts.append(neutral_filler)
+    if deliberation:
+        parts.append(f"Nota deliberativa preliminare del modello:\n{deliberation.strip()}")
     parts.append("Rispondi in formato JSON.")
     return system, "\n".join(parts)
+
+
+def build_deliberation_messages(
+    free_text: str,
+    role: str | None = None,
+    personas: dict | None = None,
+) -> tuple[str | None, str]:
+    """Prompt for the standardized first pass of the deliberative condition."""
+    table = personas if personas is not None else ROLE_PERSONAS
+    system = table.get(role) if role else None
+    user = "\n".join(
+        [
+            DELIBERATION_INSTRUCTION,
+            f'Testo del paziente: "{free_text}"',
+        ]
+    )
+    return system, user

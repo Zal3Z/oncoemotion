@@ -1,9 +1,16 @@
 # Esecuzione definitiva - ESMO AI 2026
 
-Il protocollo scientifico v2, centrato sulla sensibilità al linguaggio affettivo, è in
+Il protocollo scientifico v3, centrato sulla sensibilità al linguaggio affettivo, è in
 [`ESMO_2026_PROTOCOL.md`](ESMO_2026_PROTOCOL.md); i parametri autoritativi sono in
 [`configs/study_esmo_2026.yaml`](../configs/study_esmo_2026.yaml). I vecchi report e
 gli archivi `oncoemotion_results*` sono esplorativi e non alimentano l'abstract.
+
+Il run reale validato e la successiva estensione con risposta esplicita
+`NON_CLASSIFICABILE` sono documentati separatamente in
+[`REASONING_ABSTENTION_PROTOCOL.md`](REASONING_ABSTENTION_PROTOCOL.md). Tutti i
+protocolli vengono ora eseguiti da `notebooks/oncoemotion_colab.ipynb`; l'estensione
+direct/deliberative resta un'analisi separata e non sostituisce il protocollo
+reale v2.
 
 ## 1. Prima del run
 
@@ -29,21 +36,30 @@ disponibile nella sessione Colab. La build deve fallire, non degradare, se manca
 
 ## 2. Notebook Colab
 
-Aprire `notebooks/colab_multimodel.ipynb` e usare soltanto:
+Aprire `notebooks/oncoemotion_colab.ipynb` e usare **Runtime → Esegui tutto**. Le
+celle eseguono in ordine:
 
-1. GPU;
+1. configurazione del nuovo `RUN_ID` e controllo GPU;
 2. clone del branch congelato;
-3. installazione;
-4. login Hugging Face;
-5. terminologia ufficiale;
-6. preflight accessi (`8a`);
-7. run definitivo (`8d`);
-8. analisi e salvataggio (`9`).
+3. installazione e login Hugging Face;
+4. mount degli input privati e output persistenti su Drive;
+5. preflight degli accessi;
+6. studio controllato, campi reali v1 ed estensione reasoning/astensione;
+7. analisi, figure, audit per item e pacchetti redatti.
 
-La cella `8d` completa prima gli otto modelli Tier 1. I tier aggiuntivi rimangono
-commentati finché il pacchetto Tier 1 non è stato salvato. Per il poster non vengono
-eseguiti probing, steering e patching storici: servono vettori validati e lo studio
-ruolo-affetto. Lo spettro a 11 personae è esplorativo e disattivato.
+Il run usa otto modelli Tier 1 nelle fasi controllata e reale. La coppia Apertus
+70B base/medicalizzata è caricata in NF4 appaiato secondo
+`configs/runtime_blackwell_96gb.yaml`; gli altri modelli usano BF16. L'estensione
+reasoning viene eseguita su tre coppie base/medicalizzato, MedGemma 27B,
+Apollo2-7B e Qwen3.6-27B; Qwen3-8B e Ministral restano nei rerun confermativi ma
+non vengono ripetuti nell'estensione. `RUN_SECONDARY=True` aggiunge BioMistral-7B
+e abilita le altre analisi secondarie. Per il poster non vengono
+rieseguiti esperimenti storici fuori protocollo: le loro funzioni utili sono già
+incorporate negli script dello studio controllato.
+
+Ogni modello resta nella cache locale fino al completamento di tutte e tre le fasi;
+solo allora i pesi vengono rimossi. I risultati vivono invece in
+`MyDrive/oncoemotion/runs/<RUN_ID>/outputs`, quindi una disconnessione non li elimina.
 
 Il run è riprendibile tramite due manifesti:
 
@@ -94,7 +110,7 @@ non attribuisce causalmente l'instabilità all'affetto.
 
 ## 4. Artefatti da conservare
 
-La cella finale crea `oncoemotion_results.zip` con:
+La fase finale crea i pacchetti redatti sotto `outputs/packages/` e conserva:
 
 - configurazione congelata;
 - validazione vettori e manifesti;
@@ -102,6 +118,11 @@ La cella finale crea `oncoemotion_results.zip` con:
 - analisi pooled `esmo_primary_analysis.json`;
 - draft `esmo_abstract_draft.md` con conteggio caratteri.
 - figure affettive, controllo di specificità e contrasti base/medicalizzato.
+
+Sotto `outputs/tables/item_audit/` vengono inoltre prodotte tabelle locali con il
+testo clinico e le scelte di ogni modello, comprese le condizioni diretta e
+deliberativa. Queste tabelle e il workbook di revisione non devono entrare negli ZIP
+pubblicabili.
 
 Non includere pesi, attivazioni grezze, terminologia soggetta a licenza o testo
 clinico non redatto.

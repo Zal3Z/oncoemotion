@@ -53,19 +53,29 @@ The heavy model stack is separate:
 .venv\Scripts\python.exe -m pip install -e ".[ml,viz]"
 ```
 
-The local 8 GB GPU is for smoke testing. Definitive eight-model execution uses
-[`notebooks/colab_multimodel.ipynb`](notebooks/colab_multimodel.ipynb).
+The local 8 GB GPU is for smoke testing. The complete definitive execution uses the
+single entry point
+[`notebooks/oncoemotion_colab.ipynb`](notebooks/oncoemotion_colab.ipynb).
 
-The clinician-validated real-field protocol has a separate runner and notebook so
-its observational estimands cannot be mixed with the paired synthetic experiment:
+The clinician-validated real-field protocol has a separate runner and analysis
+contract so its observational estimands cannot be mixed with the paired synthetic
+experiment, although the single Colab notebook orchestrates both:
 
 ```powershell
 .venv\Scripts\python.exe scripts\run_real_study.py `
   --xlsx sinomi_campi_aperti.xlsx --cohort primary
 ```
 
-See [`docs/REAL_FIELDS_PROTOCOL.md`](docs/REAL_FIELDS_PROTOCOL.md) and
-[`notebooks/colab_real_fields.ipynb`](notebooks/colab_real_fields.ipynb).
+See [`docs/REAL_FIELDS_PROTOCOL.md`](docs/REAL_FIELDS_PROTOCOL.md). The same single
+Colab notebook runs this protocol after the controlled study and before the
+reasoning/explicit-abstention extension.
+
+The rerun uses an eight-model panel with the matched Apertus 70B pair in NF4 on
+Blackwell 96 GB. The reasoning extension uses the three matched
+base/medicalized pairs, MedGemma 27B, Italian-capable Apollo2-7B and Qwen3.6-27B.
+Qwen3.6 receives a separate native
+thinking arm; see
+[`docs/MODEL_PANEL_REASONING.md`](docs/MODEL_PANEL_REASONING.md).
 
 ## Deterministic mapper
 
@@ -132,7 +142,7 @@ not intended to estimate population prevalence or production accuracy.
 ```text
 configs/                 model, terminology and frozen ESMO study contract
 data/                    synthetic generators/records; real data ignored
-docs/                    protocol, runbook and legacy reports
+docs/                    protocols, runbook and audit guides
 notebooks/               definitive Colab runner and exploratory notebooks
 scripts/                 data, vector, experiment, analysis and reporting CLIs
 src/oncoemotion/         mapper, safety, model hooks, vectors and interventions

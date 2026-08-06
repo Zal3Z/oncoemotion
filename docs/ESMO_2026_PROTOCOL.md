@@ -1,6 +1,6 @@
 # ESMO AI & Digital Oncology 2026 - frozen study protocol v2
 
-Protocol ID: `esmo-ai-2026-v2`  
+Protocol ID: `esmo-ai-2026-v3`
 Freeze point: before the definitive Colab run and before inspection of Tier 1 outcomes  
 Submission deadline: 1 September 2026, 21:00 CEST
 
@@ -90,7 +90,7 @@ are secondary.
 - Corrected-by-role, broken-by-role and changed-wrong-to-wrong transitions.
 - Per-axis, grouped signed and RMS role shifts at the patient-text read point (`R`)
   and code-decision point (`D`).
-- Matched medicalized-minus-base contrasts across Apertus-8B, EuroLLM-9B and
+- Matched medicalized-minus-base contrasts across Apertus-70B-NF4, EuroLLM-9B and
   Gemma-3-27B. Three families support only a secondary family-level interpretation.
 
 Secondary results are estimates and intervals. No minimum p-value selected from
@@ -161,7 +161,8 @@ documented before submission.
 
 Tier 1 contains eight models and three base/medicalized pairs:
 
-- `swiss-ai/Apertus-8B-Instruct-2509` / `EPFLiGHT/Apertus-8B-MeditronFO`;
+- `swiss-ai/Apertus-70B-Instruct-2509` / `EPFLiGHT/Apertus-70B-MeditronFO`
+  (entrambi NF4 su Blackwell 96 GB);
 - `utter-project/EuroLLM-9B-Instruct` / `EPFLiGHT/EuroLLM-9B-MeditronFO`;
 - `google/gemma-3-27b-it` / `EPFLiGHT/Gemma-3-27B-MeditronFO`;
 - `Qwen/Qwen3-8B` and `mistralai/Ministral-8B-Instruct-2410` as unpaired controls.
@@ -175,7 +176,7 @@ fine-tuning.
 ## Reproducibility and execution
 
 Every model artefact records content fingerprints, git commit, dataset and validation
-hashes, model ID, roles, arms, ablation axes, seeds, scorer and protocol ID. Existing
+hashes, model ID, dtype, quantization, roles, arms, ablation axes, seeds, scorer and protocol ID. Existing
 files are reused only when all current manifest fields match.
 
 Run locally before Colab:
@@ -186,9 +187,9 @@ Run locally before Colab:
 .venv\Scripts\python.exe scripts\smoke.py --stage data
 ```
 
-The definitive GPU execution uses
-[`notebooks/colab_multimodel.ipynb`](../notebooks/colab_multimodel.ipynb), cells 1-5,
-8a, 8d and 9. The final cell refuses to export if Tier 1, artifact validation, pooled
+The definitive GPU execution uses the single entry point
+[`notebooks/oncoemotion_colab.ipynb`](../notebooks/oncoemotion_colab.ipynb). The
+final phase refuses to export if Tier 1, artifact validation, pooled
 analysis, affect-subset validation or abstract character checking fails.
 
 ## Submission constraints

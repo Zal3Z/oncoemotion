@@ -1,16 +1,27 @@
-# notebooks/
+# Notebook operativo
 
-Analysis notebooks are added with their phases (they require the ML stack and
-generated activations):
+Il repository contiene un solo notebook eseguibile:
 
-| Notebook | Phase | Purpose |
-|---|---|---|
-| 01_dataset_audit.ipynb | 1-3 | audit synthetic datasets, provenance, class balance |
-| 02_layer_sweep.ipynb | 2 | emotion-vector quality per layer (held-out probe AUROC) |
-| 03_emotion_geometry.ipynb | 2 | vector geometry, collinearity vs confounders |
-| 04_clinical_probing.ipynb | 3 | emotion scores on clinical inputs, persistence curves |
-| 05_causal_interventions.ipynb | 4 | steering/ablation/patching effects, controls |
-| colab_multimodel.ipynb | ESMO v2 | frozen controlled neutral/emotional study |
-| colab_real_fields.ipynb | real validation | private Excel ingestion, isolated per-model caches, guarded secondary run, redacted export |
+- `oncoemotion_colab.ipynb` — run end-to-end su Colab dello studio controllato,
+  della validazione sui campi reali e dell'estensione direct/deliberative con
+  `NON_CLASSIFICABILE`.
 
-Until then, the same analyses are runnable as scripts under `scripts/`.
+Le analisi prima distribuite fra notebook separati sono state consolidate negli
+script richiamati da questo notebook. In questo modo **Runtime → Esegui tutto** usa
+un solo punto di ingresso, mantiene gli output su Google Drive e conserva una cache
+dei pesi per il tempo necessario a completare tutte le fasi di ciascun modello.
+
+Input privati attesi sotto `MyDrive/oncoemotion/`:
+
+- `sinomi_campi_aperti.xlsx`;
+- `pro_ctcae_italian_labels.json`.
+
+Per iniziare un rerun indipendente basta cambiare `RUN_ID` nella prima cella. Il
+workbook e le tabelle di audit contengono testo clinico e devono restare nella
+cartella privata del run.
+
+Il rerun usa otto modelli, inclusa la coppia Apertus 70B in NF4 appaiato sulla
+Blackwell da 96 GB. Il panel reasoning contiene tre
+coppie base/medicalizzato, MedGemma 27B, Apollo2-7B con supporto italiano esplicito
+e Qwen3.6-27B; Qwen riceve anche un braccio `native_reasoning` separato. Vedere
+`docs/MODEL_PANEL_REASONING.md`.

@@ -46,6 +46,7 @@ def main() -> int:
     ap.add_argument("--model", default=None)
     ap.add_argument("--dtype", default="float16")
     ap.add_argument("--device", default="cuda")
+    ap.add_argument("--quantization", choices=["nf4", "int8"])
     ap.add_argument("--method", default="diff_of_means")
     ap.add_argument("--variant", default="resid", choices=["resid", "raw"])
     ap.add_argument("--concept", default="afraid_alarmed")
@@ -79,7 +80,11 @@ def main() -> int:
     v_confounder = vec(args.confounder)
     v_random = random_vector(v_emotion.shape[0], seed=777, norm=float(np.linalg.norm(v_emotion)))
 
-    cfg = ModelConfig(dtype=args.dtype, device_map=args.device)
+    cfg = ModelConfig(
+        dtype=args.dtype,
+        device_map=args.device,
+        quantization=args.quantization,
+    )
     adapter = load_adapter(args.model, cfg)
     print(f"Loading {adapter.config.model_id} ...", flush=True)
     adapter.load()
@@ -89,7 +94,9 @@ def main() -> int:
     rt = SteeringRuntime(adapter)
     print(f"Steering at layer {layer} (concept={args.concept})", flush=True)
 
-    results = {"model_id": adapter.config.model_id, "layer": int(layer), "concept": args.concept,
+    results = {"model_id": adapter.config.model_id, "dtype": args.dtype,
+               "quantization": args.quantization,
+               "layer": int(layer), "concept": args.concept,
                "alpha_grid": ALPHA_GRID, "inputs": {}}
 
     add_conditions = {

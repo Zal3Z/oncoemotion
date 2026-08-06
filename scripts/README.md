@@ -35,6 +35,38 @@
 The authoritative parameters are in `configs/study_esmo_2026_real.yaml`; operational
 details and estimands are in `docs/REAL_FIELDS_PROTOCOL.md`.
 
+## Reasoning and explicit-abstention extension
+
+1. `run_reasoning_classification.py` - one-model joint choice among validated
+   PRO-CTCAE items, validated CTCAE items and `NON_CLASSIFICABILE`, in direct and
+   standardized two-pass deliberative modes.
+2. `run_reasoning_study.py` - resumable cohort orchestrator with isolated model
+   caches.
+3. `analyze_reasoning_classification.py` - strict item/taxonomy metrics, paired
+   direct-deliberative effects and base/medicalized interactions.
+4. `package_reasoning_results.py` - rejects both raw clinical text and generated
+   deliberation text before export.
+5. `export_item_audit.py` - creates local JSON/JSONL audit payloads joining the
+   private validated source to the redacted v1 model outputs.
+
+Parameters are frozen in `configs/study_esmo_2026_reasoning.yaml`; rationale and
+interpretation are in `docs/REASONING_ABSTENTION_PROTOCOL.md`.
+
+## Complete Colab orchestration
+
+`run_complete_colab_study.py` is the single end-to-end orchestrator used by
+`notebooks/oncoemotion_colab.ipynb`. For each model it runs the controlled study,
+the real-field v2 study and the direct/deliberative extension before deleting that
+model's isolated weight cache. Aggregate analyses, privacy-checked packages and
+both real-field and reasoning item-audit payloads are created only after the requested
+cohort is complete.
+
+The controlled and real-field reruns use eight models, with the Apertus 70B pair
+matched in NF4 under `configs/runtime_blackwell_96gb.yaml`. The reasoning extension
+runs the three base/medicalized pairs, MedGemma 27B,
+Apollo2-7B and Qwen3.6-27B; only Qwen3.6 gets the additional
+`native_reasoning` mode. BioMistral-7B is the optional secondary model.
+
 The authoritative parameters live in `configs/study_esmo_2026.yaml`. Existing
 artefacts are reusable only when their manifest/fingerprint matches the current
 pipeline.

@@ -51,6 +51,7 @@ def main() -> int:
     ap.add_argument("--model", default=None)
     ap.add_argument("--dtype", default="float16")
     ap.add_argument("--device", default="cuda")
+    ap.add_argument("--quantization", choices=["nf4", "int8"])
     ap.add_argument("--pooling", default="mean", choices=["mean", "last"])
     ap.add_argument("--methods", nargs="+", default=["diff_of_means"])
     ap.add_argument("--dataset", type=Path, default=_ROOT / "data/synthetic/emotion_dataset.jsonl")
@@ -73,9 +74,14 @@ def main() -> int:
     print(f"Dataset: {len(ds)} examples ({int((concepts_arr!='neutral').sum())} concept + "
           f"{int((concepts_arr=='neutral').sum())} neutral), {len(set(EMOTIONS+CONTROLS))} concepts")
 
-    cfg = ModelConfig(dtype=args.dtype, device_map=args.device)
+    cfg = ModelConfig(
+        dtype=args.dtype,
+        device_map=args.device,
+        quantization=args.quantization,
+    )
     adapter = load_adapter(args.model, cfg)
-    print(f"Loading {adapter.config.model_id} ({args.dtype}) on {args.device} ...", flush=True)
+    precision = args.quantization or args.dtype
+    print(f"Loading {adapter.config.model_id} ({precision}) on {args.device} ...", flush=True)
     t0 = time.time()
     adapter.load()
     print(f"  loaded in {time.time()-t0:.1f}s | layers={adapter.n_layers} hidden={adapter.hidden_size}")
@@ -88,7 +94,9 @@ def main() -> int:
     np.savez_compressed(args.acts_out, acts=acts.astype(np.float32), concepts=concepts_arr,
                         splits=splits, families=families, sources=sources,
                         texts=np.array(texts, dtype=object),
-                        model_id=adapter.config.model_id, pooling=args.pooling)
+                        model_id=adapter.config.model_id, pooling=args.pooling,
+                        dtype=args.dtype,
+                        quantization=args.quantization or "none")
     print(f"Saved activations -> {args.acts_out}")
 
     n_layers = acts.shape[1]
@@ -153,7 +161,8 @@ def main() -> int:
 
     np.savez_compressed(args.vec_out, **vec_store, **norm_store,
                         model_id=adapter.config.model_id, methods=np.array(args.methods, dtype=object),
-                        emotions=np.array(EMOTIONS, dtype=object), controls=np.array(CONTROLS, dtype=object))
+                        emotions=np.array(EMOTIONS, dtype=object), controls=np.array(CONTROLS, dtype=object),
+                        dtype=args.dtype, quantization=args.quantization or "none")
     args.vec_out.parent.mkdir(parents=True, exist_ok=True)
     print(f"Saved {len([k for k in vec_store])} vector sets "
           f"({n_resid} residualized) -> {args.vec_out}")

@@ -59,6 +59,7 @@ def main() -> int:
     ap.add_argument("--model", default=None)
     ap.add_argument("--dtype", default="float16")
     ap.add_argument("--device", default="cuda")
+    ap.add_argument("--quantization", choices=["nf4", "int8"])
     ap.add_argument("--method", default="diff_of_means")
     ap.add_argument("--variant", default="resid", choices=["resid", "raw"])
     ap.add_argument("--vecs", type=Path, default=_ROOT / "outputs/checkpoints/emotion_vectors.npz")
@@ -85,7 +86,11 @@ def main() -> int:
     layer_of = {c: best_layer.get(c, vectors[c].shape[0] // 2) for c in concepts}
     print("vector variant:", {c: ("resid" if key_for(c).endswith("resid") else "raw") for c in concepts})
 
-    cfg = ModelConfig(dtype=args.dtype, device_map=args.device)
+    cfg = ModelConfig(
+        dtype=args.dtype,
+        device_map=args.device,
+        quantization=args.quantization,
+    )
     adapter = load_adapter(args.model, cfg)
     print(f"Loading {adapter.config.model_id} ...", flush=True)
     adapter.load()
@@ -152,6 +157,8 @@ def main() -> int:
 
     report = {
         "model_id": adapter.config.model_id,
+        "dtype": args.dtype,
+        "quantization": args.quantization,
         "method": args.method,
         "layer_of": layer_of,
         "gradient_trends_pearson_step_vs_z": grad_trends,

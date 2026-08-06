@@ -66,7 +66,9 @@ class ModelConfig:
     device_map: str = "cuda"
     trust_remote_code: bool = False
     use_cache: bool = False          # off for clean activation capture
-    quantization: str | None = None  # disabled in main experiments (spec section 6)
+    # ``nf4`` is reserved for models that cannot fit in BF16.  It is explicit in
+    # every artifact so a quantized representation is never mistaken for BF16.
+    quantization: str | None = None
     seed: int = 12345
     max_new_tokens: int = 8
     temperature: float = 0.0         # deterministic measurement

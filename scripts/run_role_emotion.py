@@ -165,6 +165,7 @@ def main() -> int:
     ap.add_argument("--model", default=None)
     ap.add_argument("--dtype", default="float16")
     ap.add_argument("--device", default="cuda")
+    ap.add_argument("--quantization", choices=["nf4", "int8"])
     ap.add_argument("--method", default="diff_of_means")
     ap.add_argument("--variant", default="resid", choices=["resid", "raw"])
     ap.add_argument("--roles", nargs="+",
@@ -275,7 +276,11 @@ def main() -> int:
     print(f"{len(items)} items | roles={args.roles} | arms={args.arms} | "
           f"emotions={concepts} | controls={control_concepts}")
 
-    cfg = ModelConfig(dtype=args.dtype, device_map=args.device)
+    cfg = ModelConfig(
+        dtype=args.dtype,
+        device_map=args.device,
+        quantization=args.quantization,
+    )
     adapter = load_adapter(args.model, cfg)
     print(f"Loading {adapter.config.model_id} ...", flush=True)
     adapter.load()
@@ -514,6 +519,7 @@ def main() -> int:
         "vectors_sha256": _sha256(args.vecs),
         "validation_sha256": _sha256(args.val_report),
         "model_id": adapter.config.model_id, "method": args.method, "variant": args.variant,
+        "dtype": args.dtype, "quantization": args.quantization,
         "roles": args.roles, "concepts": concepts,
         "control_concepts": control_concepts, "layer_of": layer_of,
         "ablate_concepts": list(ablate_vecs.keys()),

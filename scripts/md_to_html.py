@@ -7,7 +7,7 @@ links, horizontal rules, emoji. Output is a single HTML file (inline CSS,
 light/dark aware) you can open by double-click.
 
 Usage:
-    python scripts/md_to_html.py docs/RELAZIONE.md outputs/reports/relazione.html
+    python scripts/md_to_html.py docs/ESECUZIONE.md outputs/reports/esecuzione.html
 """
 
 from __future__ import annotations

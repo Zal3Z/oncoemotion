@@ -1,0 +1,114 @@
+protocol_id: "esmo-ai-2026-reasoning-v3"
+title: "Explicit abstention and standardized deliberation in validated oncology free text"
+
+# This is an exploratory behavioural extension.  It does not replace or redefine
+# the separately versioned esmo-ai-2026-real-v2 affect/error endpoint.
+design:
+  roles: ["oncologo", "none_filler"]
+  # The cross-model comparison uses the same portable, standardized conditions.
+  reasoning_modes: ["direct", "deliberative"]
+  decision_space: "joint"
+  expected_records_per_model: 1275
+  expected_base_rows_per_model: 5100
+
+source_expectations:
+  records: 1275
+  pro_records: 968
+  ctcae_records: 245
+  nonclassifiable_records: 62
+  distinct_pro_ids: 63
+  distinct_ctcae_items: 76
+  unique_source_ids: 996
+
+models:
+  # Prospective panel for the reasoning extension.  The six paired models
+  # identify medicalization x deliberation.  MedGemma adds an independently
+  # developed medical-reasoning control; Apollo2 adds a medical model with
+  # explicit Italian support; Qwen3.6 is the latest feasible open-weight Qwen
+  # comparator and receives a separate native-thinking experiment.  Ministral
+  # and Qwen3-8B remain in the frozen eight-model confirmatory rerun.
+  primary:
+    - "swiss-ai/Apertus-70B-Instruct-2509"
+    - "EPFLiGHT/Apertus-70B-MeditronFO"
+    - "utter-project/EuroLLM-9B-Instruct"
+    - "EPFLiGHT/EuroLLM-9B-MeditronFO"
+    - "google/gemma-3-27b-it"
+    - "EPFLiGHT/Gemma-3-27B-MeditronFO"
+    - "google/medgemma-27b-text-it"
+    - "FreedomIntelligence/Apollo2-7B"
+    - "Qwen/Qwen3.6-27B"
+  secondary:
+    - "BioMistral/BioMistral-7B"
+
+native_reasoning:
+  enabled: true
+  mode: "native_reasoning"
+  models:
+    - "Qwen/Qwen3.6-27B"
+  policy: "Qwen3.6 chat-template thinking followed by the same constrained final choice"
+  max_new_tokens: 512
+  sampling:
+    do_sample: true
+    temperature: 1.0
+    top_p: 0.95
+    top_k: 20
+  expected_extra_rows_per_enabled_model: 2550
+  analysis_status: "single-model exploratory; never pooled with standardized deliberation"
+
+classification:
+  choices:
+    - "PRO-CTCAE | <validated item>"
+    - "CTCAE | <validated item>"
+    - "NON_CLASSIFICABILE"
+  pro_candidate_source: "official PRO-CTCAE terminology"
+  ctcae_candidate_source: "76 exact CTCAE v5 item labels in the validated workbook"
+  nonclassifiable_is_explicit_candidate: true
+  constrained_top_k_saved: 5
+  direct_native_thinking: false
+  deliberative_policy: "standardized two-pass evidence/taxonomy/uncertainty note with native thinking disabled"
+  reasoning_max_new_tokens: 80
+  candidate_chunk_by_model:
+    # Both 70B checkpoints are loaded as matched NF4 models on the 96 GB
+    # Blackwell profile.  A small likelihood batch leaves ample activation
+    # headroom and does not change the candidate scoring rule.
+    "swiss-ai/Apertus-70B-Instruct-2509": 4
+    "EPFLiGHT/Apertus-70B-MeditronFO": 4
+    # Qwen3.6-27B has 64 text layers and a 5,120-wide residual stream.  The
+    # smaller candidate batch keeps the 157-way likelihood pass memory-safe on
+    # the Blackwell 96 GB profile without changing the scoring rule.
+    "Qwen/Qwen3.6-27B": 8
+
+analysis:
+  primary_role: "oncologo"
+  bootstrap_draws: 5000
+  seed: 20261002
+  cluster_field: "source_id"
+  equal_model_weighting: true
+  outcomes:
+    - "strict_joint_accuracy"
+    - "ontology_accuracy"
+    - "pro_item_accuracy"
+    - "ctcae_item_accuracy"
+    - "nonclassifiable_accuracy"
+    - "explicit_nonclassifiable_rate"
+    - "direct_vs_deliberative_flip_rate"
+    - "direct_vs_deliberative_accuracy_delta"
+    - "qwen36_native_reasoning_vs_direct_accuracy_delta"
+    - "base_vs_medicalized_accuracy_delta"
+    - "medicalization_x_deliberation_interaction"
+
+model_pairs:
+  primary:
+    - family: "Apertus-70B-NF4"
+      base: "swiss-ai/Apertus-70B-Instruct-2509"
+      medicalized: "EPFLiGHT/Apertus-70B-MeditronFO"
+    - family: "EuroLLM-9B"
+      base: "utter-project/EuroLLM-9B-Instruct"
+      medicalized: "EPFLiGHT/EuroLLM-9B-MeditronFO"
+    - family: "Gemma-3-27B-MeditronFO"
+      base: "google/gemma-3-27b-it"
+      medicalized: "EPFLiGHT/Gemma-3-27B-MeditronFO"
+  secondary:
+    - family: "Gemma-3-27B-MedGemma"
+      base: "google/gemma-3-27b-it"
+      medicalized: "google/medgemma-27b-text-it"

@@ -56,3 +56,6 @@ sinomi_campi_aperti.xlsx
 
 # Local regulatory/reference downloads and temporary renders
 tmp/
+
+# Rendered result reports (built by scripts/build_real_results_report.py)
+reports/

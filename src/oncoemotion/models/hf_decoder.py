@@ -17,7 +17,9 @@ from oncoemotion.config import ModelConfig
 from oncoemotion.models.base import AdapterCapabilities, ModelAdapter, register_adapter
 
 
-@register_adapter(r"(qwen2|qwen3|llama-3|llama-4|meta-llama|mistral|ministral|gemma)")
+@register_adapter(
+    r"(qwen2|qwen3|apollo|llama-3|llama-4|meta-llama|mistral|ministral|gemma)"
+)
 class HFDecoderAdapter(ModelAdapter):
     """Adapter for decoder-only models exposing a stack of transformer blocks.
 
@@ -32,7 +34,7 @@ class HFDecoderAdapter(ModelAdapter):
     # ------------------------------------------------------------------ #
     def load(self) -> "HFDecoderAdapter":
         import torch
-        from transformers import AutoModelForCausalLM, AutoTokenizer
+        from transformers import AutoModelForCausalLM, AutoProcessor, AutoTokenizer
 
         dtype = {
             "float16": torch.float16,
@@ -41,6 +43,14 @@ class HFDecoderAdapter(ModelAdapter):
         }[self.config.dtype]
 
         dev = (self.config.device_map or "cpu")
+        quantization = (self.config.quantization or "").lower() or None
+        if quantization not in {None, "nf4", "int8"}:
+            raise ValueError(
+                f"unsupported quantization {self.config.quantization!r}; "
+                "expected one of: nf4, int8"
+            )
+        if quantization and dev != "auto":
+            raise ValueError("quantized loading requires device_map='auto'")
 
         # Try several AutoModel classes so multimodal decoders (Gemma-3 / MedGemma,
         # Mistral-3, ...) load for TEXT-ONLY interpretability: AutoModelForCausalLM
@@ -61,10 +71,39 @@ class HFDecoderAdapter(ModelAdapter):
 
         def _acquire(trc: bool):
             """Load tokenizer + model with a given trust_remote_code setting."""
-            tok = AutoTokenizer.from_pretrained(self.config.model_id, trust_remote_code=trc)
+            try:
+                tok = AutoTokenizer.from_pretrained(
+                    self.config.model_id, trust_remote_code=trc
+                )
+            except Exception:
+                # Recent unified vision-language checkpoints expose their chat
+                # template through AutoProcessor.  The study is text-only, so
+                # retain just its tokenizer after loading the processor.
+                processor = AutoProcessor.from_pretrained(
+                    self.config.model_id, trust_remote_code=trc
+                )
+                tok = getattr(processor, "tokenizer", processor)
             kw = dict(trust_remote_code=trc)
             if dev == "auto":
                 kw["device_map"] = "auto"
+            if quantization:
+                try:
+                    from transformers import BitsAndBytesConfig
+                except ImportError as exc:
+                    raise RuntimeError(
+                        "quantized loading requires transformers BitsAndBytesConfig "
+                        "and the bitsandbytes package"
+                    ) from exc
+                if quantization == "nf4":
+                    kw["quantization_config"] = BitsAndBytesConfig(
+                        load_in_4bit=True,
+                        bnb_4bit_quant_type="nf4",
+                        bnb_4bit_use_double_quant=True,
+                        bnb_4bit_compute_dtype=dtype,
+                    )
+                else:
+                    kw["quantization_config"] = BitsAndBytesConfig(load_in_8bit=True)
+                kw["low_cpu_mem_usage"] = True
             mdl, last = None, None
             for loader in loaders:
                 try:
@@ -197,7 +236,8 @@ class HFDecoderAdapter(ModelAdapter):
         return {k: v.to(dev) for k, v in enc.items()}
 
     def build_prompt_ids(self, user: str, system: str | None = None,
-                         assistant_prefix: str = "") -> Any:
+                         assistant_prefix: str = "", *,
+                         chat_template_kwargs: dict | None = None) -> Any:
         """Chat-template ids for ``[system?, user]`` + an assistant-turn prefix.
 
         Applies the model's chat template so a SYSTEM role actually reaches the
@@ -213,15 +253,39 @@ class HFDecoderAdapter(ModelAdapter):
         msgs = ([{"role": "system", "content": system}] if system else []) + \
                [{"role": "user", "content": user}]
         tok = self.tokenizer
+        template_kwargs = dict(chat_template_kwargs or {})
         if hasattr(tok, "apply_chat_template") and tok.chat_template:
             try:
-                base = tok.apply_chat_template(msgs, add_generation_prompt=True,
-                                               return_tensors="pt")
+                try:
+                    base = tok.apply_chat_template(
+                        msgs,
+                        add_generation_prompt=True,
+                        return_tensors="pt",
+                        **template_kwargs,
+                    )
+                except TypeError:
+                    # Most templates ignore model-specific flags.  Retrying
+                    # without them keeps non-reasoning model families portable.
+                    base = tok.apply_chat_template(
+                        msgs,
+                        add_generation_prompt=True,
+                        return_tensors="pt",
+                    )
             except Exception:
                 merged = (system + "\n\n" + user) if system else user
-                base = tok.apply_chat_template(
-                    [{"role": "user", "content": merged}],
-                    add_generation_prompt=True, return_tensors="pt")
+                try:
+                    base = tok.apply_chat_template(
+                        [{"role": "user", "content": merged}],
+                        add_generation_prompt=True,
+                        return_tensors="pt",
+                        **template_kwargs,
+                    )
+                except TypeError:
+                    base = tok.apply_chat_template(
+                        [{"role": "user", "content": merged}],
+                        add_generation_prompt=True,
+                        return_tensors="pt",
+                    )
         else:  # no chat template: plain concatenation
             text = (system + "\n" if system else "") + user + "\n"
             base = tok(text, return_tensors="pt").input_ids

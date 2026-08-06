@@ -345,7 +345,7 @@ clinica? (B) il <b>ruolo</b> assegnato le cambia, e l'emotività cambia l'<b>eti
    return pairs;})();
  (function(){const wrap=document.getElementById('M_cards');if(!wrap)return;
    if(!MEDPAIRS.length){
-     wrap.innerHTML='<div class="card"><div class="cap"><span class="hd">Nessuna coppia disponibile.</span> Servono un modello base <b>e</b> la sua versione medicalizzata (es. Apertus-8B e Apertus-8B-MedFO): con uno solo dei due il confronto controllato non è possibile.</div></div>';
+     wrap.innerHTML='<div class="card"><div class="cap"><span class="hd">Nessuna coppia disponibile.</span> Servono un modello base <b>e</b> la sua versione medicalizzata (es. Apertus-70B e Apertus-70B-MedFO): con uno solo dei due il confronto controllato non è possibile.</div></div>';
      set('M_synth','<p>Nessuna coppia base ↔ medicalizzato completa in questo run.</p>');return;}
    const SEL=SP.emo_label||{}; const spByName={}; (SP.models||[]).forEach(m=>spByName[m.name]=m);
    const emo=m=>(m.emo['oncologo']||{}).all, acc=m=>(m.acc['oncologo']||{}).intact, fp=m=>(m.fp['oncologo']||{}).fp;
@@ -620,7 +620,7 @@ coppie complete sono <b>__NPAIRS__</b>, su famiglie diverse: la replica che al r
 <p class="q">Cosa hanno detto, messi insieme, i tre esperimenti — e cosa possiamo (e non possiamo) concludere.</p>
 <div class="card"><div id="Z_body" class="synth"></div></div>
 </div>
-<div class="foot">oncoemotion · report completo · __MODLIST__ · run Colab (A100/H100) · nessun claim di coscienza.</div>"""
+<div class="foot">oncoemotion · report completo · __MODLIST__ · run Colab Blackwell 96 GB · nessun claim di coscienza.</div>"""
     return D + A + B + C + M + E + Z
 
 

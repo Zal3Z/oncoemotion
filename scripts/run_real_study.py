@@ -109,6 +109,8 @@ def _role_artifact_current(
     validation_path: Path,
     roles: list[str],
     expected_items: int,
+    dtype: str,
+    quantization: str | None,
 ) -> bool:
     required = [rows_path, meta_path, study_path, dataset_path, vectors_path, validation_path]
     if not all(path.exists() for path in required):
@@ -120,6 +122,8 @@ def _role_artifact_current(
     return all(
         [
             meta.get("model_id") == model_id,
+            meta.get("dtype") == dtype,
+            meta.get("quantization") == quantization,
             meta.get("study_config_sha256") == _sha256(study_path),
             meta.get("dataset_sha256") == _sha256(dataset_path),
             meta.get("vectors_sha256") == _sha256(vectors_path),
@@ -148,6 +152,7 @@ def main() -> int:
     ap.add_argument("--models", nargs="+", help="pilot override; disables complete-cohort analysis")
     ap.add_argument("--dtype", default="bfloat16")
     ap.add_argument("--device", default="auto")
+    ap.add_argument("--quantization", choices=["nf4", "int8"])
     ap.add_argument("--limit", type=int, default=0, help="pilot records per model; 0 = full source")
     ap.add_argument("--baseline-limit", type=int, default=0)
     ap.add_argument("--skip-existing", action=argparse.BooleanOptionalAction, default=True)
@@ -237,6 +242,8 @@ def main() -> int:
                 "--study-config",
                 str(args.study_config),
             ]
+            if args.quantization:
+                vector_command.extend(["--quantization", args.quantization])
             if args.skip_existing:
                 vector_command.append("--skip-existing")
             if args.min_free_disk_gb:
@@ -261,6 +268,8 @@ def main() -> int:
                     validation_path=validation,
                     roles=roles,
                     expected_items=expected_records,
+                    dtype=args.dtype,
+                    quantization=args.quantization,
                 )
             ):
                 print(f"[skip] {model_id}: current real-field artifact")
@@ -298,6 +307,8 @@ def main() -> int:
                 str(args.study_config),
                 "--redact-text",
             ]
+            if args.quantization:
+                command.extend(["--quantization", args.quantization])
             if args.limit:
                 command.extend(["--limit", str(args.limit)])
             if args.baseline_limit:

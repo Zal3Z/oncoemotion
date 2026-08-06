@@ -107,7 +107,15 @@ def pipeline_fingerprint(stages=ALL_STAGES, study_config: Path | None = None) ->
     return digest.hexdigest()
 
 
-def _complete_manifest(path: Path, model_id: str, fingerprint: str, stages) -> bool:
+def _complete_manifest(
+    path: Path,
+    model_id: str,
+    fingerprint: str,
+    stages,
+    *,
+    dtype: str,
+    quantization: str | None,
+) -> bool:
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError):
@@ -116,6 +124,8 @@ def _complete_manifest(path: Path, model_id: str, fingerprint: str, stages) -> b
     return bool(
         data.get("complete")
         and data.get("model_id") == model_id
+        and data.get("dtype") == dtype
+        and data.get("quantization") == quantization
         and data.get("pipeline_fingerprint") == fingerprint
         and set(stages).issubset(completed)
     )
@@ -126,6 +136,7 @@ def main() -> int:
     ap.add_argument("--models", nargs="+", default=DEFAULT_TRIO)
     ap.add_argument("--dtype", default="bfloat16")
     ap.add_argument("--device", default="auto")
+    ap.add_argument("--quantization", choices=["nf4", "int8"])
     # All 4 methods by default — the vector build now runs on the GPU (torch),
     # so pca/logistic/lda are fast even at large hidden sizes.
     ap.add_argument("--methods", nargs="+", default=["diff_of_means", "pca", "logistic", "lda"])
@@ -167,7 +178,14 @@ def main() -> int:
         d.mkdir(parents=True, exist_ok=True)
         rep = d / "clinical_probing.json"
         manifest = d / "pipeline_manifest.json"
-        if args.skip_existing and _complete_manifest(manifest, model_id, fingerprint, stages):
+        if args.skip_existing and _complete_manifest(
+            manifest,
+            model_id,
+            fingerprint,
+            stages,
+            dtype=args.dtype,
+            quantization=args.quantization,
+        ):
             print(f"[skip] {model_id} (complete manifest matches current pipeline)")
             summary.append((model_id, "skipped"))
             continue
@@ -187,6 +205,8 @@ def main() -> int:
         val = d / "vector_validation.json"
         t0 = time.time()
         common = ["--model", model_id, "--dtype", args.dtype, "--device", args.device]
+        if args.quantization:
+            common.extend(["--quantization", args.quantization])
         steps = []
         if "vectors" in stages:
             steps.extend(
@@ -289,6 +309,7 @@ def main() -> int:
                         "study_config": str(args.study_config),
                         "stages": stages,
                         "dtype": args.dtype,
+                        "quantization": args.quantization,
                         "device": args.device,
                         "methods": args.methods,
                     },

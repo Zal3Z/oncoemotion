@@ -54,7 +54,9 @@ def _model_name(slug):
     if "gemma-3" in s or "gemma3" in s: return "Gemma-3-27B" if "27" in s else "Gemma-3-4B"
     if "gemma-4" in s: return "Gemma-4-12B"
     if "eurollm" in s: return "EuroLLM-9B-MedFO" if "meditron" in s else "EuroLLM-9B"
-    if "apertus" in s: return "Apertus-8B-MedFO" if "meditron" in s else "Apertus-8B"
+    if "apertus" in s:
+        size = "70B" if "70b" in s else "8B"
+        return f"Apertus-{size}-MedFO" if "meditron" in s else f"Apertus-{size}"
     if "meditron" in s: return "Meditron3-8B"
     if "qwen3" in s: return "Qwen3-8B"
     if "qwen2" in s: return "Qwen2.5-3B"
