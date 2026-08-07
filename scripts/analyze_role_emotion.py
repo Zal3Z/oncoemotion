@@ -418,9 +418,12 @@ def main() -> int:
         print(f"   {role:10} all={_fmt(a['all']['emo_z'])}  "
               f"neutral={_fmt(a['neutral']['emo_z'])}  emotional={_fmt(a['emotional']['emo_z'])}")
     print(f"\nB) Model term-accuracy (intact|all) vs mapper {mapper_term_acc}:")
+    def _b_acc(role, key):
+        cell = B[role].get(key)
+        return cell["acc"] if cell else None
     for role in roles:
-        print(f"   {role:10} intact={B[role]['intact|all']['acc']}  ablated={B[role]['ablated|all']['acc']}"
-              f"  (emo-framing intact={B[role]['intact|emotional']['acc']} vs neutral={B[role]['intact|neutral']['acc']})")
+        print(f"   {role:10} intact={_b_acc(role, 'intact|all')}  ablated={_b_acc(role, 'ablated|all')}"
+              f"  (emo-framing intact={_b_acc(role, 'intact|emotional')} vs neutral={_b_acc(role, 'intact|neutral')})")
     print("\nC) False-positive coding on abstain (mean_conf / fp_rate, intact|all):")
     for role in roles:
         c = C[role]['intact|all']
