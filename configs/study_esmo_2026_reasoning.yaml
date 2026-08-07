@@ -28,8 +28,8 @@ models:
   # comparator and receives a separate native-thinking experiment.  Ministral
   # and Qwen3-8B remain in the frozen eight-model confirmatory rerun.
   primary:
-    - "swiss-ai/Apertus-70B-Instruct-2509"
-    - "EPFLiGHT/Apertus-70B-MeditronFO"
+    - "swiss-ai/Apertus-8B-Instruct-2509"
+    - "EPFLiGHT/Apertus-8B-MeditronFO"
     - "utter-project/EuroLLM-9B-Instruct"
     - "EPFLiGHT/EuroLLM-9B-MeditronFO"
     - "google/gemma-3-27b-it"
@@ -68,11 +68,6 @@ classification:
   deliberative_policy: "standardized two-pass evidence/taxonomy/uncertainty note with native thinking disabled"
   reasoning_max_new_tokens: 80
   candidate_chunk_by_model:
-    # Both 70B checkpoints are loaded as matched NF4 models on the 96 GB
-    # Blackwell profile.  A small likelihood batch leaves ample activation
-    # headroom and does not change the candidate scoring rule.
-    "swiss-ai/Apertus-70B-Instruct-2509": 4
-    "EPFLiGHT/Apertus-70B-MeditronFO": 4
     # Qwen3.6-27B has 64 text layers and a 5,120-wide residual stream.  The
     # smaller candidate batch keeps the 157-way likelihood pass memory-safe on
     # the Blackwell 96 GB profile without changing the scoring rule.
@@ -99,9 +94,9 @@ analysis:
 
 model_pairs:
   primary:
-    - family: "Apertus-70B-NF4"
-      base: "swiss-ai/Apertus-70B-Instruct-2509"
-      medicalized: "EPFLiGHT/Apertus-70B-MeditronFO"
+    - family: "Apertus-8B"
+      base: "swiss-ai/Apertus-8B-Instruct-2509"
+      medicalized: "EPFLiGHT/Apertus-8B-MeditronFO"
     - family: "EuroLLM-9B"
       base: "utter-project/EuroLLM-9B-Instruct"
       medicalized: "EPFLiGHT/EuroLLM-9B-MeditronFO"

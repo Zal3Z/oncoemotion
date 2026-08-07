@@ -61,8 +61,8 @@ model's isolated weight cache. Aggregate analyses, privacy-checked packages and
 both real-field and reasoning item-audit payloads are created only after the requested
 cohort is complete.
 
-The controlled and real-field reruns use eight models, with the Apertus 70B pair
-matched in NF4 under `configs/runtime_blackwell_96gb.yaml`. The reasoning extension
+The controlled and real-field reruns use eight models, all in plain BF16 under
+`configs/runtime_blackwell_96gb.yaml` (the swiss pair is Apertus 8B). The reasoning extension
 runs the three base/medicalized pairs, MedGemma 27B,
 Apollo2-7B and Qwen3.6-27B; only Qwen3.6 gets the additional
 `native_reasoning` mode. BioMistral-7B is the optional secondary model.

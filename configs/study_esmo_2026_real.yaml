@@ -23,8 +23,8 @@ source_expectations:
 models:
   analysis_policy: "complete_primary_secondary_descriptive"
   primary:
-    - "swiss-ai/Apertus-70B-Instruct-2509"
-    - "EPFLiGHT/Apertus-70B-MeditronFO"
+    - "swiss-ai/Apertus-8B-Instruct-2509"
+    - "EPFLiGHT/Apertus-8B-MeditronFO"
     - "utter-project/EuroLLM-9B-Instruct"
     - "EPFLiGHT/EuroLLM-9B-MeditronFO"
     - "Qwen/Qwen3-8B"
@@ -96,9 +96,9 @@ mechanistic_gate:
 
 model_pairs:
   primary:
-    - family: "Apertus-70B-NF4"
-      base: "swiss-ai/Apertus-70B-Instruct-2509"
-      medicalized: "EPFLiGHT/Apertus-70B-MeditronFO"
+    - family: "Apertus-8B"
+      base: "swiss-ai/Apertus-8B-Instruct-2509"
+      medicalized: "EPFLiGHT/Apertus-8B-MeditronFO"
     - family: "EuroLLM-9B"
       base: "utter-project/EuroLLM-9B-Instruct"
       medicalized: "EPFLiGHT/EuroLLM-9B-MeditronFO"

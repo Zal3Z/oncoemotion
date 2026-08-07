@@ -47,9 +47,9 @@ celle eseguono in ordine:
 6. studio controllato, campi reali v1 ed estensione reasoning/astensione;
 7. analisi, figure, audit per item e pacchetti redatti.
 
-Il run usa otto modelli Tier 1 nelle fasi controllata e reale. La coppia Apertus
-70B base/medicalizzata è caricata in NF4 appaiato secondo
-`configs/runtime_blackwell_96gb.yaml`; gli altri modelli usano BF16. L'estensione
+Il run usa otto modelli Tier 1 nelle fasi controllata e reale, tutti caricati in
+BF16 secondo `configs/runtime_blackwell_96gb.yaml`; la coppia appaiata svizzera è
+Apertus 8B base/medicalizzata. L'estensione
 reasoning viene eseguita su tre coppie base/medicalizzato, MedGemma 27B,
 Apollo2-7B e Qwen3.6-27B; Qwen3-8B e Ministral restano nei rerun confermativi ma
 non vengono ripetuti nell'estensione. `RUN_SECONDARY=True` aggiunge BioMistral-7B

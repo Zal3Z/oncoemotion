@@ -347,30 +347,28 @@ def test_complete_runner_cohorts_are_aligned():
     assert primary["controlled"] == primary["real"]
     assert len(primary["reasoning"]) == 9
     assert "FreedomIntelligence/Apollo2-7B" in primary["reasoning"]
-    assert "swiss-ai/Apertus-70B-Instruct-2509" in primary["controlled"]
-    assert "EPFLiGHT/Apertus-70B-MeditronFO" in primary["reasoning"]
-    assert all("Apertus-8B" not in model for models in primary.values() for model in models)
+    assert "swiss-ai/Apertus-8B-Instruct-2509" in primary["controlled"]
+    assert "EPFLiGHT/Apertus-8B-MeditronFO" in primary["reasoning"]
+    assert all("Apertus-70B" not in model for models in primary.values() for model in models)
     assert "mistralai/Ministral-8B-Instruct-2410" not in primary["reasoning"]
     assert len(complete["real"]) == 9
     assert len(complete["reasoning"]) == 10
 
 
-def test_blackwell_runtime_quantizes_only_the_matched_apertus_70b_pair():
+def test_blackwell_runtime_uses_plain_bf16_for_every_model():
     runner = _script("run_complete_colab_study.py")
     import yaml
 
     profile = yaml.safe_load(
         (_ROOT / "configs/runtime_blackwell_96gb.yaml").read_text(encoding="utf-8")
     )
-    base = runner._runtime_for_model(profile, "swiss-ai/Apertus-70B-Instruct-2509")
-    medical = runner._runtime_for_model(profile, "EPFLiGHT/Apertus-70B-MeditronFO")
+    base = runner._runtime_for_model(profile, "swiss-ai/Apertus-8B-Instruct-2509")
+    medical = runner._runtime_for_model(profile, "EPFLiGHT/Apertus-8B-MeditronFO")
     apollo = runner._runtime_for_model(profile, "FreedomIntelligence/Apollo2-7B")
-    assert base == medical
-    assert base["quantization"] == "nf4"
+    assert base == medical == apollo
+    assert base["quantization"] is None
     assert base["dtype"] == "bfloat16"
-    assert base["minimum_free_disk_gb"] == 165.0
-    assert apollo["quantization"] is None
-    assert apollo["dtype"] == "bfloat16"
+    assert base["minimum_free_disk_gb"] == 75.0
 
 
 def test_reasoning_modes_add_native_thinking_only_for_qwen():

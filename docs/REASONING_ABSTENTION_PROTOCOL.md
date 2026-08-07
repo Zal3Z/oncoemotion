@@ -94,8 +94,8 @@ Per questo l'audit per item distingue:
 
 ## Nuova estensione: risposta esplicita e reasoning
 
-Il protocollo `esmo-ai-2026-reasoning-v3` è versionato separatamente e
-usa la coppia Apertus 70B in NF4 appaiato; gli altri checkpoint restano BF16. Esso
+Il protocollo `esmo-ai-2026-reasoning-v3` è versionato separatamente; tutti i
+checkpoint, inclusa la coppia Apertus 8B, sono caricati in BF16. Esso
 aggiunge un esperimento comportamentale separato.
 
 ### Spazio delle risposte

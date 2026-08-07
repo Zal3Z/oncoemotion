@@ -2,13 +2,15 @@
 
 ## Decisione prospettica per il rerun
 
-Il rerun dei protocolli `esmo-ai-2026-v3` e `esmo-ai-2026-real-v2` usa Apertus
-70B al posto di Apertus 8B, mantenendo invariato il numero di modelli. L'estensione
+Il rerun dei protocolli `esmo-ai-2026-v3` e `esmo-ai-2026-real-v2` usa la coppia
+Apertus 8B in BF16 (il tentativo con Apertus 70B NF4 è stato abbandonato per costi
+di download e fragilità della VM), mantenendo invariato il numero di modelli.
+L'estensione
 `esmo-ai-2026-reasoning-v3` usa il seguente panel prospettico:
 
 | Ruolo | Modelli | Motivo |
 |---|---|---|
-| Nucleo medicalizzazione | Apertus 70B base/MeditronFO NF4, EuroLLM base/MeditronFO, Gemma 27B base/MeditronFO | Tre confronti appaiati entro la stessa architettura e precisione |
+| Nucleo medicalizzazione | Apertus 8B base/MeditronFO, EuroLLM base/MeditronFO, Gemma 27B base/MeditronFO | Tre confronti appaiati entro la stessa architettura e precisione |
 | Riferimento medico | MedGemma 27B text | Modello Google ottimizzato per conoscenza e reasoning medico; confronto separato con Gemma 27B |
 | Medico multilingue italiano | Apollo2-7B | Pesi locali, Apache-2.0, italiano dichiarato fra le lingue mediche supportate |
 | Reasoning nativo recente | Qwen3.6-27B | Checkpoint Qwen open-weight più recente e praticabile sulla Blackwell; thinking attivabile/disattivabile |

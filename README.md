@@ -70,8 +70,8 @@ See [`docs/REAL_FIELDS_PROTOCOL.md`](docs/REAL_FIELDS_PROTOCOL.md). The same sin
 Colab notebook runs this protocol after the controlled study and before the
 reasoning/explicit-abstention extension.
 
-The rerun uses an eight-model panel with the matched Apertus 70B pair in NF4 on
-Blackwell 96 GB. The reasoning extension uses the three matched
+The rerun uses an eight-model panel with the matched Apertus 8B pair in plain
+BF16. The reasoning extension uses the three matched
 base/medicalized pairs, MedGemma 27B, Italian-capable Apollo2-7B and Qwen3.6-27B.
 Qwen3.6 receives a separate native
 thinking arm; see

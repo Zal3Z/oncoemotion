@@ -20,8 +20,8 @@ Per iniziare un rerun indipendente basta cambiare `RUN_ID` nella prima cella. Il
 workbook e le tabelle di audit contengono testo clinico e devono restare nella
 cartella privata del run.
 
-Il rerun usa otto modelli, inclusa la coppia Apertus 70B in NF4 appaiato sulla
-Blackwell da 96 GB. Il panel reasoning contiene tre
+Il rerun usa otto modelli, inclusa la coppia Apertus 8B in BF16 come tutti gli
+altri checkpoint. Il panel reasoning contiene tre
 coppie base/medicalizzato, MedGemma 27B, Apollo2-7B con supporto italiano esplicito
 e Qwen3.6-27B; Qwen riceve anche un braccio `native_reasoning` separato. Vedere
 `docs/MODEL_PANEL_REASONING.md`.

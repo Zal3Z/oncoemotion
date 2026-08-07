@@ -90,7 +90,7 @@ are secondary.
 - Corrected-by-role, broken-by-role and changed-wrong-to-wrong transitions.
 - Per-axis, grouped signed and RMS role shifts at the patient-text read point (`R`)
   and code-decision point (`D`).
-- Matched medicalized-minus-base contrasts across Apertus-70B-NF4, EuroLLM-9B and
+- Matched medicalized-minus-base contrasts across Apertus-8B, EuroLLM-9B and
   Gemma-3-27B. Three families support only a secondary family-level interpretation.
 
 Secondary results are estimates and intervals. No minimum p-value selected from
@@ -161,8 +161,7 @@ documented before submission.
 
 Tier 1 contains eight models and three base/medicalized pairs:
 
-- `swiss-ai/Apertus-70B-Instruct-2509` / `EPFLiGHT/Apertus-70B-MeditronFO`
-  (entrambi NF4 su Blackwell 96 GB);
+- `swiss-ai/Apertus-8B-Instruct-2509` / `EPFLiGHT/Apertus-8B-MeditronFO`;
 - `utter-project/EuroLLM-9B-Instruct` / `EPFLiGHT/EuroLLM-9B-MeditronFO`;
 - `google/gemma-3-27b-it` / `EPFLiGHT/Gemma-3-27B-MeditronFO`;
 - `Qwen/Qwen3-8B` and `mistralai/Ministral-8B-Instruct-2410` as unpaired controls.

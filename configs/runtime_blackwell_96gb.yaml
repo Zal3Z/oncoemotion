@@ -5,15 +5,7 @@ default:
   quantization: null
   minimum_free_disk_gb: 75
 
-# The matched 70B pair uses the same weight representation.  Cross-model
-# comparisons involving this pair are descriptive; the base-vs-medicalized
-# contrast is valid because architecture and quantization are held constant.
-models:
-  "swiss-ai/Apertus-70B-Instruct-2509":
-    dtype: "bfloat16"
-    quantization: "nf4"
-    minimum_free_disk_gb: 165
-  "EPFLiGHT/Apertus-70B-MeditronFO":
-    dtype: "bfloat16"
-    quantization: "nf4"
-    minimum_free_disk_gb: 165
+# Every panel checkpoint (largest: the 27B tier) fits in plain BF16 on this
+# profile, so no per-model quantization or disk overrides are needed since the
+# Apertus pair moved back to 8B.
+models: {}
